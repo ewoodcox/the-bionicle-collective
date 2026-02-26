@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "include": [
+    "/*"
+  ],
+  "exclude": [
+    "/_astro/*",
+    "/.assetsignore",
+    "/.gitkeep",
+    "/Matoran_FoldArms_v1.png",
+    "/fonts/Trajan Pro Regular.ttf",
+    "/set-photos/.gitkeep"
+  ]
+}

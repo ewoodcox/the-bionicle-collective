@@ -1,0 +1,40 @@
+---
+import { site, social } from '../config/site';
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+const { title = site.name, description = site.description } = Astro.props;
+---
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <title>{title}</title>
+  </head>
+  <body>
+    <header class="site-header">
+      <a href="/" class="logo">{site.name}</a>
+      <nav>
+        <a href="/">Home</a>
+        <a href="/collection/">Collection</a>
+      </nav>
+    </header>
+    <main class="main">
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <p>&copy; {new Date().getFullYear()} {site.name}</p>
+      <div class="social">
+        <a href={social.youtube} target="_blank" rel="noopener noreferrer" aria-label="YouTube">YouTube</a>
+        <a href={social.facebook} target="_blank" rel="noopener noreferrer" aria-label="Facebook">Facebook</a>
+        <a href={social.instagram} target="_blank" rel="noopener noreferrer" aria-label="Instagram">Instagram</a>
+        <a href={social.bluesky} target="_blank" rel="noopener noreferrer" aria-label="Bluesky">Bluesky</a>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,7 +1,0 @@
-{
-  "name": "bionicle-collective",
-  "private": true,
-  "scripts": {
-    "start": "npx serve . -p 8080"
-  }
-}

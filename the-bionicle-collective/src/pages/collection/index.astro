@@ -1,0 +1,377 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { sets } from '../../data/sets';
+import { getSetDisplayLabel, getSetNumber, getSetSortKey, getMissingSetEntries } from '../../data/setNamesByYear';
+import { YEAR_GROUPS, getYearGroup, getYearsForGroup } from '../../config/constants';
+import type { SetRecord } from '../../data/sets';
+
+const byGroup = new Map<string, SetRecord[]>();
+for (const g of YEAR_GROUPS) byGroup.set(g.id, []);
+for (const s of sets) {
+  const year = Number(s.year);
+  const group = getYearGroup(year);
+  byGroup.get(group)!.push(s);
+}
+for (const [, list] of byGroup) list.sort((a, b) => getSetSortKey(a) - getSetSortKey(b));
+
+// Show tabs for Gen 1, Gen 2, Other and a separate Media tab.
+const EXTRA_GROUPS: readonly { id: string; label: string }[] = [{ id: 'other', label: 'Other' }, { id: 'media', label: 'Media' }];
+const VISIBLE_GROUPS = [...YEAR_GROUPS.filter((g) => g.id === 'gen1' || g.id === 'gen2'), ...EXTRA_GROUPS];
+const groupsWithData = VISIBLE_GROUPS.filter((g) => {
+  if (g.id === 'other')
+    return sets.some((s) => {
+      const theme = s.theme ?? '';
+      return theme === 'Combiner Models' || theme === 'Alternate Models';
+    });
+  if (g.id === 'media') return sets.some((s) => (s.theme ?? '').toLowerCase().includes('media'));
+  return (byGroup.get(g.id) ?? []).length > 0;
+});
+const defaultGroupId =
+  groupsWithData.find((g) => g.id === 'gen1')?.id ??
+  groupsWithData[0]?.id ??
+  VISIBLE_GROUPS[0]?.id ??
+  null;
+---
+<Layout title="Meet the Collective | The Bionicle Collective" description="Bionicle collection by year.">
+  <div class="collection-page">
+  <h1>Meet the Collective</h1>
+  <p style="text-align: center; margin-top: 0.25rem; margin-bottom: 1.5rem;">
+    Here you can browse through the individual sets and other items that make up The Bionicle Collective.
+  </p>
+
+  {VISIBLE_GROUPS.length > 1 && (
+    <div class="generation-tabs" role="tablist" aria-label="Select generation">
+      {VISIBLE_GROUPS.map((group) => (
+        <button
+          type="button"
+          class="generation-tab"
+          role="tab"
+          aria-selected={group.id === defaultGroupId}
+          data-group-id={group.id}
+        >
+          {group.label}
+        </button>
+      ))}
+    </div>
+  )}
+
+  {VISIBLE_GROUPS.map((group) => {
+    const items =
+      group.id === 'other'
+        ? sets.filter((s) => {
+            const theme = s.theme ?? '';
+            return theme === 'Combiner Models' || theme === 'Alternate Models';
+          })
+        : group.id === 'media'
+        ? sets.filter((s) => (s.theme ?? '').toLowerCase().includes('media'))
+        : (byGroup.get(group.id) ?? []).filter((s) => {
+            const theme = s.theme ?? '';
+            return theme !== 'Combiner Models' && theme !== 'Alternate Models';
+          });
+
+    const years = getYearsForGroup(group.id);
+    const hasCarousel = years.length > 0;
+    const yearsWithData = hasCarousel
+      ? years.filter((y) => items.some((s) => Number(s.year) === y))
+      : [];
+    const firstYear = yearsWithData.length > 0 ? yearsWithData[0] : null;
+
+    return (
+      <section class="collection-section" id={group.id} data-group-id={group.id} data-active={group.id === defaultGroupId}>
+        {items.length === 0 ? (
+          <p class="collection-empty">No sets added yet for this generation.</p>
+        ) : group.id === 'other' ? (
+          <>
+            <div
+              class="year-carousel"
+              role="tablist"
+              aria-label={`Select group for ${group.label}`}
+              data-group-id={group.id}
+            >
+              {items.some((s) => (s.theme ?? '') === 'Combiner Models') && (
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={true}
+                  aria-controls={`${group.id}-year-combiner`}
+                  id={`${group.id}-tab-combiner`}
+                  data-year="combiner"
+                  data-group-id={group.id}
+                >
+                  Combiner Models
+                </button>
+              )}
+              {items.some((s) => (s.theme ?? '') === 'Alternate Models') && (
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={!items.some((s) => (s.theme ?? '') === 'Combiner Models')}
+                  aria-controls={`${group.id}-year-alternate`}
+                  id={`${group.id}-tab-alternate`}
+                  data-year="alternate"
+                  data-group-id={group.id}
+                >
+                  Alternate Models
+                </button>
+              )}
+            </div>
+            {items.some((s) => (s.theme ?? '') === 'Combiner Models') && (
+              <div
+                class="year-pane"
+                id={`${group.id}-year-combiner`}
+                role="tabpanel"
+                aria-labelledby={`${group.id}-tab-combiner`}
+                data-year="combiner"
+                data-group-id={group.id}
+                data-active={true}
+              >
+                <div class="set-grid">
+                  {items
+                    .filter((s) => (s.theme ?? '') === 'Combiner Models')
+                    .map((set) => (
+                      <a href={`/collection/${set.id}/`} class="set-card">
+                        <img src={`/set-photos/${set.id}.jpg`} data-fallback={set.imageUrl} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" onerror="this.onerror=null;this.src=this.dataset.fallback" />
+                        <div class="info">
+                          <div class="name">{getSetDisplayLabel(set)}</div>
+                          <div class="meta">{set.year}</div>
+                        </div>
+                      </a>
+                    ))}
+                </div>
+              </div>
+            )}
+            {items.some((s) => (s.theme ?? '') === 'Alternate Models') && (
+              <div
+                class="year-pane"
+                id={`${group.id}-year-alternate`}
+                role="tabpanel"
+                aria-labelledby={`${group.id}-tab-alternate`}
+                data-year="alternate"
+                data-group-id={group.id}
+                data-active={!items.some((s) => (s.theme ?? '') === 'Combiner Models')}
+              >
+                <div class="set-grid">
+                  {items
+                    .filter((s) => (s.theme ?? '') === 'Alternate Models')
+                    .map((set) => (
+                      <a href={`/collection/${set.id}/`} class="set-card">
+                        <img src={`/set-photos/${set.id}.jpg`} data-fallback={set.imageUrl} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" onerror="this.onerror=null;this.src=this.dataset.fallback" />
+                        <div class="info">
+                          <div class="name">{getSetDisplayLabel(set)}</div>
+                          <div class="meta">{set.year}</div>
+                        </div>
+                      </a>
+                    ))}
+                </div>
+              </div>
+            )}
+          </>
+        ) : hasCarousel && yearsWithData.length > 0 ? (
+          <>
+            <div
+              class="year-carousel"
+              role="tablist"
+              aria-label={`Select year for ${group.label}`}
+              data-group-id={group.id}
+            >
+              {yearsWithData.map((y) => (
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={y === firstYear}
+                  aria-controls={`${group.id}-year-${y}`}
+                  id={`${group.id}-tab-${y}`}
+                  data-year={String(y)}
+                  data-group-id={group.id}
+                >
+                  {y}
+                </button>
+              ))}
+            </div>
+            {yearsWithData.map((y) => {
+              const yearKey = String(y);
+              const yearItems = items.filter((s) => Number(s.year) === y);
+              const ownedSetNumbers = new Set(yearItems.map((s) => getSetNumber(s)));
+              const missingEntries = getMissingSetEntries(y, ownedSetNumbers);
+              return (
+                <div
+                  class="year-pane"
+                  id={`${group.id}-year-${yearKey}`}
+                  role="tabpanel"
+                  aria-labelledby={`${group.id}-tab-${y}`}
+                  data-year={yearKey}
+                  data-group-id={group.id}
+                  data-active={y === firstYear}
+                >
+                  <div class="set-grid">
+                    {yearItems.map((set) => (
+                      <a href={`/collection/${set.id}/`} class="set-card">
+                        <img src={`/set-photos/${set.id}.jpg`} data-fallback={set.imageUrl} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" onerror="this.onerror=null;this.src=this.dataset.fallback" />
+                        <div class="info">
+                          <div class="name">{getSetDisplayLabel(set)}</div>
+                          <div class="meta">{set.year}</div>
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                  {missingEntries.length > 0 && (
+                    <div class="missing-section">
+                      <h3 class="missing-heading">Missing</h3>
+                      <div class="set-grid">
+                        {missingEntries.map((entry) => (
+                          <div class="set-card set-card--missing">
+                            <img
+                              src={`https://placehold.co/160x160?text=${encodeURIComponent(entry.setNumber)}`}
+                              alt={`${entry.setNumber} - ${entry.name}`}
+                              width="160"
+                              height="160"
+                              loading="lazy"
+                            />
+                            <div class="info">
+                              <div class="name">{entry.setNumber} - {entry.name}</div>
+                              <div class="meta">{y}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </>
+        ) : (
+          <div class="set-grid">
+            {items.map((set) => (
+              <a href={`/collection/${set.id}/`} class="set-card">
+                <img src={`/set-photos/${set.id}.jpg`} data-fallback={set.imageUrl} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" onerror="this.onerror=null;this.src=this.dataset.fallback" />
+                <div class="info">
+                  <div class="name">{getSetDisplayLabel(set)}</div>
+                  <div class="meta">{set.year}</div>
+                </div>
+              </a>
+            ))}
+          </div>
+        )}
+      </section>
+    );
+  })}
+  </div>
+
+  <script>
+    (function () {
+      const params = new URLSearchParams(window.location.search);
+      const savedGroup = params.get('gen');
+      const groupTabs = document.querySelectorAll('.generation-tab[data-group-id]');
+      if (groupTabs.length) {
+        const sections = document.querySelectorAll('.collection-section[data-group-id]');
+        const groupIds = Array.from(groupTabs).map((t) => t.getAttribute('data-group-id')).filter(Boolean);
+
+        function selectGroup(groupId: string, updateUrl = true) {
+          groupTabs.forEach((tab) => {
+            const active = tab.getAttribute('data-group-id') === groupId;
+            tab.setAttribute('aria-selected', active ? 'true' : 'false');
+          });
+          sections.forEach((section) => {
+            section.setAttribute('data-active', section.getAttribute('data-group-id') === groupId ? 'true' : 'false');
+          });
+
+          if (updateUrl && groupIds.includes(groupId)) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('gen', groupId);
+            const activeSection = document.querySelector('.collection-section[data-active="true"]');
+            const carousel = activeSection?.querySelector('.year-carousel');
+            const firstBtn = carousel?.querySelector('button[data-year]');
+            const firstYear = firstBtn?.getAttribute('data-year');
+            if (firstYear) {
+              url.searchParams.set('year', firstYear);
+              const cgId = carousel.getAttribute('data-group-id');
+              if (cgId) {
+                const btns = carousel.querySelectorAll('button[data-year]');
+                const panes = document.querySelectorAll(`.year-pane[data-group-id="${cgId}"]`);
+                btns.forEach((btn) => {
+                  const isActive = btn.getAttribute('data-year') === firstYear;
+                  btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                  btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+                });
+                panes.forEach((pane) => {
+                  pane.setAttribute('data-active', pane.getAttribute('data-year') === firstYear ? 'true' : 'false');
+                });
+              }
+            } else {
+              url.searchParams.delete('year');
+            }
+            window.history.replaceState({}, '', url.toString());
+          }
+        }
+
+        let initialGroup = savedGroup && groupIds.includes(savedGroup) ? savedGroup : (groupTabs[0].getAttribute('data-group-id') || groupIds[0]);
+        if (initialGroup) selectGroup(initialGroup, false);
+
+        groupTabs.forEach((tab) => {
+          tab.addEventListener('click', () => {
+            const gid = tab.getAttribute('data-group-id');
+            if (gid) selectGroup(gid);
+          });
+        });
+      }
+
+      const savedYear = params.get('year');
+
+      document.querySelectorAll('.year-carousel').forEach((carousel) => {
+        const groupId = carousel.getAttribute('data-group-id');
+        if (!groupId) return;
+        const buttons = carousel.querySelectorAll('button[data-year]');
+        const panes = document.querySelectorAll(`.year-pane[data-group-id="${groupId}"]`);
+        const yearValues = Array.from(buttons).map((b) => b.getAttribute('data-year'));
+
+        function selectYear(year: string, updateUrl = true) {
+          // #region agent log
+          fetch('http://127.0.0.1:7339/ingest/0c8c3e3b-3a03-4dbd-a713-6d179189bb25', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Debug-Session-Id': '1d758d',
+            },
+            body: JSON.stringify({
+              sessionId: '1d758d',
+              runId: 'pre-fix',
+              hypothesisId: 'yearTabs',
+              location: 'collection/index.astro:191',
+              message: 'selectYear called',
+              data: { groupId, year, updateUrl },
+              timestamp: Date.now(),
+            }),
+          }).catch(() => {});
+          // #endregion
+
+          buttons.forEach((btn) => {
+            const active = btn.getAttribute('data-year') === year;
+            btn.setAttribute('aria-selected', active ? 'true' : 'false');
+            btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+          });
+          panes.forEach((pane) => {
+            pane.setAttribute('data-active', pane.getAttribute('data-year') === year ? 'true' : 'false');
+          });
+          if (updateUrl && yearValues.includes(year)) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('year', year);
+            window.history.replaceState({}, '', url.toString());
+          }
+        }
+
+        if (savedYear && yearValues.includes(savedYear)) {
+          selectYear(savedYear, false);
+        }
+
+        buttons.forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const y = btn.getAttribute('data-year');
+            if (y) selectYear(y);
+          });
+          if (btn.getAttribute('aria-selected') === 'true') btn.setAttribute('aria-pressed', 'true');
+        });
+      });
+    })();
+  </script>
+</Layout>

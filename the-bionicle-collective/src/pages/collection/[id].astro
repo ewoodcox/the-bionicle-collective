@@ -1,0 +1,278 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { sets, getSetById } from '../../data/sets';
+import { getSetDisplayLabel, getSetNumber } from '../../data/setNamesByYear';
+
+export function getStaticPaths() {
+  return sets.map((set) => ({ params: { id: set.id } }));
+}
+
+const { id } = Astro.params;
+const set = id ? getSetById(id) : null;
+
+if (!set) {
+  return Astro.redirect('/collection/');
+}
+
+const displayLabel = getSetDisplayLabel(set);
+const setNumberDisplay = getSetNumber(set);
+
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+function formatAcquiredDate(acquiredDate: string | undefined): string {
+  if (!acquiredDate || acquiredDate.trim() === '') return '—';
+  const parts = acquiredDate.trim().split('-');
+  const year = parts[0];
+  const monthNum = parts[1];
+  if (monthNum && monthNum.length >= 1 && monthNum.length <= 2) {
+    const monthIndex = parseInt(monthNum, 10) - 1;
+    if (monthIndex >= 0 && monthIndex < 12) return `${MONTH_NAMES[monthIndex]} ${year}`;
+  }
+  return year;
+}
+---
+<Layout title={`${displayLabel} | The Bionicle Collective`} description={`${displayLabel} (${set.year})`}>
+  <a href="/collection/" class="button-primary back-link">← Back to collection</a>
+
+  <article class="set-detail">
+    <div class="image-wrap">
+      <img src={`/set-photos/${set.id}.jpg`} data-fallback={set.imageUrl} alt={displayLabel} width="280" height="280" onerror="this.onerror=null;this.src=this.dataset.fallback" />
+    </div>
+    <div>
+      <h1>{displayLabel}</h1>
+      <ul class="meta-list">
+        <li><span>Set #</span><span>{setNumberDisplay}</span></li>
+        <li><span>Year</span><span>{set.year}</span></li>
+        <li><span>Theme</span><span>{set.theme}</span></li>
+        {set.pieceCount != null && (
+          <li><span>Pieces</span><span>{set.pieceCount}</span></li>
+        )}
+      </ul>
+
+      <div class="bio-block collection-section" id="in-my-collection" data-set-id={set.id}>
+        <h3>In my collection</h3>
+        <div class="collection-view" id="collection-view" role="region" aria-label="Collection details">
+          <p class="collection-field"><strong>Date acquired:</strong> <span id="view-acquiredDate" class="collection-value">{formatAcquiredDate(set.acquiredDate)}</span></p>
+          <p class="collection-field"><strong>Purchased from:</strong> <span id="view-acquiredFrom" class="collection-value">{set.acquiredFrom ?? '—'}</span></p>
+          <p class="collection-field"><strong>Status:</strong> <span id="view-status" class="collection-value">—</span></p>
+          <p class="collection-field"><strong>Collector notes:</strong> <span id="view-notes" class="collection-value">{set.notes ?? '—'}</span></p>
+          <p class="collection-edit-actions">
+            <button type="button" class="button-primary collection-edit-btn" id="collection-edit-btn" aria-label="Edit collection details">Edit</button>
+            <button type="button" class="button-secondary collection-unlock-btn" id="collection-unlock-btn" aria-label="Unlock editing with your secret key">Unlock editing</button>
+          </p>
+        </div>
+        <form class="collection-form collection-form--hidden" id="collection-form" aria-label="Edit collection details">
+          <label class="collection-label">Date acquired</label>
+          <div class="collection-date-row">
+            <select id="input-acquiredMonth" class="collection-input collection-select" name="acquiredMonth" aria-label="Month">
+              <option value="">—</option>
+              {['January','February','March','April','May','June','July','August','September','October','November','December'].map((name, i) => {
+                const val = String(i + 1).padStart(2, '0');
+                const selected = (() => {
+                  if (!set.acquiredDate) return false;
+                  const part = set.acquiredDate.split('-')[1];
+                  const m = part ? String(parseInt(part, 10)).padStart(2, '0') : '';
+                  return m && parseInt(m, 10) >= 1 && parseInt(m, 10) <= 12 && m === val;
+                })();
+                return <option value={val} selected={selected}>{name}</option>;
+              })}
+            </select>
+            <select id="input-acquiredYear" class="collection-input collection-select" name="acquiredYear" aria-label="Year">
+              <option value="">—</option>
+              {Array.from({ length: 2026 - 2003 + 1 }, (_, i) => 2003 + i).map((y) => {
+                const selected = (() => {
+                  if (!set.acquiredDate) return false;
+                  const parts = set.acquiredDate.split('-');
+                  return parts[0] === String(y);
+                })();
+                return <option value={y} selected={selected}>{y}</option>;
+              })}
+            </select>
+          </div>
+          <label class="collection-label" for="input-acquiredFrom">Purchased from</label>
+          <input type="text" id="input-acquiredFrom" class="collection-input" name="acquiredFrom" value={set.acquiredFrom ?? ''} placeholder="e.g. LEGO Store" />
+          <label class="collection-label" for="input-status">Status</label>
+          <select id="input-status" class="collection-input collection-select" name="status">
+            <option value="">—</option>
+            <option value="new">New</option>
+            <option value="used-complete">Used – Complete</option>
+            <option value="used-incomplete">Used – Incomplete</option>
+          </select>
+          <label class="collection-label" for="input-notes">Collector notes</label>
+          <textarea id="input-notes" class="collection-input collection-textarea" name="notes" rows="3" placeholder="Optional notes">{set.notes ?? ''}</textarea>
+          <div class="collection-form-actions">
+            <button type="submit" class="button-primary">Save</button>
+            <button type="button" class="button-secondary collection-cancel-btn" id="collection-cancel-btn">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </article>
+</Layout>
+
+<script define:vars={{ setId: set.id, initialAcquiredDate: set.acquiredDate ?? '', initialAcquiredFrom: set.acquiredFrom ?? '', initialNotes: set.notes ?? '', initialStatus: '' }}>
+  const viewEl = document.getElementById('collection-view');
+  const formEl = document.getElementById('collection-form');
+  const editBtn = document.getElementById('collection-edit-btn');
+  const cancelBtn = document.getElementById('collection-cancel-btn');
+  const viewAcquiredDate = document.getElementById('view-acquiredDate');
+  const viewAcquiredFrom = document.getElementById('view-acquiredFrom');
+  const viewStatus = document.getElementById('view-status');
+  const viewNotes = document.getElementById('view-notes');
+  const inputAcquiredMonth = document.getElementById('input-acquiredMonth');
+  const inputAcquiredYear = document.getElementById('input-acquiredYear');
+  const inputAcquiredFrom = document.getElementById('input-acquiredFrom');
+  const inputStatus = document.getElementById('input-status');
+  const inputNotes = document.getElementById('input-notes');
+
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const STATUS_LABELS = {
+    'new': 'New',
+    'used-complete': 'Used \u2013 Complete',
+    'used-incomplete': 'Used \u2013 Incomplete',
+  };
+  function formatAcquiredDateForView(acquiredDate) {
+    if (!acquiredDate || acquiredDate.trim() === '') return '—';
+    const parts = acquiredDate.trim().split('-');
+    const year = parts[0];
+    const monthNum = parts[1];
+    if (monthNum && monthNum.length >= 1 && monthNum.length <= 2) {
+      const monthIndex = parseInt(monthNum, 10) - 1;
+      if (monthIndex >= 0 && monthIndex < 12) return monthNames[monthIndex] + ' ' + year;
+    }
+    return year;
+  }
+
+  function formatStatusForView(status) {
+    if (!status || status.trim() === '') return '\u2014';
+    return STATUS_LABELS[status] || status;
+  }
+
+  const INITIAL_DATA = {
+    acquiredDate: initialAcquiredDate,
+    acquiredFrom: initialAcquiredFrom,
+    status: initialStatus,
+    notes: initialNotes,
+  };
+
+  async function fetchCollectionData() {
+    try {
+      const res = await fetch(`/api/collection/${encodeURIComponent(setId)}`);
+      if (!res.ok) return INITIAL_DATA;
+      const data = await res.json();
+      return {
+        acquiredDate: data.acquiredDate ?? '',
+        acquiredFrom: data.acquiredFrom ?? '',
+        status: data.status ?? '',
+        notes: data.notes ?? '',
+      };
+    } catch (_) {
+      return INITIAL_DATA;
+    }
+  }
+
+  function applyToView(data) {
+    const d = (v) => (v === '' ? '—' : v);
+    viewAcquiredDate.textContent = formatAcquiredDateForView(data.acquiredDate);
+    viewAcquiredFrom.textContent = d(data.acquiredFrom);
+    viewStatus.textContent = formatStatusForView(data.status);
+    viewNotes.textContent = d(data.notes);
+  }
+
+  function showView() {
+    formEl.classList.add('collection-form--hidden');
+    viewEl.classList.remove('collection-view--hidden');
+  }
+
+  function showEdit() {
+    fetchCollectionData().then((data) => {
+      const ad = data.acquiredDate || '';
+      const parts = ad.split('-');
+      const y = parts[0] || '';
+      let m = (parts[1] || '').padStart(2, '0');
+      if (parseInt(m, 10) < 1 || parseInt(m, 10) > 12) m = '';
+      inputAcquiredMonth.value = m;
+      inputAcquiredYear.value = y;
+      inputAcquiredFrom.value = data.acquiredFrom;
+      inputStatus.value = data.status || '';
+      inputNotes.value = data.notes;
+      viewEl.classList.add('collection-view--hidden');
+      formEl.classList.remove('collection-form--hidden');
+      inputAcquiredMonth.focus();
+    });
+  }
+
+  const EDIT_KEY_STORAGE = 'collection-edit-key';
+  function getEditKey() {
+    try {
+      return sessionStorage.getItem(EDIT_KEY_STORAGE);
+    } catch {
+      return null;
+    }
+  }
+  function setEditKey(key) {
+    try {
+      if (key) sessionStorage.setItem(EDIT_KEY_STORAGE, key);
+      else sessionStorage.removeItem(EDIT_KEY_STORAGE);
+    } catch {}
+  }
+
+  function save(data) {
+    const headers = { 'Content-Type': 'application/json' };
+    const key = getEditKey();
+    if (key) headers['X-Edit-Key'] = key;
+    fetch(`/api/collection/${encodeURIComponent(setId)}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(data),
+    })
+      .then((res) => {
+        if (res.status === 401) {
+          setEditKey(null);
+          const entered = prompt('Editing is restricted. Enter your edit key to save.');
+          if (entered != null && entered.trim()) {
+            setEditKey(entered.trim());
+            save(data);
+          }
+          return;
+        }
+        applyToView(data);
+        showView();
+      })
+      .catch(() => {});
+  }
+
+  editBtn.addEventListener('click', showEdit);
+
+  const unlockBtn = document.getElementById('collection-unlock-btn');
+  if (unlockBtn) {
+    unlockBtn.addEventListener('click', () => {
+      const key = prompt('Enter your edit key to unlock saving.');
+      if (key != null && key.trim()) {
+        setEditKey(key.trim());
+        unlockBtn.textContent = 'Editing unlocked';
+      }
+    });
+  }
+
+  cancelBtn.addEventListener('click', () => {
+    showView();
+  });
+
+  formEl.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const year = inputAcquiredYear.value.trim();
+    const month = inputAcquiredMonth.value.trim();
+    let acquiredDate = '';
+    if (year) acquiredDate = month ? year + '-' + month : year;
+    save({
+      acquiredDate,
+      acquiredFrom: inputAcquiredFrom.value.trim(),
+      status: inputStatus.value,
+      notes: inputNotes.value.trim(),
+    });
+  });
+
+  fetchCollectionData().then((data) => {
+    applyToView(data);
+  });
+</script>
