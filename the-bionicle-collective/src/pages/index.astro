@@ -17,10 +17,9 @@ import { site } from '../config/site';
   <div class="edit-gate" id="edit-gate" hidden>
     <div class="edit-gate-inner">
       <h1 class="site-title">{site.name}</h1>
-      <p class="edit-gate-subtitle">Edit access</p>
+      <p class="edit-gate-subtitle">Enter your key to unlock editing</p>
       <div id="edit-gate-status" class="edit-gate-status">Checking…</div>
       <form id="edit-gate-form" class="edit-gate-form" hidden>
-        <label for="edit-gate-key" class="edit-gate-label">Enter your edit key to unlock editing for 2 hours</label>
         <input type="password" id="edit-gate-key" class="edit-gate-input" name="key" placeholder="Edit key" autocomplete="off" required />
         <button type="submit" class="button-primary">Unlock editing</button>
       </form>
@@ -74,14 +73,7 @@ import { site } from '../config/site';
         body: JSON.stringify({ key }),
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        redirect: 'manual',
       }).then((res) => {
-        if (res.status === 302) {
-          const loc = res.headers.get('Location');
-          if (loc) window.location.href = loc;
-          else window.location.href = next;
-          return;
-        }
         if (res.ok) {
           window.location.href = next;
           return;
