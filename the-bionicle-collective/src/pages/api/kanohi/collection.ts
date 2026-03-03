@@ -72,7 +72,18 @@ export const PUT: APIRoute = async ({ request, locals }) => {
     }
   }
 
-  await store.set(ownedIds);
+  try {
+    await store.set(ownedIds);
+  } catch (err) {
+    console.error('Kanohi store set failed:', err);
+    return new Response(
+      JSON.stringify({
+        error: 'Failed to save. Check that R2 bucket is bound and accessible.',
+        details: err instanceof Error ? err.message : String(err),
+      }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
 
   return new Response(JSON.stringify({ ownedIds }), {
     status: 200,

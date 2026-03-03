@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
+    "deploy": "astro build && wrangler deploy",
     "preview": "astro preview",
     "upload:kv": "node scripts/upload-collection-store-to-kv.mjs",
     "verify:r2": "node scripts/verify-r2-collection-format.mjs"

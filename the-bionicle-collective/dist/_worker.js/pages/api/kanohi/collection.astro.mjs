@@ -1,31 +1,48 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { writeFile, readFile } from 'fs/promises';
-import { existsSync } from 'fs';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
 import { a as isAuthConfigured, i as isAuthenticated } from '../../../chunks/adminAuth_CE1MGqB7.mjs';
 export { renderers } from '../../../renderers.mjs';
 
-const __dirname$1 = dirname(fileURLToPath(import.meta.url));
-const STORE_PATH = join(__dirname$1, "..", "data", "kanohi-store.json");
+const memoryStore = [];
+function parseIds(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((x) => typeof x === "string");
+}
 async function readStore() {
-  if (!existsSync(STORE_PATH)) return [];
   try {
+    const { readFile } = await import('fs/promises');
+    const { existsSync } = await import('fs');
+    const { dirname, join } = await import('path');
+    const { fileURLToPath } = await import('url');
+    const __dirname = dirname(fileURLToPath(import.meta.url));
+    const STORE_PATH = join(__dirname, "..", "data", "kanohi-store.json");
+    if (!existsSync(STORE_PATH)) return [...memoryStore];
     const raw = await readFile(STORE_PATH, "utf8");
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) return parsed.filter((x) => typeof x === "string");
+    return parseIds(parsed);
   } catch {
+    return [...memoryStore];
   }
-  return [];
 }
 async function writeStore(ids) {
-  await writeFile(STORE_PATH, JSON.stringify(ids, null, 2), "utf8");
+  memoryStore.length = 0;
+  memoryStore.push(...ids);
+  try {
+    const { writeFile } = await import('fs/promises');
+    const { dirname, join } = await import('path');
+    const { fileURLToPath } = await import('url');
+    const __dirname = dirname(fileURLToPath(import.meta.url));
+    const STORE_PATH = join(__dirname, "..", "data", "kanohi-store.json");
+    await writeFile(STORE_PATH, JSON.stringify(ids, null, 2), "utf8");
+  } catch {
+  }
 }
 async function getKanohiOwnedIds$1() {
   return readStore();
 }
 async function setKanohiOwnedIds$1(ids) {
-  await writeStore([...new Set(ids)].filter(Boolean));
+  const deduped = [...new Set(ids)].filter(Boolean);
+  await writeStore(deduped);
+  return deduped;
 }
 
 const R2_KEY = "kanohi-collection.json";
@@ -94,19 +111,35 @@ const PUT = async ({ request, locals }) => {
   } catch {
     return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400 });
   }
-  const maskId = typeof body.maskId === "string" ? body.maskId.trim() : "";
-  const owned = body.owned === true;
-  if (!maskId) {
-    return new Response(JSON.stringify({ error: "Missing maskId" }), { status: 400 });
-  }
   const store = getStore(locals);
-  let ownedIds = await store.get();
-  if (owned) {
-    if (!ownedIds.includes(maskId)) ownedIds = [...ownedIds, maskId];
+  let ownedIds;
+  if (Array.isArray(body.ownedIds)) {
+    ownedIds = body.ownedIds.filter((id) => typeof id === "string").filter(Boolean);
   } else {
-    ownedIds = ownedIds.filter((id) => id !== maskId);
+    const maskId = typeof body.maskId === "string" ? body.maskId.trim() : "";
+    const owned = body.owned === true;
+    if (!maskId) {
+      return new Response(JSON.stringify({ error: "Missing maskId" }), { status: 400 });
+    }
+    ownedIds = await store.get();
+    if (owned) {
+      if (!ownedIds.includes(maskId)) ownedIds = [...ownedIds, maskId];
+    } else {
+      ownedIds = ownedIds.filter((id) => id !== maskId);
+    }
   }
-  await store.set(ownedIds);
+  try {
+    await store.set(ownedIds);
+  } catch (err) {
+    console.error("Kanohi store set failed:", err);
+    return new Response(
+      JSON.stringify({
+        error: "Failed to save. Check that R2 bucket is bound and accessible.",
+        details: err instanceof Error ? err.message : String(err)
+      }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
   return new Response(JSON.stringify({ ownedIds }), {
     status: 200,
     headers: { "Content-Type": "application/json" }

@@ -527,13 +527,31 @@ const defaultGroupId =
                 credentials: 'include',
               });
               if (!res.ok) {
-                if (res.status === 401) alert('Session expired. Please log in again.');
+                if (res.status === 401) {
+                  alert('Session expired. Please log in again.');
+                } else {
+                  const err = await res.text();
+                  alert('Save failed (' + res.status + '). Check the console.');
+                  console.error('Kanohi save failed:', res.status, err);
+                }
                 return;
               }
-              const data = await res.json();
-              if (data && Array.isArray(data.ownedIds)) applyOwnedState(data.ownedIds);
-            } catch (_) {}
-            finally {
+              let data;
+              try {
+                data = await res.json();
+              } catch {
+                applyOwnedState(ownedIds);
+                return;
+              }
+              if (data && Array.isArray(data.ownedIds)) {
+                applyOwnedState(data.ownedIds);
+              } else {
+                applyOwnedState(ownedIds);
+              }
+            } catch (e) {
+              console.error('Kanohi save error:', e);
+              alert('Save failed. Check the console.');
+            } finally {
               saveBtn.disabled = false;
             }
           });

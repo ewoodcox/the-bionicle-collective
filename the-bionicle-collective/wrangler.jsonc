@@ -1,7 +1,12 @@
 {
   "name": "the-bionicle-collective",
+  "main": "./dist/_worker.js/index.js",
   "compatibility_date": "2025-02-23",
   "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "./dist"
+  },
   "kv_namespaces": [
     {
       "binding": "SESSION",
@@ -11,7 +16,8 @@
   "r2_buckets": [
     {
       "binding": "BIONICLE_COLLECTION",
-      "bucket_name": "bionicle-collection"
+      "bucket_name": "bionicle-collection",
+      "remote": true
     }
   ]
 }
