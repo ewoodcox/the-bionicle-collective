@@ -461,6 +461,7 @@ const defaultGroupId =
       const isEditHost = window.location.hostname === 'edit.bioniclecollective.com';
       if (isEditHost) {
         maskCards.forEach((el) => {
+          el.classList.add('mask-card-editable');
           el.setAttribute('role', 'button');
           el.setAttribute('tabindex', '0');
           el.style.cursor = 'pointer';

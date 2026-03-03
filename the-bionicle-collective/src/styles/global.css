@@ -476,6 +476,12 @@ body {
   pointer-events: none;
 }
 
+/* Allow click on Kanohi masks in edit mode even when marked unowned */
+.mask-card-editable.set-card--missing {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
 .set-card--missing:hover {
   border-color: transparent;
 }
