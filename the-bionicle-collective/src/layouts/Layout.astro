@@ -18,7 +18,9 @@ const { title = site.name, description = site.description } = Astro.props;
   </head>
   <body>
     <header class="site-header">
-      <a href="/" class="logo">{site.name}</a>
+      <a href="/" class="logo">
+        <img src="/TBC%20logo%20for%20site.png" alt={site.name} class="logo-image" />
+      </a>
       <nav>
         <a href="/">Home</a>
         <a href="/collection/">Collection</a>

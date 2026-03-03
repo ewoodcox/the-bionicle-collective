@@ -9,19 +9,34 @@
 
 Use the **Log out** link in the header (on any page on the edit subdomain) or on the home page when you’re logged in. That clears the admin cookie and sends you back to the login form.
 
-## ADMIN_SECRET not working
+## Where to set ADMIN_SECRET (checklist)
 
-1. **Check that the secret is available:** Open  
-   `https://edit.bioniclecollective.com/api/admin/status`  
-   in your browser. The JSON will show `authConfigured: true` only if `ADMIN_SECRET` (or `COLLECTION_EDIT_SECRET`) is set in the environment.
+The app reads `ADMIN_SECRET` (or `COLLECTION_EDIT_SECRET`) from the **Cloudflare Worker/Pages environment** only. It does **not** read from `.env` in production. Use this checklist:
 
-2. **Set the variable in Cloudflare:**  
-   **Workers & Pages** → your **Pages** project → **Settings** → **Environment variables**. Add **ADMIN_SECRET** for the **Production** environment (and Preview if you use it). Use a strong random value. **Redeploy** after saving; env vars apply to new deployments only.
+### Production (edit.bioniclecollective.com)
 
-3. **Local dev:** Create a **`.dev.vars`** file in the project root (same level as `wrangler.jsonc`) with:
-   ```bash
-   ADMIN_SECRET=your_secret_here
-   ```
-   Restart the dev server after changing `.dev.vars`.
+1. **Cloudflare dashboard**  
+   - Go to **Workers & Pages** → open the **Pages project** that serves **edit.bioniclecollective.com** (the one whose custom domain is the edit subdomain).  
+   - **Settings** → **Environment variables** (or **Variables and Secrets**).  
+   - **Add** → name: `ADMIN_SECRET`, value: your secret.  
+   - Choose **Production** (and **Preview** if you use preview deployments).  
+   - Save.
 
-4. **Exact match:** The value you type in the login form must match `ADMIN_SECRET` exactly (no extra spaces, same casing).
+2. **Redeploy**  
+   - Env vars apply only to **new** deployments. After adding or changing `ADMIN_SECRET`, trigger a new deploy (e.g. **Deployments** → **Create deployment**, or push a commit if you use Git).
+
+3. **If you have two Pages projects** (e.g. one for main site, one for edit), set `ADMIN_SECRET` on the **edit** project (the one with custom domain `edit.bioniclecollective.com`), then redeploy that project.
+
+### Local development
+
+4. **`.dev.vars`** (recommended for local)  
+   - In the **project root** (same folder as `wrangler.jsonc`), create or edit **`.dev.vars`**.  
+   - Add: `ADMIN_SECRET=your_secret_here`  
+   - Restart the dev server (`npm run dev`).
+
+5. **Optional: `.env`**  
+   - You can put `ADMIN_SECRET=...` in **`.env`** for reference; some Wrangler setups load `.env` in local dev. If login works with `.dev.vars` but not with only `.env`, rely on **`.dev.vars`** for local.
+
+### Verify
+
+6. Open **https://edit.bioniclecollective.com/api/admin/status** in your browser. If it shows `authConfigured: true`, the secret is available. Then the value you type in the login form must **match exactly** (no extra spaces, same casing).
