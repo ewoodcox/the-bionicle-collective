@@ -17,6 +17,25 @@ if (!set) {
 const displayLabel = getSetDisplayLabel(set);
 const setNumberDisplay = getSetNumber(set);
 
+// Determine prev/next set in the global sequence
+const currentIndex = sets.findIndex((s) => s.id === set.id);
+const prevSet = currentIndex > 0 ? sets[currentIndex - 1] : null;
+const nextSet = currentIndex >= 0 && currentIndex < sets.length - 1 ? sets[currentIndex + 1] : null;
+
+// Preserve generation/year context from query params so Back/Prev/Next remember where you came from
+const url = Astro.url;
+const genParam = url.searchParams.get('gen');
+const yearParam = url.searchParams.get('year');
+const backParams = new URLSearchParams();
+if (genParam) backParams.set('gen', genParam);
+if (yearParam) backParams.set('year', yearParam);
+const backQuery = backParams.toString();
+const backSuffix = backQuery ? `?${backQuery}` : '';
+
+const backHref = `/collection/${backSuffix}`;
+const prevHref = prevSet ? `/collection/${prevSet.id}/${backSuffix}` : null;
+const nextHref = nextSet ? `/collection/${nextSet.id}/${backSuffix}` : null;
+
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 function formatAcquiredDate(acquiredDate: string | undefined): string {
   if (!acquiredDate || acquiredDate.trim() === '') return '—';
@@ -31,7 +50,7 @@ function formatAcquiredDate(acquiredDate: string | undefined): string {
 }
 ---
 <Layout title={`${displayLabel} | The Bionicle Collective`} description={`${displayLabel} (${set.year})`}>
-  <a href="/collection/" class="button-primary back-link">← Back to collection</a>
+  <a href={backHref} class="button-primary back-link">← Back to collection</a>
 
   <article class="set-detail">
     <div class="image-wrap">
@@ -39,6 +58,18 @@ function formatAcquiredDate(acquiredDate: string | undefined): string {
     </div>
     <div>
       <h1>{displayLabel}</h1>
+      <nav class="set-detail-nav" aria-label="Set navigation">
+        {prevHref ? (
+          <a href={prevHref} class="set-detail-arrow set-detail-arrow--prev">← Previous</a>
+        ) : (
+          <span class="set-detail-arrow set-detail-arrow--disabled">← Previous</span>
+        )}
+        {nextHref ? (
+          <a href={nextHref} class="set-detail-arrow set-detail-arrow--next">Next →</a>
+        ) : (
+          <span class="set-detail-arrow set-detail-arrow--disabled">Next →</span>
+        )}
+      </nav>
       <ul class="meta-list">
         <li><span>Set #</span><span>{setNumberDisplay}</span></li>
         <li><span>Year</span><span>{set.year}</span></li>

@@ -129,7 +129,7 @@ const defaultGroupId =
                   {items
                     .filter((s) => (s.theme ?? '') === 'Combiner Models')
                     .map((set) => (
-                      <a href={`/collection/${set.id}/`} class="set-card">
+                      <a href={`/collection/${set.id}/?gen=${group.id}&year=combiner`} class="set-card">
                         <img src={`/set-photos/${set.id}.jpg`} data-fallback={set.imageUrl} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" onerror="this.onerror=null;this.src=this.dataset.fallback" />
                         <div class="info">
                           <div class="name">{getSetDisplayLabel(set)}</div>
@@ -154,7 +154,7 @@ const defaultGroupId =
                   {items
                     .filter((s) => (s.theme ?? '') === 'Alternate Models')
                     .map((set) => (
-                      <a href={`/collection/${set.id}/`} class="set-card">
+                      <a href={`/collection/${set.id}/?gen=${group.id}&year=alternate`} class="set-card">
                         <img src={`/set-photos/${set.id}.jpg`} data-fallback={set.imageUrl} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" onerror="this.onerror=null;this.src=this.dataset.fallback" />
                         <div class="info">
                           <div class="name">{getSetDisplayLabel(set)}</div>
@@ -205,7 +205,7 @@ const defaultGroupId =
                 >
                   <div class="set-grid">
                     {yearItems.map((set) => (
-                      <a href={`/collection/${set.id}/`} class="set-card">
+                      <a href={`/collection/${set.id}/?gen=${group.id}&year=${y}`} class="set-card">
                         <img src={`/set-photos/${set.id}.jpg`} data-fallback={set.imageUrl} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" onerror="this.onerror=null;this.src=this.dataset.fallback" />
                         <div class="info">
                           <div class="name">{getSetDisplayLabel(set)}</div>
@@ -243,7 +243,7 @@ const defaultGroupId =
         ) : (
           <div class="set-grid">
             {items.map((set) => (
-              <a href={`/collection/${set.id}/`} class="set-card">
+              <a href={`/collection/${set.id}/?gen=${group.id}`} class="set-card">
                 <img src={`/set-photos/${set.id}.jpg`} data-fallback={set.imageUrl} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" onerror="this.onerror=null;this.src=this.dataset.fallback" />
                 <div class="info">
                   <div class="name">{getSetDisplayLabel(set)}</div>
@@ -267,7 +267,7 @@ const defaultGroupId =
         const sections = document.querySelectorAll('.collection-section[data-group-id]');
         const groupIds = Array.from(groupTabs).map((t) => t.getAttribute('data-group-id')).filter(Boolean);
 
-        function selectGroup(groupId: string, updateUrl = true) {
+        function selectGroup(groupId, updateUrl = true) {
           groupTabs.forEach((tab) => {
             const active = tab.getAttribute('data-group-id') === groupId;
             tab.setAttribute('aria-selected', active ? 'true' : 'false');
@@ -325,26 +325,7 @@ const defaultGroupId =
         const panes = document.querySelectorAll(`.year-pane[data-group-id="${groupId}"]`);
         const yearValues = Array.from(buttons).map((b) => b.getAttribute('data-year'));
 
-        function selectYear(year: string, updateUrl = true) {
-          // #region agent log
-          fetch('http://127.0.0.1:7339/ingest/0c8c3e3b-3a03-4dbd-a713-6d179189bb25', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Debug-Session-Id': '1d758d',
-            },
-            body: JSON.stringify({
-              sessionId: '1d758d',
-              runId: 'pre-fix',
-              hypothesisId: 'yearTabs',
-              location: 'collection/index.astro:191',
-              message: 'selectYear called',
-              data: { groupId, year, updateUrl },
-              timestamp: Date.now(),
-            }),
-          }).catch(() => {});
-          // #endregion
-
+        function selectYear(year, updateUrl = true) {
           buttons.forEach((btn) => {
             const active = btn.getAttribute('data-year') === year;
             btn.setAttribute('aria-selected', active ? 'true' : 'false');
