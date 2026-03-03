@@ -17,7 +17,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const env = (locals as { runtime?: { env?: Env } }).runtime?.env;
     if (!isAuthConfigured(env)) {
       return jsonResponse(
-        { error: 'Admin login not configured. Set ADMIN_SECRET (or COLLECTION_EDIT_SECRET) in Cloudflare Pages env or in .dev.vars for local dev.' },
+        { error: 'Admin login not configured. Set ADMIN_SECRET in Cloudflare Pages → Settings → Environment variables (Production), then redeploy. Check /api/admin/status to verify.' },
         503
       );
     }

@@ -27,6 +27,7 @@ import { site } from '../config/site';
       <div id="edit-gate-logged-in" class="edit-gate-logged-in" hidden>
         <p>You’re logged in. You can edit collection details for 2 hours.</p>
         <a href="/collection/" class="button-primary">Go to collection</a>
+        <a href="/api/admin/logout" class="edit-gate-logout">Log out</a>
       </div>
     </div>
   </div>
@@ -92,7 +93,10 @@ import { site } from '../config/site';
           })
           .catch(async () => {
             const text = await res.text();
-            statusEl.textContent = text ? `Login failed (${res.status}).` : `Login failed (${res.status}). Check server logs.`;
+            const statusMsg = res.status === 503
+              ? 'Admin login not configured. Check https://edit.bioniclecollective.com/api/admin/status and set ADMIN_SECRET in Cloudflare Pages env.'
+              : `Login failed (${res.status}). See Cloudflare: Workers & Pages → your project → Logs.`;
+            statusEl.textContent = text ? `Login failed (${res.status}).` : statusMsg;
             statusEl.hidden = false;
           });
       });

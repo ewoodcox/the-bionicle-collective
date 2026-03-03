@@ -22,8 +22,15 @@ const { title = site.name, description = site.description } = Astro.props;
       <nav>
         <a href="/">Home</a>
         <a href="/collection/">Collection</a>
+        <a href="/api/admin/logout" class="nav-logout" id="nav-logout" hidden>Log out</a>
       </nav>
     </header>
+    <script>
+      if (typeof window !== 'undefined' && window.location.hostname === 'edit.bioniclecollective.com') {
+        const el = document.getElementById('nav-logout');
+        if (el) el.hidden = false;
+      }
+    </script>
     <main class="main">
       <slot />
     </main>

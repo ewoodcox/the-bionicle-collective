@@ -181,6 +181,23 @@ body {
 .edit-gate-logged-in p {
   margin-bottom: 1rem;
 }
+.edit-gate-logout {
+  display: inline-block;
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+.edit-gate-logout:hover {
+  color: var(--color-text);
+}
+.nav-logout {
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+.nav-logout:hover {
+  color: var(--color-accent);
+}
 
 .button-primary {
   display: inline-block;
