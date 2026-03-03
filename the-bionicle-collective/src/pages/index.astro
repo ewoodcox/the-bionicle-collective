@@ -85,13 +85,16 @@ import { site } from '../config/site';
           window.location.href = next;
           return;
         }
-        res.json().then((data) => {
-          statusEl.textContent = data.error || 'Invalid key';
-          statusEl.hidden = false;
-        }).catch(() => {
-          statusEl.textContent = 'Login failed.';
-          statusEl.hidden = false;
-        });
+        res.json()
+          .then((data) => {
+            statusEl.textContent = data.error || 'Invalid key';
+            statusEl.hidden = false;
+          })
+          .catch(async () => {
+            const text = await res.text();
+            statusEl.textContent = text ? `Login failed (${res.status}).` : `Login failed (${res.status}). Check server logs.`;
+            statusEl.hidden = false;
+          });
       });
     });
   })();
