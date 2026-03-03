@@ -27,7 +27,8 @@ const OWNED_IDS = new Set(kanohiCollection as string[]);
 
 function toMask(raw: { id: string; bricklinkColorId: string; partId: string; [k: string]: unknown }): KanohiMask {
   const owned = OWNED_IDS.has(raw.id);
-  const imageUrl = `https://img.bricklink.com/ItemImage/PN/${raw.bricklinkColorId}/${raw.partId}.png`;
+  // Use our cached proxy; first request fetches from BrickLink and stores in R2
+  const imageUrl = `/api/kanohi/image/PN/${raw.bricklinkColorId}/${raw.partId}.png`;
   return {
     ...raw,
     year: Number(raw.year),

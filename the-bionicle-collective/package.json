@@ -8,7 +8,8 @@
     "deploy": "astro build && wrangler deploy",
     "preview": "astro preview",
     "upload:kv": "node scripts/upload-collection-store-to-kv.mjs",
-    "verify:r2": "node scripts/verify-r2-collection-format.mjs"
+    "verify:r2": "node scripts/verify-r2-collection-format.mjs",
+    "fetch:kanohi": "node scripts/fetch-kanohi-bricklink.mjs"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^12.6.12",
