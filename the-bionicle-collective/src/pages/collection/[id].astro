@@ -55,9 +55,8 @@ function formatAcquiredDate(acquiredDate: string | undefined): string {
           <p class="collection-field"><strong>Purchased from:</strong> <span id="view-acquiredFrom" class="collection-value">{set.acquiredFrom ?? '—'}</span></p>
           <p class="collection-field"><strong>Status:</strong> <span id="view-status" class="collection-value">—</span></p>
           <p class="collection-field"><strong>Collector notes:</strong> <span id="view-notes" class="collection-value">{set.notes ?? '—'}</span></p>
-          <p class="collection-edit-actions">
+          <p class="collection-edit-actions" id="collection-edit-actions">
             <button type="button" class="button-primary collection-edit-btn" id="collection-edit-btn" aria-label="Edit collection details">Edit</button>
-            <button type="button" class="button-secondary collection-unlock-btn" id="collection-unlock-btn" aria-label="Unlock editing with your secret key">Unlock editing</button>
           </p>
         </div>
         <form class="collection-form collection-form--hidden" id="collection-form" aria-label="Edit collection details">
@@ -201,57 +200,31 @@ function formatAcquiredDate(acquiredDate: string | undefined): string {
     });
   }
 
-  const EDIT_KEY_STORAGE = 'collection-edit-key';
-  function getEditKey() {
-    try {
-      return sessionStorage.getItem(EDIT_KEY_STORAGE);
-    } catch {
-      return null;
-    }
-  }
-  function setEditKey(key) {
-    try {
-      if (key) sessionStorage.setItem(EDIT_KEY_STORAGE, key);
-      else sessionStorage.removeItem(EDIT_KEY_STORAGE);
-    } catch {}
-  }
-
   function save(data) {
-    const headers = { 'Content-Type': 'application/json' };
-    const key = getEditKey();
-    if (key) headers['X-Edit-Key'] = key;
     fetch(`/api/collection/${encodeURIComponent(setId)}`, {
       method: 'PUT',
-      headers,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
+      credentials: 'include',
     })
       .then((res) => {
         if (res.status === 401) {
-          setEditKey(null);
-          const entered = prompt('Editing is restricted. Enter your edit key to save.');
-          if (entered != null && entered.trim()) {
-            setEditKey(entered.trim());
-            save(data);
-          }
+          window.location.href = '/?next=' + encodeURIComponent(window.location.pathname);
           return;
         }
+        if (!res.ok) return;
         applyToView(data);
         showView();
       })
       .catch(() => {});
   }
 
-  editBtn.addEventListener('click', showEdit);
-
-  const unlockBtn = document.getElementById('collection-unlock-btn');
-  if (unlockBtn) {
-    unlockBtn.addEventListener('click', () => {
-      const key = prompt('Enter your edit key to unlock saving.');
-      if (key != null && key.trim()) {
-        setEditKey(key.trim());
-        unlockBtn.textContent = 'Editing unlocked';
-      }
-    });
+  const isEditHost = window.location.hostname === 'edit.bioniclecollective.com';
+  if (isEditHost) {
+    editBtn.addEventListener('click', showEdit);
+  } else {
+    const editActions = document.getElementById('collection-edit-actions');
+    if (editActions) editActions.style.display = 'none';
   }
 
   cancelBtn.addEventListener('click', () => {

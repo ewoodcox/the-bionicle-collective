@@ -1,11 +1,12 @@
 import type { APIRoute } from 'astro';
 import { getCollectionEntry, upsertCollectionEntry } from '../../../utils/collectionStore';
 import * as storeKV from '../../../utils/collectionStoreKV';
+import { isAuthConfigured, isAuthenticated } from '../../../utils/adminAuth';
 
 // Dynamic API route: don't prerender at build, run only on request.
 export const prerender = false;
 
-type Env = { COLLECTION_STORE?: KVNamespace; COLLECTION_EDIT_SECRET?: string };
+type Env = { COLLECTION_STORE?: KVNamespace; ADMIN_SECRET?: string; COLLECTION_EDIT_SECRET?: string };
 
 function getStore(locals: App.Locals) {
   const env = (locals as { runtime?: { env?: Env } }).runtime?.env;
@@ -52,14 +53,13 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
   }
 
   const env = (locals as { runtime?: { env?: Env } }).runtime?.env;
-  const secret = env?.COLLECTION_EDIT_SECRET;
-  if (secret) {
-    const provided = request.headers.get('X-Edit-Key');
-    if (provided !== secret) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
+  if (isAuthConfigured(env)) {
+    const ok = await isAuthenticated(request, env);
+    if (!ok) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized. Log in at the edit site home page.' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
     }
   }
 

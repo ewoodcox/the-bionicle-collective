@@ -3,7 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import { site } from '../config/site';
 ---
 <Layout title={site.name} description={site.description}>
-  <div class="home-page">
+  <div class="home-page" id="home-main">
     <h1 class="site-title">{site.name}</h1>
     <h2 class="home-about-heading">About</h2>
     <hr class="home-about-divider" />
@@ -12,4 +12,87 @@ import { site } from '../config/site';
       <a href="/collection/" class="button-primary">View the collection</a>
     </p>
   </div>
+
+  <!-- Edit subdomain: show login form or "logged in" (filled by JS) -->
+  <div class="edit-gate" id="edit-gate" hidden>
+    <div class="edit-gate-inner">
+      <h1 class="site-title">{site.name}</h1>
+      <p class="edit-gate-subtitle">Edit access</p>
+      <div id="edit-gate-status" class="edit-gate-status">Checking…</div>
+      <form id="edit-gate-form" class="edit-gate-form" hidden>
+        <label for="edit-gate-key" class="edit-gate-label">Enter your edit key to unlock editing for 2 hours</label>
+        <input type="password" id="edit-gate-key" class="edit-gate-input" name="key" placeholder="Edit key" autocomplete="off" required />
+        <button type="submit" class="button-primary">Unlock editing</button>
+      </form>
+      <div id="edit-gate-logged-in" class="edit-gate-logged-in" hidden>
+        <p>You’re logged in. You can edit collection details for 2 hours.</p>
+        <a href="/collection/" class="button-primary">Go to collection</a>
+      </div>
+    </div>
+  </div>
 </Layout>
+
+<script>
+  (function () {
+    if (typeof window === 'undefined' || window.location.hostname !== 'edit.bioniclecollective.com') return;
+    const homeMain = document.getElementById('home-main');
+    const editGate = document.getElementById('edit-gate');
+    const statusEl = document.getElementById('edit-gate-status');
+    const formEl = document.getElementById('edit-gate-form');
+    const loggedInEl = document.getElementById('edit-gate-logged-in');
+    if (!homeMain || !editGate || !statusEl || !formEl || !loggedInEl) return;
+
+    homeMain.hidden = true;
+    editGate.hidden = false;
+
+    fetch('/api/admin/check', { credentials: 'include' })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.ok) {
+          statusEl.hidden = true;
+          loggedInEl.hidden = false;
+        } else {
+          statusEl.hidden = true;
+          formEl.hidden = false;
+        }
+      })
+      .catch(() => {
+        statusEl.textContent = 'Could not check session.';
+        formEl.hidden = false;
+      });
+
+    formEl.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = document.getElementById('edit-gate-key');
+      const key = input && (input as HTMLInputElement).value ? (input as HTMLInputElement).value.trim() : '';
+      if (!key) return;
+      const nextParam = new URLSearchParams(window.location.search).get('next');
+      const next = (nextParam && nextParam.startsWith('/')) ? nextParam : '/collection/';
+      fetch(`/api/admin/login?next=${encodeURIComponent(next)}`, {
+        method: 'POST',
+        body: JSON.stringify({ key }),
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        redirect: 'manual',
+      }).then((res) => {
+        if (res.status === 302) {
+          const loc = res.headers.get('Location');
+          if (loc) window.location.href = loc;
+          else window.location.href = next;
+          return;
+        }
+        if (res.ok) {
+          window.location.href = next;
+          return;
+        }
+        res.json().then((data) => {
+          statusEl.textContent = data.error || 'Invalid key';
+          statusEl.hidden = false;
+        }).catch(() => {
+          statusEl.textContent = 'Login failed.';
+          statusEl.hidden = false;
+        });
+      });
+    });
+  })();
+</script>

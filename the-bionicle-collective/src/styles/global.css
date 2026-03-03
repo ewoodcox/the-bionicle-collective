@@ -133,6 +133,55 @@ body {
   text-align: center;
 }
 
+/* Edit subdomain: login / gate */
+.edit-gate {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 2rem 0;
+}
+.edit-gate-inner {
+  background: var(--color-bg-alt);
+  padding: 2rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-accent);
+}
+.edit-gate-subtitle {
+  text-align: center;
+  color: var(--color-text-muted);
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+}
+.edit-gate-status {
+  margin-bottom: 1rem;
+  color: var(--color-text-muted);
+}
+.edit-gate-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.edit-gate-label {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+}
+.edit-gate-input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  font-size: 1rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-text-muted);
+  border-radius: 4px;
+  color: var(--color-text);
+}
+.edit-gate-logged-in {
+  text-align: center;
+}
+.edit-gate-logged-in p {
+  margin-bottom: 1rem;
+}
+
 .button-primary {
   display: inline-block;
   padding: 0.6rem 1.5rem;
