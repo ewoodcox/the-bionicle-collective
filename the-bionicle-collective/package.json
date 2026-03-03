@@ -6,12 +6,16 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "upload:kv": "node scripts/upload-collection-store-to-kv.mjs"
+    "upload:kv": "node scripts/upload-collection-store-to-kv.mjs",
+    "verify:r2": "node scripts/verify-r2-collection-format.mjs"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^12.6.12",
     "astro": "^5.17.3",
     "html-escaper": "^3.0.3"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260301.1",
+    "@types/node": "^25.3.3"
+  }
 }

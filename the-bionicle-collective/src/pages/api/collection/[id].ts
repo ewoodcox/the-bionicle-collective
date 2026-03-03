@@ -1,21 +1,21 @@
 import type { APIRoute } from 'astro';
 import { getCollectionEntry, upsertCollectionEntry } from '../../../utils/collectionStore';
-import * as storeKV from '../../../utils/collectionStoreKV';
+import * as storeR2 from '../../../utils/collectionStoreR2';
 import { isAuthConfigured, isAuthenticated } from '../../../utils/adminAuth';
 
 // Dynamic API route: don't prerender at build, run only on request.
 export const prerender = false;
 
-type Env = { COLLECTION_STORE?: KVNamespace; ADMIN_SECRET?: string; COLLECTION_EDIT_SECRET?: string };
+type Env = { BIONICLE_COLLECTION?: R2Bucket; ADMIN_SECRET?: string; COLLECTION_EDIT_SECRET?: string };
 
 function getStore(locals: App.Locals) {
   const env = (locals as { runtime?: { env?: Env } }).runtime?.env;
-  const kv = env?.COLLECTION_STORE;
-  if (kv) {
+  const bucket = env?.BIONICLE_COLLECTION;
+  if (bucket) {
     return {
-      get: (id: string) => storeKV.getCollectionEntry(kv, id),
-      put: (id: string, data: storeKV.CollectionEntry) =>
-        storeKV.upsertCollectionEntry(kv, id, data),
+      get: (id: string) => storeR2.getCollectionEntry(bucket, id),
+      put: (id: string, data: storeR2.CollectionEntry) =>
+        storeR2.upsertCollectionEntry(bucket, id, data),
     };
   }
   return {

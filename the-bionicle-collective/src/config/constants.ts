@@ -3,9 +3,9 @@
  * 2001–2010 = Generation 1, 2015–2016 = Generation 2, then "Other".
  */
 
-export const YEAR_GROUPS: readonly { id: string; label: string }[] = [
-  { id: 'gen1', label: 'Generation 1' },
-  { id: 'gen2', label: 'Generation 2' },
+export const YEAR_GROUPS: readonly { id: string; label: string; labelShort?: string }[] = [
+  { id: 'gen1', label: 'Generation 1', labelShort: 'Gen 1' },
+  { id: 'gen2', label: 'Generation 2', labelShort: 'Gen 2' },
   { id: 'other', label: 'Other' },
 ];
 

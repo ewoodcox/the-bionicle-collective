@@ -3,6 +3,7 @@ import { readFile, writeFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
+import { a as isAuthConfigured, i as isAuthenticated } from '../../../chunks/adminAuth_CE1MGqB7.mjs';
 export { renderers } from '../../../renderers.mjs';
 
 const __dirname$1 = dirname(fileURLToPath(import.meta.url));
@@ -38,7 +39,7 @@ async function upsertCollectionEntry$1(setId, data) {
   return merged;
 }
 
-const KV_KEY = "collection-store";
+const R2_KEY = "collection.json";
 function parseStore(raw) {
   if (!raw) return {};
   try {
@@ -48,13 +49,15 @@ function parseStore(raw) {
   }
   return {};
 }
-async function getCollectionEntry(kv, setId) {
-  const raw = await kv.get(KV_KEY);
+async function getCollectionEntry(bucket, setId) {
+  const object = await bucket.get(R2_KEY);
+  const raw = object ? await object.text() : null;
   const store = parseStore(raw);
   return store[setId] ?? null;
 }
-async function upsertCollectionEntry(kv, setId, data) {
-  const raw = await kv.get(KV_KEY);
+async function upsertCollectionEntry(bucket, setId, data) {
+  const object = await bucket.get(R2_KEY);
+  const raw = object ? await object.text() : null;
   const store = parseStore(raw);
   const existing = store[setId] ?? {};
   const merged = {
@@ -64,18 +67,20 @@ async function upsertCollectionEntry(kv, setId, data) {
     notes: data.notes ?? existing.notes ?? ""
   };
   store[setId] = merged;
-  await kv.put(KV_KEY, JSON.stringify(store));
+  await bucket.put(R2_KEY, JSON.stringify(store), {
+    httpMetadata: { contentType: "application/json" }
+  });
   return merged;
 }
 
 const prerender = false;
 function getStore(locals) {
   const env = locals.runtime?.env;
-  const kv = env?.COLLECTION_STORE;
-  if (kv) {
+  const bucket = env?.BIONICLE_COLLECTION;
+  if (bucket) {
     return {
-      get: (id) => getCollectionEntry(kv, id),
-      put: (id, data) => upsertCollectionEntry(kv, id, data)
+      get: (id) => getCollectionEntry(bucket, id),
+      put: (id, data) => upsertCollectionEntry(bucket, id, data)
     };
   }
   return {
@@ -107,14 +112,13 @@ const PUT = async ({ params, request, locals }) => {
     return new Response(JSON.stringify({ error: "Missing id" }), { status: 400 });
   }
   const env = locals.runtime?.env;
-  const secret = env?.COLLECTION_EDIT_SECRET;
-  if (secret) {
-    const provided = request.headers.get("X-Edit-Key");
-    if (provided !== secret) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" }
-      });
+  if (isAuthConfigured(env)) {
+    const ok = await isAuthenticated(request, env);
+    if (!ok) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized. Log in at the edit site home page." }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
     }
   }
   let body;

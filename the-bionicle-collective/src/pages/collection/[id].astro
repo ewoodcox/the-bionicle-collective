@@ -95,25 +95,22 @@ function formatAcquiredDate(acquiredDate: string | undefined): string {
 <Layout title={`${displayLabel} | The Bionicle Collective`} description={`${displayLabel} (${set.year})`}>
   <a href={backHref} class="button-primary back-link">← Back to collection</a>
 
-  <article class="set-detail">
-    <div class="image-wrap">
-      <img src={`/set-photos/${set.id}.jpg`} data-fallback={set.imageUrl} alt={displayLabel} width="280" height="280" onerror="this.onerror=null;this.src=this.dataset.fallback" />
-    </div>
-    <div>
-      <h1>{displayLabel}</h1>
-      <nav class="set-detail-nav" aria-label="Set navigation">
-        {prevHref ? (
-          <a href={prevHref} class="set-detail-arrow set-detail-arrow--prev">← Previous</a>
-        ) : (
-          <span class="set-detail-arrow set-detail-arrow--disabled">← Previous</span>
-        )}
-        {nextHref ? (
-          <a href={nextHref} class="set-detail-arrow set-detail-arrow--next">Next →</a>
-        ) : (
-          <span class="set-detail-arrow set-detail-arrow--disabled">Next →</span>
-        )}
-      </nav>
-      <ul class="meta-list">
+  <div class="set-detail-layout">
+    <nav class="set-detail-nav" aria-label="Set navigation">
+      {prevHref ? (
+        <a href={prevHref} class="set-detail-arrow-btn" aria-label="Previous set">←</a>
+      ) : (
+        <span class="set-detail-arrow-btn set-detail-arrow-btn--disabled" aria-hidden="true">←</span>
+      )}
+    </nav>
+
+    <article class="set-detail">
+      <div class="image-wrap">
+        <img src={`/set-photos/${set.id}.jpg`} data-fallback={set.imageUrl} alt={displayLabel} width="280" height="280" onerror="this.onerror=null;this.src=this.dataset.fallback" />
+      </div>
+      <div>
+        <h1>{displayLabel}</h1>
+        <ul class="meta-list">
         <li><span>Set #</span><span>{setNumberDisplay}</span></li>
         <li><span>Year</span><span>{set.year}</span></li>
         <li><span>Theme</span><span>{set.theme}</span></li>
@@ -180,6 +177,15 @@ function formatAcquiredDate(acquiredDate: string | undefined): string {
       </div>
     </div>
   </article>
+
+    <nav class="set-detail-nav" aria-label="Set navigation">
+      {nextHref ? (
+        <a href={nextHref} class="set-detail-arrow-btn" aria-label="Next set">→</a>
+      ) : (
+        <span class="set-detail-arrow-btn set-detail-arrow-btn--disabled" aria-hidden="true">→</span>
+      )}
+    </nav>
+  </div>
 </Layout>
 
 <script define:vars={{ setId: set.id, initialAcquiredDate: set.acquiredDate ?? '', initialAcquiredFrom: set.acquiredFrom ?? '', initialNotes: set.notes ?? '', initialStatus: '' }}>

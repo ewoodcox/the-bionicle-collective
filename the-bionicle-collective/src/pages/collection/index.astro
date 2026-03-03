@@ -3,6 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import { sets } from '../../data/sets';
 import { getSetDisplayLabel, getSetNumber, getSetSortKey, getMissingSetEntries } from '../../data/setNamesByYear';
 import { YEAR_GROUPS, getYearGroup, getYearsForGroup } from '../../config/constants';
+import { getMasksByYear, getKanohiYears } from '../../data/kanohi';
 import type { SetRecord } from '../../data/sets';
 
 const byGroup = new Map<string, SetRecord[]>();
@@ -15,14 +16,18 @@ for (const s of sets) {
 for (const [, list] of byGroup) list.sort((a, b) => getSetSortKey(a) - getSetSortKey(b));
 
 // Show tabs for Gen 1, Gen 2, Other and a separate Media tab.
-const EXTRA_GROUPS: readonly { id: string; label: string }[] = [{ id: 'other', label: 'Other' }, { id: 'media', label: 'Media' }];
+const EXTRA_GROUPS: readonly { id: string; label: string; labelShort?: string }[] = [{ id: 'other', label: 'Other' }, { id: 'media', label: 'Media' }];
 const VISIBLE_GROUPS = [...YEAR_GROUPS.filter((g) => g.id === 'gen1' || g.id === 'gen2'), ...EXTRA_GROUPS];
+const kanohiYears = getKanohiYears();
+const hasKanohi = kanohiYears.length > 0;
 const groupsWithData = VISIBLE_GROUPS.filter((g) => {
   if (g.id === 'other')
-    return sets.some((s) => {
-      const theme = s.theme ?? '';
-      return theme === 'Combiner Models' || theme === 'Alternate Models';
-    });
+    return (
+      sets.some((s) => {
+        const theme = s.theme ?? '';
+        return theme === 'Combiner Models' || theme === 'Alternate Models';
+      }) || hasKanohi
+    );
   if (g.id === 'media') return sets.some((s) => (s.theme ?? '').toLowerCase().includes('media'));
   return (byGroup.get(g.id) ?? []).length > 0;
 });
@@ -49,7 +54,14 @@ const defaultGroupId =
           aria-selected={group.id === defaultGroupId}
           data-group-id={group.id}
         >
-          {group.label}
+          {group.labelShort ? (
+            <>
+              <span class="generation-tab-full">{group.label}</span>
+              <span class="generation-tab-short">{group.labelShort}</span>
+            </>
+          ) : (
+            group.label
+          )}
         </button>
       ))}
     </div>
@@ -75,10 +87,14 @@ const defaultGroupId =
       ? years.filter((y) => items.some((s) => Number(s.year) === y))
       : [];
     const firstYear = yearsWithData.length > 0 ? yearsWithData[0] : null;
+    const hasCombiner = group.id === 'other' && items.some((s) => (s.theme ?? '') === 'Combiner Models');
+    const hasAlternate = group.id === 'other' && items.some((s) => (s.theme ?? '') === 'Alternate Models');
+    const firstOtherTab =
+      group.id === 'other' ? (hasCombiner ? 'combiner' : hasAlternate ? 'alternate' : 'kanohi') : '';
 
     return (
       <section class="collection-section" id={group.id} data-group-id={group.id} data-active={group.id === defaultGroupId}>
-        {items.length === 0 ? (
+        {items.length === 0 && !(group.id === 'other' && hasKanohi) ? (
           <p class="collection-empty">No sets added yet for this generation.</p>
         ) : group.id === 'other' ? (
           <>
@@ -88,11 +104,11 @@ const defaultGroupId =
               aria-label={`Select group for ${group.label}`}
               data-group-id={group.id}
             >
-              {items.some((s) => (s.theme ?? '') === 'Combiner Models') && (
+              {hasCombiner && (
                 <button
                   type="button"
                   role="tab"
-                  aria-selected={true}
+                  aria-selected={firstOtherTab === 'combiner'}
                   aria-controls={`${group.id}-year-combiner`}
                   id={`${group.id}-tab-combiner`}
                   data-year="combiner"
@@ -101,11 +117,11 @@ const defaultGroupId =
                   Combiner Models
                 </button>
               )}
-              {items.some((s) => (s.theme ?? '') === 'Alternate Models') && (
+              {hasAlternate && (
                 <button
                   type="button"
                   role="tab"
-                  aria-selected={!items.some((s) => (s.theme ?? '') === 'Combiner Models')}
+                  aria-selected={firstOtherTab === 'alternate'}
                   aria-controls={`${group.id}-year-alternate`}
                   id={`${group.id}-tab-alternate`}
                   data-year="alternate"
@@ -114,8 +130,21 @@ const defaultGroupId =
                   Alternate Models
                 </button>
               )}
+              {hasKanohi && (
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={firstOtherTab === 'kanohi'}
+                  aria-controls={`${group.id}-year-kanohi`}
+                  id={`${group.id}-tab-kanohi`}
+                  data-year="kanohi"
+                  data-group-id={group.id}
+                >
+                  Kanohi
+                </button>
+              )}
             </div>
-            {items.some((s) => (s.theme ?? '') === 'Combiner Models') && (
+            {hasCombiner && (
               <div
                 class="year-pane"
                 id={`${group.id}-year-combiner`}
@@ -123,7 +152,7 @@ const defaultGroupId =
                 aria-labelledby={`${group.id}-tab-combiner`}
                 data-year="combiner"
                 data-group-id={group.id}
-                data-active={true}
+                data-active={firstOtherTab === 'combiner'}
               >
                 <div class="set-grid">
                   {items
@@ -140,7 +169,7 @@ const defaultGroupId =
                 </div>
               </div>
             )}
-            {items.some((s) => (s.theme ?? '') === 'Alternate Models') && (
+            {hasAlternate && (
               <div
                 class="year-pane"
                 id={`${group.id}-year-alternate`}
@@ -148,7 +177,7 @@ const defaultGroupId =
                 aria-labelledby={`${group.id}-tab-alternate`}
                 data-year="alternate"
                 data-group-id={group.id}
-                data-active={!items.some((s) => (s.theme ?? '') === 'Combiner Models')}
+                data-active={firstOtherTab === 'alternate'}
               >
                 <div class="set-grid">
                   {items
@@ -163,6 +192,76 @@ const defaultGroupId =
                       </a>
                     ))}
                 </div>
+              </div>
+            )}
+            {hasKanohi && (
+              <div
+                class="year-pane"
+                id={`${group.id}-year-kanohi`}
+                role="tabpanel"
+                aria-labelledby={`${group.id}-tab-kanohi`}
+                data-year="kanohi"
+                data-group-id={group.id}
+                data-active={firstOtherTab === 'kanohi'}
+              >
+                <div
+                  class="year-carousel"
+                  role="tablist"
+                  aria-label="Select year for Kanohi"
+                  data-group-id="other-kanohi"
+                >
+                  {kanohiYears.map((y) => (
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={y === kanohiYears[0]}
+                      aria-controls={`other-kanohi-year-${y}`}
+                      id={`other-kanohi-tab-${y}`}
+                      data-year={String(y)}
+                      data-group-id="other-kanohi"
+                    >
+                      {y}
+                    </button>
+                  ))}
+                </div>
+                {kanohiYears.map((y) => {
+                  const yearMasks = getMasksByYear(y);
+                  return (
+                    <div
+                      class="year-pane"
+                      id={`other-kanohi-year-${y}`}
+                      role="tabpanel"
+                      aria-labelledby={`other-kanohi-tab-${y}`}
+                      data-year={String(y)}
+                      data-group-id="other-kanohi"
+                      data-active={y === kanohiYears[0]}
+                    >
+                      <div class="set-grid">
+                        {yearMasks.map((mask) => (
+                          <div
+                            class={`set-card${mask.owned ? '' : ' set-card--missing'}`}
+                            data-mask-id={mask.id}
+                            aria-label={`${mask.name} ${mask.colorLabel}${mask.owned ? ', owned' : ', not owned'}`}
+                          >
+                            <img
+                              src={mask.imageUrl}
+                              data-fallback={`https://placehold.co/160x160?text=${encodeURIComponent(mask.name)}`}
+                              alt={`${mask.name} - ${mask.colorLabel}`}
+                              width="160"
+                              height="160"
+                              loading="lazy"
+                              onerror="this.onerror=null;this.src=this.dataset.fallback"
+                            />
+                            <div class="info">
+                              <div class="name">{mask.name} - {mask.colorLabel}</div>
+                              <div class="meta">{mask.year} · {mask.type}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </>
@@ -353,6 +452,71 @@ const defaultGroupId =
           if (btn.getAttribute('aria-selected') === 'true') btn.setAttribute('aria-pressed', 'true');
         });
       });
+    })();
+
+    (function () {
+      const maskCards = document.querySelectorAll('[data-mask-id]');
+      if (maskCards.length === 0) return;
+
+      const isEditHost = window.location.hostname === 'edit.bioniclecollective.com';
+      if (isEditHost) {
+        maskCards.forEach((el) => {
+          el.setAttribute('role', 'button');
+          el.setAttribute('tabindex', '0');
+          el.style.cursor = 'pointer';
+          el.setAttribute('aria-label', (el.getAttribute('aria-label') || '') + ' Click to toggle ownership.');
+        });
+      }
+
+      function applyOwnedState(ownedIds) {
+        const owned = new Set(ownedIds || []);
+        maskCards.forEach((card) => {
+          const id = card.getAttribute('data-mask-id');
+          const isOwned = owned.has(id);
+          if (isOwned) {
+            card.classList.remove('set-card--missing');
+          } else {
+            card.classList.add('set-card--missing');
+          }
+          const label = card.getAttribute('aria-label');
+          const base = label ? label.replace(/, (owned|not owned)\.?$/, '').replace(/ Click to toggle.*$/, '') : '';
+          card.setAttribute('aria-label', base + (isOwned ? ', owned' : ', not owned') + (isEditHost ? '. Click to toggle ownership.' : ''));
+        });
+      }
+
+      fetch('/api/kanohi/collection')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (data && Array.isArray(data.ownedIds)) applyOwnedState(data.ownedIds);
+        })
+        .catch(() => {});
+
+      if (isEditHost) {
+        maskCards.forEach((card) => {
+          card.addEventListener('click', async () => {
+            const maskId = card.getAttribute('data-mask-id');
+            if (!maskId) return;
+            const isOwned = !card.classList.contains('set-card--missing');
+            try {
+              const res = await fetch('/api/kanohi/collection', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ maskId, owned: !isOwned }),
+                credentials: 'include',
+              });
+              if (!res.ok) return;
+              const data = await res.json();
+              if (data && Array.isArray(data.ownedIds)) applyOwnedState(data.ownedIds);
+            } catch (_) {}
+          });
+          card.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              card.click();
+            }
+          });
+        });
+      }
     })();
   </script>
 </Layout>
