@@ -1,4 +1,5 @@
 /// <reference path="../.astro/types.d.ts" />
+/// <reference types="@cloudflare/workers-types" />
 
 interface KVNamespace {
   get(key: string): Promise<string | null>;

@@ -239,7 +239,7 @@ const defaultGroupId =
                       <div class="set-grid">
                         {yearMasks.map((mask) => (
                           <div
-                            class={`set-card${mask.owned ? '' : ' set-card--missing'}`}
+                            class={`set-card mask-card${mask.owned ? '' : ' set-card--missing'}`}
                             data-mask-id={mask.id}
                             aria-label={`${mask.name} ${mask.colorLabel}${mask.owned ? ', owned' : ', not owned'}`}
                           >
@@ -256,12 +256,19 @@ const defaultGroupId =
                               <div class="name">{mask.name} - {mask.colorLabel}</div>
                               <div class="meta">{mask.year} · {mask.type}</div>
                             </div>
+                            <label class="mask-card-checkbox-wrap" aria-label={`${mask.name} - mark as owned`} data-edit-only>
+                              <input type="checkbox" class="mask-card-checkbox" data-mask-id={mask.id} checked={mask.owned} />
+                              <span class="mask-card-checkbox-box" aria-hidden="true"></span>
+                            </label>
                           </div>
                         ))}
                       </div>
                     </div>
                   );
                 })}
+                <div class="kanohi-save-row" data-edit-only>
+                  <button type="button" class="kanohi-save-btn">Save Kanohi ownership</button>
+                </div>
               </div>
             )}
           </>
@@ -460,13 +467,7 @@ const defaultGroupId =
 
       const isEditHost = window.location.hostname === 'edit.bioniclecollective.com';
       if (isEditHost) {
-        maskCards.forEach((el) => {
-          el.classList.add('mask-card-editable');
-          el.setAttribute('role', 'button');
-          el.setAttribute('tabindex', '0');
-          el.style.cursor = 'pointer';
-          el.setAttribute('aria-label', (el.getAttribute('aria-label') || '') + ' Click to toggle ownership.');
-        });
+        document.documentElement.setAttribute('data-host', 'edit');
       }
 
       function applyOwnedState(ownedIds) {
@@ -479,9 +480,11 @@ const defaultGroupId =
           } else {
             card.classList.add('set-card--missing');
           }
+          const cb = card.querySelector('.mask-card-checkbox');
+          if (cb instanceof HTMLInputElement) cb.checked = isOwned;
           const label = card.getAttribute('aria-label');
-          const base = label ? label.replace(/, (owned|not owned)\.?$/, '').replace(/ Click to toggle.*$/, '') : '';
-          card.setAttribute('aria-label', base + (isOwned ? ', owned' : ', not owned') + (isEditHost ? '. Click to toggle ownership.' : ''));
+          const base = label ? label.replace(/, (owned|not owned)\.?$/, '') : '';
+          card.setAttribute('aria-label', base + (isOwned ? ', owned' : ', not owned'));
         });
       }
 
@@ -494,29 +497,47 @@ const defaultGroupId =
 
       if (isEditHost) {
         maskCards.forEach((card) => {
-          card.addEventListener('click', async () => {
-            const maskId = card.getAttribute('data-mask-id');
-            if (!maskId) return;
-            const isOwned = !card.classList.contains('set-card--missing');
-            try {
-              const res = await fetch('/api/kanohi/collection', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ maskId, owned: !isOwned }),
-                credentials: 'include',
-              });
-              if (!res.ok) return;
-              const data = await res.json();
-              if (data && Array.isArray(data.ownedIds)) applyOwnedState(data.ownedIds);
-            } catch (_) {}
-          });
-          card.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              card.click();
+          const cb = card.querySelector('.mask-card-checkbox');
+          if (!(cb instanceof HTMLInputElement)) return;
+          cb.addEventListener('change', () => {
+            const isOwned = cb.checked;
+            if (isOwned) {
+              card.classList.remove('set-card--missing');
+            } else {
+              card.classList.add('set-card--missing');
             }
           });
         });
+
+        const saveBtn = document.querySelector('.kanohi-save-btn');
+        if (saveBtn instanceof HTMLButtonElement) {
+          saveBtn.addEventListener('click', async () => {
+            if (saveBtn.disabled) return;
+            saveBtn.disabled = true;
+            try {
+              const checkboxes = document.querySelectorAll('.mask-card-checkbox');
+              const ownedIds = Array.from(checkboxes)
+                .filter((cb) => cb instanceof HTMLInputElement && cb.checked)
+                .map((cb) => cb.getAttribute('data-mask-id'))
+                .filter((id) => typeof id === 'string');
+              const res = await fetch('/api/kanohi/collection', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ownedIds }),
+                credentials: 'include',
+              });
+              if (!res.ok) {
+                if (res.status === 401) alert('Session expired. Please log in again.');
+                return;
+              }
+              const data = await res.json();
+              if (data && Array.isArray(data.ownedIds)) applyOwnedState(data.ownedIds);
+            } catch (_) {}
+            finally {
+              saveBtn.disabled = false;
+            }
+          });
+        }
       }
     })();
   </script>

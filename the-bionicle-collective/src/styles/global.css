@@ -477,14 +477,99 @@ body {
   pointer-events: none;
 }
 
-/* Allow click on Kanohi masks in edit mode even when marked unowned */
-.mask-card-editable.set-card--missing {
+/* Allow checkbox clicks on Kanohi masks in edit mode even when marked unowned */
+[data-host="edit"] .mask-card.set-card--missing {
   pointer-events: auto;
-  cursor: pointer;
 }
 
 .set-card--missing:hover {
   border-color: transparent;
+}
+
+/* Kanohi edit mode: checkbox in bottom-right, visible only on edit host */
+.mask-card {
+  position: relative;
+}
+
+.mask-card-checkbox-wrap {
+  display: none;
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  cursor: pointer;
+  margin: 0;
+  padding: 0.25rem;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+[data-host="edit"] .mask-card-checkbox-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mask-card-checkbox {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.mask-card-checkbox-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid #fff;
+  border-radius: 3px;
+  background: transparent;
+  transition: background 0.15s, border-color 0.15s;
+  font-size: 0.75rem;
+  color: #000;
+}
+
+.mask-card-checkbox:checked + .mask-card-checkbox-box {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.mask-card-checkbox:checked + .mask-card-checkbox-box::before {
+  content: '✓';
+}
+
+.kanohi-save-row {
+  display: none;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-bg-alt);
+}
+
+[data-host="edit"] .kanohi-save-row {
+  display: block;
+}
+
+.kanohi-save-btn {
+  padding: 0.5rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #000;
+  background: var(--color-accent);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.kanohi-save-btn:hover {
+  opacity: 0.9;
+}
+
+.kanohi-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* Set detail page */

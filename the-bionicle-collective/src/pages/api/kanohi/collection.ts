@@ -46,26 +46,32 @@ export const PUT: APIRoute = async ({ request, locals }) => {
     }
   }
 
-  let body: { maskId?: string; owned?: boolean };
+  let body: { maskId?: string; owned?: boolean; ownedIds?: unknown };
   try {
     body = await request.json();
   } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400 });
   }
 
-  const maskId = typeof body.maskId === 'string' ? body.maskId.trim() : '';
-  const owned = body.owned === true;
-  if (!maskId) {
-    return new Response(JSON.stringify({ error: 'Missing maskId' }), { status: 400 });
+  const store = getStore(locals);
+  let ownedIds: string[];
+
+  if (Array.isArray(body.ownedIds)) {
+    ownedIds = body.ownedIds.filter((id): id is string => typeof id === 'string').filter(Boolean);
+  } else {
+    const maskId = typeof body.maskId === 'string' ? body.maskId.trim() : '';
+    const owned = body.owned === true;
+    if (!maskId) {
+      return new Response(JSON.stringify({ error: 'Missing maskId' }), { status: 400 });
+    }
+    ownedIds = await store.get();
+    if (owned) {
+      if (!ownedIds.includes(maskId)) ownedIds = [...ownedIds, maskId];
+    } else {
+      ownedIds = ownedIds.filter((id) => id !== maskId);
+    }
   }
 
-  const store = getStore(locals);
-  let ownedIds = await store.get();
-  if (owned) {
-    if (!ownedIds.includes(maskId)) ownedIds = [...ownedIds, maskId];
-  } else {
-    ownedIds = ownedIds.filter((id) => id !== maskId);
-  }
   await store.set(ownedIds);
 
   return new Response(JSON.stringify({ ownedIds }), {
