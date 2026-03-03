@@ -22,16 +22,9 @@ Edit **`src/config/site.ts`**:
 
 To use the colors in the site, add CSS variables in **`src/styles/global.css`** that reference your `site.ts` values, or paste the hex codes into the existing `:root` variables there.
 
-### 2. Collection data from your spreadsheet
+### 2. Collection data
 
-**Option A – Import from XLSX (recommended)**  
-1. Put your spreadsheet at **`data/BIONICLE (1).xlsx`**.  
-2. Run **`npm run import:xlsx`**.  
-   - This reads the **Total Count** tab: **column B** = 2001 sets, **column C** = 2002 sets; writes **`src/data/collection.json`**.  
-3. The site uses `collection.json`; re-run the script whenever you update the spreadsheet.
-
-**Option B – Edit by hand**  
-Edit **`src/data/collection.json`** (or **`src/data/sets.ts`** if you switch it back):
+Edit **`src/data/collection.json`** directly:
 
 - **`SetRecord`** is the schema. Each set has: `id`, `name`, `setNumber`, `year`, `theme`, `imageUrl`, and optional `acquiredDate`, `acquiredFrom`, `notes` for bios.
 - Replace the sample `sets` array with your own data. One entry per set.
@@ -41,7 +34,7 @@ Edit **`src/data/collection.json`** (or **`src/data/sets.ts`** if you switch it 
 
 ### 3. Adding a bio to a set
 
-On any set in `src/data/collection.json` (or add fields and re-run the import script), set:
+On any set in `src/data/collection.json`, set:
 
 - **`acquiredDate`** – e.g. `"2020"` or `"2022-06-15"`
 - **`acquiredFrom`** – e.g. `"eBay"`, `"local toy store"`
@@ -61,7 +54,7 @@ Output is in `dist/`. This project is set up for **Cloudflare Pages** (server mo
 
 - **`src/config/site.ts`** – Site name, colors (hex), social links.
 - **`src/config/constants.ts`** – Year groups (2001–2010, 2015–2016, Other).
-- **`src/data/sets.ts`** – Types and loader; **`src/data/collection.json`** – collection data (from `npm run import:xlsx` or hand-edited).
+- **`src/data/sets.ts`** – Types and loader; **`src/data/collection.json`** – collection data (edit directly).
 - **`src/pages/index.astro`** – Home.
 - **`src/pages/collection/index.astro`** – Collection list by year.
 - **`src/pages/collection/[id].astro`** – One page per set (for bios).

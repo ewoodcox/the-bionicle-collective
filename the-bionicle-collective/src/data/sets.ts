@@ -1,8 +1,6 @@
 /**
  * Collection data: one record per set.
- * Generated from spreadsheet by: npm run import:xlsx
- * (Reads data/BIONICLE (1).xlsx, sheet "Total Count"; column B = 2001 set list.)
- * Image URLs: use BionicleSector01 or replace in collection.json / re-import.
+ * Edit src/data/collection.json directly to add or update sets.
  */
 
 import collection from './collection.json';
@@ -22,7 +20,7 @@ export interface SetRecord {
   notes?: string;
 }
 
-/** Loaded from collection.json (see scripts/import-from-xlsx.mjs). */
+/** Loaded from collection.json. */
 export const sets: SetRecord[] = collection as SetRecord[];
 
 export function getSetById(id: string): SetRecord | undefined {

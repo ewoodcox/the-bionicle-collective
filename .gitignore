@@ -2,3 +2,6 @@
 Bionicle
 Collective
 Website.code-workspace
+
+# Spreadsheet no longer used as source; collection.json is edited directly
+the-bionicle-collective/data/*.xlsx

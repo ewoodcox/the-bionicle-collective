@@ -1,10 +1,53 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { sets, getSetById } from '../../data/sets';
-import { getSetDisplayLabel, getSetNumber } from '../../data/setNamesByYear';
+import { getSetDisplayLabel, getSetNumber, getSetSortKey } from '../../data/setNamesByYear';
+import { getYearGroup, getYearsForGroup } from '../../config/constants';
+import type { SetRecord } from '../../data/sets';
 
 export function getStaticPaths() {
   return sets.map((set) => ({ params: { id: set.id } }));
+}
+
+/** Build the same ordered sequence as the collection page: Gen1 by year (set number order), Gen2 by year, Other (Combiner, Alternate), Media. */
+function getCollectionPageOrder(): SetRecord[] {
+  const byGroup = new Map<string, SetRecord[]>();
+  for (const g of ['gen1', 'gen2', 'other']) byGroup.set(g, []);
+  for (const s of sets) {
+    const year = Number(s.year);
+    const group = getYearGroup(year);
+    byGroup.get(group)!.push(s);
+  }
+  for (const [, list] of byGroup) list.sort((a, b) => getSetSortKey(a) - getSetSortKey(b));
+
+  const ordered: SetRecord[] = [];
+
+  // Gen1: years 2001-2010, sets in set-number order per year
+  const gen1Years = getYearsForGroup('gen1');
+  const gen1Items = (byGroup.get('gen1') ?? []).filter((s) => (s.theme ?? '') !== 'Combiner Models' && (s.theme ?? '') !== 'Alternate Models');
+  for (const y of gen1Years) {
+    const yearItems = gen1Items.filter((s) => Number(s.year) === y);
+    ordered.push(...yearItems);
+  }
+
+  // Gen2: years 2015-2016
+  const gen2Years = getYearsForGroup('gen2');
+  const gen2Items = (byGroup.get('gen2') ?? []).filter((s) => (s.theme ?? '') !== 'Combiner Models' && (s.theme ?? '') !== 'Alternate Models');
+  for (const y of gen2Years) {
+    const yearItems = gen2Items.filter((s) => Number(s.year) === y);
+    ordered.push(...yearItems);
+  }
+
+  // Other: Combiner Models, then Alternate Models (each sorted by set number)
+  const combiner = sets.filter((s) => (s.theme ?? '') === 'Combiner Models').sort((a, b) => getSetSortKey(a) - getSetSortKey(b));
+  const alternate = sets.filter((s) => (s.theme ?? '') === 'Alternate Models').sort((a, b) => getSetSortKey(a) - getSetSortKey(b));
+  ordered.push(...combiner, ...alternate);
+
+  // Media
+  const media = sets.filter((s) => (s.theme ?? '').toLowerCase().includes('media')).sort((a, b) => getSetSortKey(a) - getSetSortKey(b));
+  ordered.push(...media);
+
+  return ordered;
 }
 
 const { id } = Astro.params;
@@ -17,10 +60,10 @@ if (!set) {
 const displayLabel = getSetDisplayLabel(set);
 const setNumberDisplay = getSetNumber(set);
 
-// Determine prev/next set in the global sequence
-const currentIndex = sets.findIndex((s) => s.id === set.id);
-const prevSet = currentIndex > 0 ? sets[currentIndex - 1] : null;
-const nextSet = currentIndex >= 0 && currentIndex < sets.length - 1 ? sets[currentIndex + 1] : null;
+const orderedSets = getCollectionPageOrder();
+const currentIndex = orderedSets.findIndex((s) => s.id === set.id);
+const prevSet = currentIndex > 0 ? orderedSets[currentIndex - 1] : null;
+const nextSet = currentIndex >= 0 && currentIndex < orderedSets.length - 1 ? orderedSets[currentIndex + 1] : null;
 
 // Preserve generation/year context from query params so Back/Prev/Next remember where you came from
 const url = Astro.url;
