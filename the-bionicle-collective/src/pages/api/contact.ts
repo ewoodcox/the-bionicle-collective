@@ -1,10 +1,9 @@
 /// <reference types="@cloudflare/workers-types" />
 import type { APIRoute } from 'astro';
 import { checkRateLimitContact } from '../../utils/rateLimitR2';
+import { createResendClient } from '../../utils/resend';
 
 export const prerender = false;
-
-const RESEND_API = 'https://api.resend.com/emails';
 
 type Env = { RESEND_API_KEY?: string; OWNER_EMAIL?: string; BIONICLE_COLLECTION?: R2Bucket };
 
@@ -67,24 +66,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const fromName = name || 'Anonymous';
   const emailBody = `You received a message from the Community page:\n\nFrom: ${fromName} <${email}>\nSubject: ${subject}\n\n---\n\n${message}`;
 
-  const res = await fetch(RESEND_API, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: 'The Bionicle Collective <onboarding@resend.dev>',
-      to: [ownerEmail],
-      reply_to: email,
-      subject: `[Community] ${subject}`,
-      text: emailBody,
-    }),
+  const resend = createResendClient(apiKey);
+  const { error } = await resend.emails.send({
+    from: 'The Bionicle Collective <onboarding@resend.dev>',
+    to: [ownerEmail],
+    replyTo: email,
+    subject: `[Community] ${subject}`,
+    text: emailBody,
   });
 
-  if (!res.ok) {
-    const err = await res.text();
-    console.error('Resend API error:', res.status, err);
+  if (error) {
+    console.error('Resend API error:', error);
     return new Response(
       JSON.stringify({ error: 'Failed to send message. Please try again later.' }),
       { status: 502, headers: { 'Content-Type': 'application/json' } }
