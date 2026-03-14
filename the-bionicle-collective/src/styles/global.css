@@ -861,3 +861,4 @@ body {
 .reply-author, .reply-text-input { padding: 0.5rem; font-size: 0.9rem; background: var(--color-bg); border: 1px solid var(--color-text-muted); border-radius: 6px; color: var(--color-text); font-family: inherit; }
 .reply-submit { align-self: flex-start; padding: 0.35rem 0.75rem; font-size: 0.9rem; background: var(--color-accent); color: #fff; border: none; border-radius: 6px; cursor: pointer; }
 .reply-submit:hover { opacity: 0.9; }
+.reply-author-admin { font-weight: 700; color: var(--color-accent); }

@@ -153,7 +153,7 @@ import { site } from '../../config/site';
                   <div class="reply-box ${r.pinned ? 'reply-box--pinned' : ''}" data-reply-id="${r.id}">
                     ${r.pinned ? '<span class="reply-pinned-badge">Pinned</span>' : ''}
                     <p class="reply-text">${escapeHtml(r.text)}</p>
-                    <p class="reply-meta">${escapeHtml(r.authorName || 'Anonymous')} · ${new Date(r.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}</p>
+                    <p class="reply-meta">${r.authorName === 'Admin' ? `<span class="reply-author-admin">Admin</span>` : escapeHtml(r.authorName || 'Anonymous')} · ${new Date(r.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}</p>
                     ${isAdmin && !r.pinned ? `<button type="button" class="admin-btn admin-pin" data-reply-id="${r.id}">Pin</button>` : ''}
                   </div>
                 `).join('')}

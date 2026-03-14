@@ -3,10 +3,11 @@ import type { APIRoute } from 'astro';
 import * as storeR2 from '../../../../utils/suggestionsStoreR2';
 import * as storeMem from '../../../../utils/suggestionsStore';
 import { checkRateLimitReplies } from '../../../../utils/rateLimitR2';
+import { isAuthenticated } from '../../../../utils/adminAuth';
 
 export const prerender = false;
 
-type Env = { BIONICLE_COLLECTION?: R2Bucket };
+type Env = { BIONICLE_COLLECTION?: R2Bucket; ADMIN_SECRET?: string; COLLECTION_EDIT_SECRET?: string };
 
 function getStore(locals: App.Locals) {
   const env = (locals as { runtime?: { env?: Env } }).runtime?.env;
@@ -61,7 +62,9 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
     });
   }
 
-  const authorName = body?.authorName != null ? String(body.authorName).trim() : undefined;
+  const envForAuth = (locals as { runtime?: { env?: Env } }).runtime?.env;
+  const isAdmin = await isAuthenticated(request, envForAuth);
+  const authorName = isAdmin ? 'Admin' : (body?.authorName != null ? String(body.authorName).trim() : undefined);
   const store = getStore(locals);
   const suggestion = await store.addReply(id, { text, authorName });
 
