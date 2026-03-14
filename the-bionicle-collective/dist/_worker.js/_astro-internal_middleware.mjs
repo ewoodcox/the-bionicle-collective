@@ -1,8 +1,8 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { d as defineMiddleware, s as sequence } from './chunks/index_B_evQWZ3.mjs';
+import { d as defineMiddleware, s as sequence } from './chunks/index_DU40keGK.mjs';
 import { i as isAuthenticated } from './chunks/adminAuth_CE1MGqB7.mjs';
-import './chunks/astro-designed-error-pages_BH7HHw2O.mjs';
-import './chunks/astro/server_Cg27aoHm.mjs';
+import './chunks/astro-designed-error-pages_BmBdAF5r.mjs';
+import './chunks/astro/server_DXfHa-2P.mjs';
 
 const EDIT_HOST = "edit.bioniclecollective.com";
 const onRequest$2 = defineMiddleware(async (context, next) => {

@@ -1,0 +1,230 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { site } from '../../config/site';
+---
+<Layout title="Community | The Bionicle Collective" description="Contact the collector and suggest items to add to the site.">
+  <div class="community-page">
+    <h1>Community</h1>
+    <p class="community-intro">
+      Get in touch with the collector or suggest items you'd like to see added to The Bionicle Collective.
+    </p>
+
+    <section class="community-section" aria-labelledby="contact-heading">
+      <h2 id="contact-heading">Contact</h2>
+      <p class="section-desc">Send a private message directly to the collection owner. Your message will be forwarded via email.</p>
+      <form id="contact-form" class="community-form">
+        <div class="form-row">
+          <label for="contact-name">Name</label>
+          <input id="contact-name" name="name" type="text" required placeholder="Your name" autocomplete="name" />
+        </div>
+        <div class="form-row">
+          <label for="contact-email">Email</label>
+          <input id="contact-email" name="email" type="email" required placeholder="your@email.com" autocomplete="email" />
+        </div>
+        <div class="form-row">
+          <label for="contact-subject">Subject</label>
+          <select id="contact-subject" name="subject">
+            <option value="general">General inquiry</option>
+            <option value="collection">Collection question</option>
+            <option value="suggestion">Suggestion</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="contact-message">Message</label>
+          <textarea id="contact-message" name="message" required rows="5" placeholder="Your message..." maxlength="2000"></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="button-primary">Send message</button>
+          <span id="contact-status" class="form-status" aria-live="polite"></span>
+        </div>
+      </form>
+    </section>
+
+    <section class="community-section" aria-labelledby="suggestions-heading">
+      <h2 id="suggestions-heading">Suggestions</h2>
+      <p class="section-desc">Recommend sets, masks, or other items to add to the site. Community members can upvote or downvote ideas.</p>
+
+      <form id="suggestion-form" class="community-form">
+        <div class="form-row">
+          <label for="suggestion-title">Title</label>
+          <input id="suggestion-title" name="title" type="text" required placeholder="e.g. Add 2005 Visorak" maxlength="100" />
+        </div>
+        <div class="form-row">
+          <label for="suggestion-description">Description (optional)</label>
+          <textarea id="suggestion-description" name="description" rows="3" placeholder="Why should this be added?" maxlength="500"></textarea>
+        </div>
+        <div class="form-row">
+          <label for="suggestion-name">Your name (optional, for credit)</label>
+          <input id="suggestion-name" name="submitterName" type="text" placeholder="Anonymous" maxlength="60" />
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="button-primary">Submit suggestion</button>
+          <span id="suggestion-status" class="form-status" aria-live="polite"></span>
+        </div>
+      </form>
+
+      <div id="suggestions-list" class="suggestions-list">
+        <p class="loading-msg">Loading suggestions...</p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      if (typeof document === 'undefined') return;
+
+      const contactForm = document.getElementById('contact-form');
+      const contactStatus = document.getElementById('contact-status');
+      const suggestionForm = document.getElementById('suggestion-form');
+      const suggestionStatus = document.getElementById('suggestion-status');
+      const suggestionsList = document.getElementById('suggestions-list');
+
+      function setStatus(el, text, isError) {
+        if (!el) return;
+        el.textContent = text;
+        el.className = 'form-status' + (isError ? ' form-status--error' : '');
+      }
+
+      if (contactForm && contactStatus) {
+        contactForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const fd = new FormData(contactForm as HTMLFormElement);
+          setStatus(contactStatus, 'Sending...', false);
+          try {
+            const res = await fetch('/api/contact', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                name: fd.get('name'),
+                email: fd.get('email'),
+                subject: fd.get('subject'),
+                message: fd.get('message'),
+              }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+              setStatus(contactStatus, 'Message sent! We\'ll get back to you soon.', false);
+              (contactForm as HTMLFormElement).reset();
+            } else {
+              setStatus(contactStatus, data.error || 'Failed to send. Try again later.', true);
+            }
+          } catch {
+            setStatus(contactStatus, 'Network error. Please try again.', true);
+          }
+        });
+      }
+
+      function renderSuggestion(s: { id: string; title: string; description?: string; upvotes: number; downvotes: number; createdAt: string; submitterName?: string }) {
+        const score = s.upvotes - s.downvotes;
+        const div = document.createElement('div');
+        div.className = 'suggestion-card';
+        div.dataset.id = s.id;
+        const date = new Date(s.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' });
+        div.innerHTML = `
+          <div class="suggestion-votes">
+            <button type="button" class="vote-btn vote-up" aria-label="Upvote" data-direction="up">+</button>
+            <span class="vote-score">${score}</span>
+            <button type="button" class="vote-btn vote-down" aria-label="Downvote" data-direction="down">−</button>
+          </div>
+          <div class="suggestion-body">
+            <h3 class="suggestion-title">${escapeHtml(s.title)}</h3>
+            ${s.description ? `<p class="suggestion-desc">${escapeHtml(s.description)}</p>` : ''}
+            <p class="suggestion-meta">${escapeHtml(s.submitterName || 'Anonymous')} · ${date}</p>
+          </div>
+        `;
+        const upBtn = div.querySelector('.vote-up');
+        const downBtn = div.querySelector('.vote-down');
+        const scoreEl = div.querySelector('.vote-score');
+        const vote = async (dir: 'up' | 'down') => {
+          try {
+            const res = await fetch(`/api/suggestions/${s.id}/vote`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ direction: dir }),
+              credentials: 'include',
+            });
+            const data = await res.json();
+            if (res.ok && data.upvotes != null && data.downvotes != null && scoreEl) {
+              const newScore = data.upvotes - data.downvotes;
+              scoreEl.textContent = String(newScore);
+              upBtn?.classList.toggle('voted', dir === 'up');
+              downBtn?.classList.toggle('voted', dir === 'down');
+            }
+          } catch {}
+        };
+        upBtn?.addEventListener('click', () => vote('up'));
+        downBtn?.addEventListener('click', () => vote('down'));
+        return div;
+      }
+
+      function escapeHtml(text: string) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      async function loadSuggestions() {
+        if (!suggestionsList) return;
+        try {
+          const res = await fetch('/api/suggestions');
+          const data = await res.json();
+          if (res.ok && Array.isArray(data.suggestions)) {
+            suggestionsList.innerHTML = '';
+            if (data.suggestions.length === 0) {
+              const p = document.createElement('p');
+              p.className = 'suggestions-empty';
+              p.textContent = 'No suggestions yet. Be the first to recommend something!';
+              suggestionsList.appendChild(p);
+            } else {
+              const votes = (document.cookie.match(/suggestion_votes=([^;]+)/)?.[1]) ? JSON.parse(decodeURIComponent(document.cookie.match(/suggestion_votes=([^;]+)/)![1])) : {};
+              data.suggestions.forEach((s: { id: string; title: string; description?: string; upvotes: number; downvotes: number; createdAt: string; submitterName?: string }) => {
+                const card = renderSuggestion(s);
+                const upBtn = card.querySelector('.vote-up');
+                const downBtn = card.querySelector('.vote-down');
+                if (votes[s.id] === 'up') upBtn?.classList.add('voted');
+                if (votes[s.id] === 'down') downBtn?.classList.add('voted');
+                suggestionsList.appendChild(card);
+              });
+            }
+          } else {
+            suggestionsList.innerHTML = '<p class="suggestions-error">Failed to load suggestions.</p>';
+          }
+        } catch {
+          suggestionsList.innerHTML = '<p class="suggestions-error">Failed to load suggestions.</p>';
+        }
+      }
+
+      if (suggestionForm && suggestionStatus && suggestionsList) {
+        suggestionForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const fd = new FormData(suggestionForm as HTMLFormElement);
+          setStatus(suggestionStatus, 'Submitting...', false);
+          try {
+            const res = await fetch('/api/suggestions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                title: fd.get('title'),
+                description: fd.get('description') || undefined,
+                submitterName: fd.get('submitterName') || undefined,
+              }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+              setStatus(suggestionStatus, 'Suggestion added!', false);
+              (suggestionForm as HTMLFormElement).reset();
+              loadSuggestions();
+            } else {
+              setStatus(suggestionStatus, data.error || 'Failed to add suggestion.', true);
+            }
+          } catch {
+            setStatus(suggestionStatus, 'Network error. Please try again.', true);
+          }
+        });
+      }
+
+      loadSuggestions();
+    })();
+  </script>
+</Layout>

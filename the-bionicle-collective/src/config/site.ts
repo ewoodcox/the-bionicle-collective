@@ -35,6 +35,7 @@ export const colors = {
 /** Social links for the collection (YouTube, Facebook, Instagram, Bluesky). */
 export const social = {
   youtube: 'https://youtube.com/@bioniclecollective',
+  facebook: 'https://facebook.com/bioniclecollective',
   instagram: 'https://instagram.com/bioniclecollective',
   bluesky: 'https://bsky.app/profile/lumberingstill.bsky.social',
 } as const;

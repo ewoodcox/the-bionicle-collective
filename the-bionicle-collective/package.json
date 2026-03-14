@@ -9,10 +9,12 @@
     "preview": "astro preview",
     "upload:kv": "node scripts/upload-collection-store-to-kv.mjs",
     "verify:r2": "node scripts/verify-r2-collection-format.mjs",
-    "fetch:kanohi": "node scripts/fetch-kanohi-bricklink.mjs"
+    "fetch:kanohi": "node scripts/fetch-kanohi-bricklink.mjs",
+    "warm:kanohi-images": "node scripts/warm-kanohi-image-cache.mjs"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^12.6.12",
+    "@rollup/rollup-win32-x64-msvc": "^4.59.0",
     "astro": "^5.17.3",
     "html-escaper": "^3.0.3"
   },

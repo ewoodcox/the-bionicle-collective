@@ -1,0 +1,125 @@
+globalThis.process ??= {}; globalThis.process.env ??= {};
+const R2_KEY = "suggestions.json";
+const VOTES_R2_KEY = "suggestion-votes.json";
+function parseStore(raw) {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed?.suggestions && Array.isArray(parsed.suggestions)) {
+      return parsed.suggestions.filter(
+        (s) => s && typeof s.id === "string" && typeof s.title === "string" && typeof s.description === "string" && typeof s.upvotes === "number" && typeof s.downvotes === "number" && typeof s.createdAt === "string"
+      );
+    }
+  } catch {
+  }
+  return [];
+}
+async function getSuggestions(bucket) {
+  const object = await bucket.get(R2_KEY);
+  const raw = object ? await object.text() : null;
+  const suggestions = parseStore(raw);
+  return suggestions.sort((a, b) => {
+    const scoreA = a.upvotes - a.downvotes;
+    const scoreB = b.upvotes - b.downvotes;
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+}
+async function addSuggestion$1(bucket, data) {
+  const object = await bucket.get(R2_KEY);
+  const raw = object ? await object.text() : null;
+  const suggestions = parseStore(raw);
+  const id = crypto.randomUUID();
+  const suggestion = {
+    id,
+    title: data.title.slice(0, 100),
+    description: data.description.slice(0, 500),
+    submitterName: data.submitterName?.slice(0, 100),
+    upvotes: 0,
+    downvotes: 0,
+    createdAt: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  suggestions.push(suggestion);
+  await bucket.put(R2_KEY, JSON.stringify({ suggestions }), {
+    httpMetadata: { contentType: "application/json" }
+  });
+  return suggestion;
+}
+function parseVotesStore(raw) {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object") return parsed;
+  } catch {
+  }
+  return {};
+}
+async function getPreviousVote(bucket, visitorId, suggestionId) {
+  const object = await bucket.get(VOTES_R2_KEY);
+  const raw = object ? await object.text() : null;
+  const store = parseVotesStore(raw);
+  const dir = store[visitorId]?.[suggestionId];
+  return dir === "up" || dir === "down" ? dir : null;
+}
+async function recordVote(bucket, visitorId, suggestionId, direction) {
+  const object = await bucket.get(VOTES_R2_KEY);
+  const raw = object ? await object.text() : null;
+  const store = parseVotesStore(raw);
+  if (!store[visitorId]) store[visitorId] = {};
+  store[visitorId][suggestionId] = direction;
+  await bucket.put(VOTES_R2_KEY, JSON.stringify(store), {
+    httpMetadata: { contentType: "application/json" }
+  });
+}
+async function applyVote$1(bucket, suggestionId, direction, previousDirection) {
+  const object = await bucket.get(R2_KEY);
+  const raw = object ? await object.text() : null;
+  const suggestions = parseStore(raw);
+  const idx = suggestions.findIndex((s2) => s2.id === suggestionId);
+  if (idx < 0) return null;
+  const s = suggestions[idx];
+  if (previousDirection === "up") s.upvotes = Math.max(0, s.upvotes - 1);
+  if (previousDirection === "down") s.downvotes = Math.max(0, s.downvotes - 1);
+  if (direction === "up") s.upvotes += 1;
+  else s.downvotes += 1;
+  await bucket.put(R2_KEY, JSON.stringify({ suggestions }), {
+    httpMetadata: { contentType: "application/json" }
+  });
+  return s;
+}
+
+let inMemorySuggestions = [];
+async function listSuggestions() {
+  return [...inMemorySuggestions].sort((a, b) => {
+    const scoreA = a.upvotes - a.downvotes;
+    const scoreB = b.upvotes - b.downvotes;
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+}
+async function addSuggestion(data) {
+  const id = crypto.randomUUID();
+  const suggestion = {
+    id,
+    title: data.title.slice(0, 100),
+    description: data.description.slice(0, 500),
+    submitterName: data.submitterName?.slice(0, 100),
+    upvotes: 0,
+    downvotes: 0,
+    createdAt: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  inMemorySuggestions.push(suggestion);
+  return suggestion;
+}
+async function applyVote(id, direction, previousDirection) {
+  const idx = inMemorySuggestions.findIndex((s2) => s2.id === id);
+  if (idx < 0) return null;
+  const s = inMemorySuggestions[idx];
+  if (previousDirection === "up") s.upvotes = Math.max(0, s.upvotes - 1);
+  if (previousDirection === "down") s.downvotes = Math.max(0, s.downvotes - 1);
+  if (direction === "up") s.upvotes += 1;
+  else s.downvotes += 1;
+  return s;
+}
+
+export { applyVote$1 as a, applyVote as b, addSuggestion$1 as c, getSuggestions as d, addSuggestion as e, getPreviousVote as g, listSuggestions as l, recordVote as r };

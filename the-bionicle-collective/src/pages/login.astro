@@ -1,0 +1,40 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="Admin login | The Bionicle Collective" description="Admin login for collection edits.">
+  <div class="login-page">
+    <h1>Admin login</h1>
+    <p>Enter your admin secret to edit "In my Collection" on set pages.</p>
+    <form id="login-form" class="login-form">
+      <label for="secret" class="login-label">Secret</label>
+      <input type="password" id="secret" name="secret" class="login-input" autocomplete="current-password" required />
+      <button type="submit" class="button-primary">Log in</button>
+    </form>
+    <p id="login-error" class="login-error" aria-live="polite" hidden></p>
+  </div>
+
+  <script>
+    const form = document.getElementById('login-form');
+    const errorEl = document.getElementById('login-error');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorEl.hidden = true;
+      errorEl.textContent = '';
+      const secret = (document.getElementById('secret') as HTMLInputElement).value;
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret }),
+        credentials: 'include',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        errorEl.textContent = data.error || 'Login failed';
+        errorEl.hidden = false;
+        return;
+      }
+      const next = new URLSearchParams(window.location.search).get('next') || '/collection/';
+      window.location.href = next;
+    });
+  </script>
+</Layout>

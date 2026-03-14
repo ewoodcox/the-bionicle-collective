@@ -1,3 +1,3 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-export { a as page } from '../chunks/image-endpoint_eDjBZRlS.mjs';
+export { a as page } from '../chunks/image-endpoint_DxAwpPns.mjs';
 export { renderers } from '../renderers.mjs';

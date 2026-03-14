@@ -1,0 +1,5 @@
+# Copy to .dev.vars and fill in your values for local development.
+# These are used by wrangler dev. For production, use: wrangler secret put RESEND_API_KEY
+
+RESEND_API_KEY=re_xxxx
+OWNER_EMAIL=your@email.com
