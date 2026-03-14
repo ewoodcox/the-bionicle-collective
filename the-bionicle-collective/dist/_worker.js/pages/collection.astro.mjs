@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { f as createComponent, l as renderComponent, r as renderTemplate, m as maybeRenderHead, h as addAttribute, n as Fragment, o as renderScript } from '../chunks/astro/server_DXfHa-2P.mjs';
-import { $ as $$Layout } from '../chunks/Layout_BrcL0Ql7.mjs';
+import { $ as $$Layout } from '../chunks/Layout_CAdaPe7t.mjs';
 import { Y as YEAR_GROUPS, s as sets, c as getSetSortKey, d as getYearGroup, e as getYearsForGroup, a as getSetDisplayLabel, b as getSetNumber, f as getMissingSetEntries } from '../chunks/constants_Cc7xRAlb.mjs';
 export { renderers } from '../renderers.mjs';
 

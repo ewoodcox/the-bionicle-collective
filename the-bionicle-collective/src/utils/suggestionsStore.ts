@@ -3,6 +3,14 @@
  * Data is lost on restart; use R2 in production.
  */
 
+export interface Reply {
+  id: string;
+  text: string;
+  authorName?: string;
+  createdAt: string;
+  pinned?: boolean;
+}
+
 export interface Suggestion {
   id: string;
   title: string;
@@ -13,12 +21,26 @@ export interface Suggestion {
   createdAt: string;
   hidden?: boolean;
   adminReply?: { text: string; repliedAt: string };
+  replies?: Reply[];
 }
 
 let inMemorySuggestions: Suggestion[] = [];
 
+function ensureReplies(s: Suggestion): Suggestion {
+  let replies = s.replies ?? [];
+  if (s.adminReply && !replies.some((r) => r.text === s.adminReply!.text)) {
+    replies = [
+      { id: crypto.randomUUID(), text: s.adminReply.text, authorName: 'Admin', createdAt: s.adminReply.repliedAt, pinned: true },
+      ...replies,
+    ];
+    s.replies = replies;
+    delete s.adminReply;
+  }
+  return s;
+}
+
 export async function listSuggestions(includeHidden = false): Promise<Suggestion[]> {
-  let list = [...inMemorySuggestions];
+  let list = inMemorySuggestions.map(ensureReplies);
   if (!includeHidden) list = list.filter((s) => !s.hidden);
   return list.sort((a, b) => {
     const scoreA = a.upvotes - a.downvotes;
@@ -76,14 +98,34 @@ export async function unhideSuggestion(id: string): Promise<Suggestion | null> {
   return inMemorySuggestions[idx];
 }
 
-export async function addAdminReply(id: string, replyText: string): Promise<Suggestion | null> {
+/** Add a reply to a suggestion (any user). */
+export async function addReply(
+  id: string,
+  data: { text: string; authorName?: string }
+): Promise<Suggestion | null> {
   const idx = inMemorySuggestions.findIndex((s) => s.id === id);
   if (idx < 0) return null;
-  inMemorySuggestions[idx].adminReply = {
-    text: replyText.slice(0, 1000),
-    repliedAt: new Date().toISOString(),
-  };
-  return inMemorySuggestions[idx];
+  const s = ensureReplies(inMemorySuggestions[idx]);
+  const replies = s.replies ?? [];
+  replies.push({
+    id: crypto.randomUUID(),
+    text: data.text.slice(0, 1000),
+    authorName: data.authorName?.slice(0, 100),
+    createdAt: new Date().toISOString(),
+  });
+  s.replies = replies;
+  return s;
+}
+
+/** Pin a reply as the top reply (admin only). */
+export async function pinReply(id: string, replyId: string): Promise<Suggestion | null> {
+  const idx = inMemorySuggestions.findIndex((s) => s.id === id);
+  if (idx < 0) return null;
+  const s = ensureReplies(inMemorySuggestions[idx]);
+  const replies = s.replies ?? [];
+  for (const r of replies) r.pinned = r.id === replyId;
+  s.replies = replies;
+  return s;
 }
 
 export async function deleteSuggestion(id: string): Promise<boolean> {

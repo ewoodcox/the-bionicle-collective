@@ -8,6 +8,14 @@
 const R2_KEY = 'suggestions.json';
 const VOTES_R2_KEY = 'suggestion-votes.json';
 
+export interface Reply {
+  id: string;
+  text: string;
+  authorName?: string;
+  createdAt: string;
+  pinned?: boolean;
+}
+
 export interface Suggestion {
   id: string;
   title: string;
@@ -17,10 +25,27 @@ export interface Suggestion {
   downvotes: number;
   createdAt: string;
   hidden?: boolean;
+  /** @deprecated Use replies instead; migrated on read */
   adminReply?: { text: string; repliedAt: string };
+  replies?: Reply[];
 }
 
 type StoreShape = { suggestions: Suggestion[] };
+
+/** Migrate adminReply to replies and ensure replies array exists. */
+function normalizeReplies(s: Suggestion): Suggestion {
+  const replies = [...(s.replies ?? [])];
+  if (s.adminReply && !replies.some((r) => r.text === s.adminReply!.text)) {
+    replies.push({
+      id: crypto.randomUUID(),
+      text: s.adminReply.text,
+      authorName: 'Admin',
+      createdAt: s.adminReply.repliedAt,
+      pinned: true,
+    });
+  }
+  return { ...s, replies: replies.length ? replies : undefined, adminReply: undefined };
+}
 
 function parseStore(raw: string | null): Suggestion[] {
   if (!raw) return [];
@@ -44,10 +69,24 @@ function parseStore(raw: string | null): Suggestion[] {
   return [];
 }
 
+/** Migrate legacy adminReply to replies array. */
+function ensureReplies(s: Suggestion): Suggestion {
+  let replies = s.replies ?? [];
+  if (s.adminReply && !replies.some((r) => r.text === s.adminReply!.text)) {
+    replies = [
+      { id: crypto.randomUUID(), text: s.adminReply.text, createdAt: s.adminReply.repliedAt, pinned: true },
+      ...replies,
+    ];
+    s.replies = replies;
+    delete s.adminReply;
+  }
+  return s;
+}
+
 export async function getSuggestions(bucket: R2Bucket, includeHidden = false): Promise<Suggestion[]> {
   const object = await bucket.get(R2_KEY);
   const raw = object ? await object.text() : null;
-  let suggestions = parseStore(raw);
+  let suggestions = parseStore(raw).map(ensureReplies);
   if (!includeHidden) {
     suggestions = suggestions.filter((s) => !s.hidden);
   }
@@ -176,21 +215,47 @@ export async function unhideSuggestion(bucket: R2Bucket, suggestionId: string): 
   return suggestions[idx];
 }
 
-/** Add admin reply to a suggestion. */
-export async function addAdminReply(
+/** Add a reply to a suggestion (any user). */
+export async function addReply(
   bucket: R2Bucket,
   suggestionId: string,
-  replyText: string
+  data: { text: string; authorName?: string }
 ): Promise<Suggestion | null> {
   const object = await bucket.get(R2_KEY);
   const raw = object ? await object.text() : null;
-  const suggestions = parseStore(raw);
+  const suggestions = parseStore(raw).map(ensureReplies);
   const idx = suggestions.findIndex((s) => s.id === suggestionId);
   if (idx < 0) return null;
-  suggestions[idx].adminReply = {
-    text: replyText.slice(0, 1000),
-    repliedAt: new Date().toISOString(),
+  const s = suggestions[idx];
+  const replies = s.replies ?? [];
+  const reply: Reply = {
+    id: crypto.randomUUID(),
+    text: data.text.slice(0, 1000),
+    authorName: data.authorName?.slice(0, 100),
+    createdAt: new Date().toISOString(),
   };
+  replies.push(reply);
+  s.replies = replies;
+  await bucket.put(R2_KEY, JSON.stringify({ suggestions }), {
+    httpMetadata: { contentType: 'application/json' },
+  });
+  return s;
+}
+
+/** Pin a reply as the top reply (admin only). */
+export async function pinReply(
+  bucket: R2Bucket,
+  suggestionId: string,
+  replyId: string
+): Promise<Suggestion | null> {
+  const object = await bucket.get(R2_KEY);
+  const raw = object ? await object.text() : null;
+  const suggestions = parseStore(raw).map(ensureReplies);
+  const idx = suggestions.findIndex((s) => s.id === suggestionId);
+  if (idx < 0) return null;
+  const replies = suggestions[idx].replies ?? [];
+  for (const r of replies) r.pinned = r.id === replyId;
+  suggestions[idx].replies = replies;
   await bucket.put(R2_KEY, JSON.stringify({ suggestions }), {
     httpMetadata: { contentType: 'application/json' },
   });

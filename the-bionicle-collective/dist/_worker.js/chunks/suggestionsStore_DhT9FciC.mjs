@@ -14,10 +14,22 @@ function parseStore(raw) {
   }
   return [];
 }
+function ensureReplies$1(s) {
+  let replies = s.replies ?? [];
+  if (s.adminReply && !replies.some((r) => r.text === s.adminReply.text)) {
+    replies = [
+      { id: crypto.randomUUID(), text: s.adminReply.text, createdAt: s.adminReply.repliedAt, pinned: true },
+      ...replies
+    ];
+    s.replies = replies;
+    delete s.adminReply;
+  }
+  return s;
+}
 async function getSuggestions(bucket, includeHidden = false) {
   const object = await bucket.get(R2_KEY);
   const raw = object ? await object.text() : null;
-  let suggestions = parseStore(raw);
+  let suggestions = parseStore(raw).map(ensureReplies$1);
   if (!includeHidden) {
     suggestions = suggestions.filter((s) => !s.hidden);
   }
@@ -114,16 +126,36 @@ async function unhideSuggestion$1(bucket, suggestionId) {
   });
   return suggestions[idx];
 }
-async function addAdminReply$1(bucket, suggestionId, replyText) {
+async function addReply$1(bucket, suggestionId, data) {
   const object = await bucket.get(R2_KEY);
   const raw = object ? await object.text() : null;
-  const suggestions = parseStore(raw);
+  const suggestions = parseStore(raw).map(ensureReplies$1);
+  const idx = suggestions.findIndex((s2) => s2.id === suggestionId);
+  if (idx < 0) return null;
+  const s = suggestions[idx];
+  const replies = s.replies ?? [];
+  const reply = {
+    id: crypto.randomUUID(),
+    text: data.text.slice(0, 1e3),
+    authorName: data.authorName?.slice(0, 100),
+    createdAt: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  replies.push(reply);
+  s.replies = replies;
+  await bucket.put(R2_KEY, JSON.stringify({ suggestions }), {
+    httpMetadata: { contentType: "application/json" }
+  });
+  return s;
+}
+async function pinReply$1(bucket, suggestionId, replyId) {
+  const object = await bucket.get(R2_KEY);
+  const raw = object ? await object.text() : null;
+  const suggestions = parseStore(raw).map(ensureReplies$1);
   const idx = suggestions.findIndex((s) => s.id === suggestionId);
   if (idx < 0) return null;
-  suggestions[idx].adminReply = {
-    text: replyText.slice(0, 1e3),
-    repliedAt: (/* @__PURE__ */ new Date()).toISOString()
-  };
+  const replies = suggestions[idx].replies ?? [];
+  for (const r of replies) r.pinned = r.id === replyId;
+  suggestions[idx].replies = replies;
   await bucket.put(R2_KEY, JSON.stringify({ suggestions }), {
     httpMetadata: { contentType: "application/json" }
   });
@@ -143,8 +175,20 @@ async function deleteSuggestion$1(bucket, suggestionId) {
 }
 
 let inMemorySuggestions = [];
+function ensureReplies(s) {
+  let replies = s.replies ?? [];
+  if (s.adminReply && !replies.some((r) => r.text === s.adminReply.text)) {
+    replies = [
+      { id: crypto.randomUUID(), text: s.adminReply.text, authorName: "Admin", createdAt: s.adminReply.repliedAt, pinned: true },
+      ...replies
+    ];
+    s.replies = replies;
+    delete s.adminReply;
+  }
+  return s;
+}
 async function listSuggestions(includeHidden = false) {
-  let list = [...inMemorySuggestions];
+  let list = inMemorySuggestions.map(ensureReplies);
   if (!includeHidden) list = list.filter((s) => !s.hidden);
   return list.sort((a, b) => {
     const scoreA = a.upvotes - a.downvotes;
@@ -189,14 +233,28 @@ async function unhideSuggestion(id) {
   inMemorySuggestions[idx].hidden = false;
   return inMemorySuggestions[idx];
 }
-async function addAdminReply(id, replyText) {
-  const idx = inMemorySuggestions.findIndex((s) => s.id === id);
+async function addReply(id, data) {
+  const idx = inMemorySuggestions.findIndex((s2) => s2.id === id);
   if (idx < 0) return null;
-  inMemorySuggestions[idx].adminReply = {
-    text: replyText.slice(0, 1e3),
-    repliedAt: (/* @__PURE__ */ new Date()).toISOString()
-  };
-  return inMemorySuggestions[idx];
+  const s = ensureReplies(inMemorySuggestions[idx]);
+  const replies = s.replies ?? [];
+  replies.push({
+    id: crypto.randomUUID(),
+    text: data.text.slice(0, 1e3),
+    authorName: data.authorName?.slice(0, 100),
+    createdAt: (/* @__PURE__ */ new Date()).toISOString()
+  });
+  s.replies = replies;
+  return s;
+}
+async function pinReply(id, replyId) {
+  const idx = inMemorySuggestions.findIndex((s2) => s2.id === id);
+  if (idx < 0) return null;
+  const s = ensureReplies(inMemorySuggestions[idx]);
+  const replies = s.replies ?? [];
+  for (const r of replies) r.pinned = r.id === replyId;
+  s.replies = replies;
+  return s;
 }
 async function deleteSuggestion(id) {
   const idx = inMemorySuggestions.findIndex((s) => s.id === id);
@@ -205,4 +263,4 @@ async function deleteSuggestion(id) {
   return true;
 }
 
-export { applyVote$1 as a, applyVote as b, addAdminReply$1 as c, deleteSuggestion$1 as d, deleteSuggestion as e, addAdminReply as f, getPreviousVote as g, hideSuggestion$1 as h, unhideSuggestion as i, hideSuggestion as j, addSuggestion$1 as k, getSuggestions as l, addSuggestion as m, listSuggestions as n, recordVote as r, unhideSuggestion$1 as u };
+export { addReply$1 as a, addReply as b, applyVote$1 as c, applyVote as d, deleteSuggestion$1 as e, deleteSuggestion as f, getPreviousVote as g, hideSuggestion$1 as h, pinReply as i, unhideSuggestion as j, hideSuggestion as k, addSuggestion$1 as l, getSuggestions as m, addSuggestion as n, listSuggestions as o, pinReply$1 as p, recordVote as r, unhideSuggestion$1 as u };

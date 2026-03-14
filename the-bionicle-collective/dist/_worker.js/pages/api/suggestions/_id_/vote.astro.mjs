@@ -1,5 +1,5 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { r as recordVote, g as getPreviousVote, a as applyVote, b as applyVote$1 } from '../../../../chunks/suggestionsStore_kPF1oB8s.mjs';
+import { r as recordVote, g as getPreviousVote, c as applyVote, d as applyVote$1 } from '../../../../chunks/suggestionsStore_DhT9FciC.mjs';
 export { renderers } from '../../../../renderers.mjs';
 
 const prerender = false;

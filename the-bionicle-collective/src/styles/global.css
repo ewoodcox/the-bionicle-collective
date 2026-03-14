@@ -822,3 +822,42 @@ body {
 .admin-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
 .admin-btn.admin-delete:hover { border-color: #c95c5c; color: #c95c5c; }
 .suggestion-card--hidden { opacity: 0.85; }
+/* Threaded replies */
+.suggestion-replies { margin-top: 0.75rem; }
+.suggestion-replies--collapsible .replies-toggle { display: block; background: none; border: none; font-size: 0.85rem; color: var(--color-accent); cursor: pointer; padding: 0.25rem 0; margin-bottom: 0.5rem; font-family: inherit; }
+.replies-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.replies-list--collapsed { display: none; }
+.reply-box { padding: 0.5rem 0.75rem; background: rgba(184, 125, 68, 0.1); border-radius: 6px; border-left: 3px solid rgba(184, 125, 68, 0.4); font-size: 0.9rem; }
+.reply-box--pinned { border-left-color: var(--color-accent); background: rgba(184, 125, 68, 0.15); }
+.reply-pinned-badge { font-size: 0.7rem; font-weight: 600; color: var(--color-accent); margin-right: 0.5rem; }
+.reply-text { margin: 0 0 0.25rem 0; }
+.reply-meta { margin: 0; font-size: 0.8rem; color: var(--color-text-muted); }
+.suggestion-reply-form { margin-top: 0.75rem; display: flex; flex-direction: column; gap: 0.35rem; }
+.suggestion-reply-form .reply-author, .suggestion-reply-form .reply-text-input { padding: 0.4rem 0.5rem; font-size: 0.9rem; font-family: inherit; background: var(--color-bg); border: 1px solid var(--color-text-muted); border-radius: 6px; color: var(--color-text); }
+.reply-submit { align-self: flex-start; padding: 0.35rem 0.6rem; font-size: 0.85rem; background: var(--color-accent); color: var(--color-bg); border: none; border-radius: 6px; cursor: pointer; }
+.reply-submit:hover { opacity: 0.9; }
+.suggestion-replies { margin-top: 0.75rem; }
+.suggestion-replies--collapsible .replies-toggle { display: block; background: none; border: none; color: var(--color-accent); cursor: pointer; font-size: 0.9rem; padding: 0.25rem 0; margin-bottom: 0.5rem; }
+.replies-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.replies-list--collapsed { display: none; }
+.reply-box { padding: 0.5rem 0.75rem; background: rgba(184,125,68,0.1); border-radius: 6px; border-left: 3px solid rgba(184,125,68,0.4); font-size: 0.9rem; position: relative; }
+.reply-box--pinned { border-left-color: var(--color-accent); background: rgba(184,125,68,0.15); }
+.reply-pinned-badge { font-size: 0.7rem; font-weight: 600; color: var(--color-accent); margin-right: 0.5rem; }
+.reply-text { margin: 0 0 0.25rem 0; }
+.reply-meta { margin: 0; font-size: 0.8rem; color: var(--color-text-muted); }
+.suggestion-reply-form { margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem; }
+.suggestion-reply-form .reply-author, .suggestion-reply-form .reply-text-input { padding: 0.4rem 0.5rem; font-size: 0.9rem; background: var(--color-bg); border: 1px solid var(--color-text-muted); border-radius: 6px; color: var(--color-text); font-family: inherit; }
+.suggestion-reply-form .reply-submit { align-self: flex-start; padding: 0.3rem 0.6rem; font-size: 0.85rem; background: var(--color-accent); color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+.suggestion-replies { margin-top: 0.75rem; }
+.suggestion-replies--collapsible .replies-toggle { display: block; background: none; border: none; color: var(--color-accent); cursor: pointer; font-size: 0.9rem; padding: 0.25rem 0; text-align: left; }
+.replies-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.replies-list--collapsed { display: none; }
+.reply-box { padding: 0.5rem 0.75rem; background: rgba(184, 125, 68, 0.12); border-radius: 6px; border-left: 3px solid rgba(184, 125, 68, 0.4); margin-top: 0.5rem; }
+.reply-box--pinned { border-left-color: var(--color-accent); background: rgba(184, 125, 68, 0.18); }
+.reply-pinned-badge { font-size: 0.7rem; font-weight: 600; color: var(--color-accent); margin-right: 0.5rem; }
+.reply-text { margin: 0.25rem 0; font-size: 0.9rem; }
+.reply-meta { margin: 0; font-size: 0.8rem; color: var(--color-text-muted); }
+.suggestion-reply-form { margin-top: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.reply-author, .reply-text-input { padding: 0.5rem; font-size: 0.9rem; background: var(--color-bg); border: 1px solid var(--color-text-muted); border-radius: 6px; color: var(--color-text); font-family: inherit; }
+.reply-submit { align-self: flex-start; padding: 0.35rem 0.75rem; font-size: 0.9rem; background: var(--color-accent); color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+.reply-submit:hover { opacity: 0.9; }

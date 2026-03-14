@@ -4,6 +4,8 @@ const CONTACT_LIMIT = 5;
 const CONTACT_WINDOW_MS = 60 * 60 * 1e3;
 const SUGGESTIONS_LIMIT = 5;
 const SUGGESTIONS_WINDOW_MS = 24 * 60 * 60 * 1e3;
+const REPLIES_LIMIT = 20;
+const REPLIES_WINDOW_MS = 60 * 60 * 1e3;
 function parseStore(raw) {
   if (!raw) return {};
   try {
@@ -47,5 +49,20 @@ async function checkRateLimitSuggestions(bucket, ip) {
   });
   return true;
 }
+async function checkRateLimitReplies(bucket, ip) {
+  if (!bucket) return true;
+  const object = await bucket.get(R2_KEY);
+  const raw = object ? await object.text() : null;
+  const store = parseStore(raw);
+  const entry = store[ip] ?? {};
+  let replies = pruneTimestamps(entry.replies ?? [], REPLIES_WINDOW_MS);
+  if (replies.length >= REPLIES_LIMIT) return false;
+  replies.push(Date.now());
+  store[ip] = { ...entry, replies };
+  await bucket.put(R2_KEY, JSON.stringify(store), {
+    httpMetadata: { contentType: "application/json" }
+  });
+  return true;
+}
 
-export { checkRateLimitSuggestions as a, checkRateLimitContact as c };
+export { checkRateLimitReplies as a, checkRateLimitSuggestions as b, checkRateLimitContact as c };

@@ -115,7 +115,18 @@ import { site } from '../../config/site';
         });
       }
 
-      type SuggestionItem = { id: string; title: string; description?: string; upvotes: number; downvotes: number; createdAt: string; submitterName?: string; hidden?: boolean; adminReply?: { text: string; repliedAt: string } };
+      type ReplyItem = { id: string; text: string; authorName?: string; createdAt: string; pinned?: boolean };
+      type SuggestionItem = { id: string; title: string; description?: string; upvotes: number; downvotes: number; createdAt: string; submitterName?: string; hidden?: boolean; adminReply?: { text: string; repliedAt: string }; replies?: ReplyItem[] };
+
+      function sortReplies(replies: ReplyItem[]): ReplyItem[] {
+        const sorted = [...replies];
+        sorted.sort((a, b) => {
+          if (a.pinned && !b.pinned) return -1;
+          if (!a.pinned && b.pinned) return 1;
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
+        return sorted;
+      }
 
       function renderSuggestion(s: SuggestionItem, isAdmin: boolean) {
         const score = s.upvotes - s.downvotes;
@@ -123,16 +134,37 @@ import { site } from '../../config/site';
         div.className = 'suggestion-card' + (s.hidden ? ' suggestion-card--hidden' : '');
         div.dataset.id = s.id;
         const date = new Date(s.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' });
-        const adminReplyHtml = s.adminReply
-          ? `<div class="suggestion-admin-reply"><strong>Admin:</strong> ${escapeHtml(s.adminReply.text)} <span class="suggestion-admin-reply-date">${new Date(s.adminReply.repliedAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}</span></div>`
-          : '';
+        const allReplies: ReplyItem[] = [];
+        if (s.adminReply) allReplies.push({ id: crypto.randomUUID(), text: s.adminReply.text, authorName: 'Admin', createdAt: s.adminReply.repliedAt, pinned: true });
+        if (s.replies) allReplies.push(...s.replies);
+        const replies = sortReplies(allReplies);
+        const repliesCollapsible = replies.length > 1;
         const adminControlsHtml = isAdmin
           ? `<div class="suggestion-admin-controls">
               <button type="button" class="admin-btn admin-hide" data-action="${s.hidden ? 'unhide' : 'hide'}">${s.hidden ? 'Unhide' : 'Hide'}</button>
-              <button type="button" class="admin-btn admin-reply">Reply</button>
               <button type="button" class="admin-btn admin-delete">Delete</button>
             </div>`
           : '';
+        const repliesHtml = replies.length
+          ? `<div class="suggestion-replies ${repliesCollapsible ? 'suggestion-replies--collapsible' : ''}">
+              ${repliesCollapsible ? `<button type="button" class="replies-toggle" aria-expanded="true">${replies.length} replies ▼</button>` : ''}
+              <div class="replies-list ${repliesCollapsible ? 'replies-list--collapsed' : ''}">
+                ${replies.map((r) => `
+                  <div class="reply-box ${r.pinned ? 'reply-box--pinned' : ''}" data-reply-id="${r.id}">
+                    ${r.pinned ? '<span class="reply-pinned-badge">Pinned</span>' : ''}
+                    <p class="reply-text">${escapeHtml(r.text)}</p>
+                    <p class="reply-meta">${escapeHtml(r.authorName || 'Anonymous')} · ${new Date(r.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}</p>
+                    ${isAdmin && !r.pinned ? `<button type="button" class="admin-btn admin-pin" data-reply-id="${r.id}">Pin</button>` : ''}
+                  </div>
+                `).join('')}
+              </div>
+            </div>`
+          : '';
+        const replyFormHtml = `<div class="suggestion-reply-form">
+            <input type="text" class="reply-author" placeholder="Your name (optional)" maxlength="60" />
+            <textarea class="reply-text-input" placeholder="Add a reply..." rows="2" maxlength="1000"></textarea>
+            <button type="button" class="reply-submit">Reply</button>
+          </div>`;
         div.innerHTML = `
           <div class="suggestion-votes">
             <button type="button" class="vote-btn vote-up" aria-label="Upvote" data-direction="up">+</button>
@@ -143,8 +175,9 @@ import { site } from '../../config/site';
             ${s.hidden ? '<span class="suggestion-hidden-badge">Hidden</span>' : ''}
             <h3 class="suggestion-title">${escapeHtml(s.title)}</h3>
             ${s.description ? `<p class="suggestion-desc">${escapeHtml(s.description)}</p>` : ''}
-            ${adminReplyHtml}
             <p class="suggestion-meta">${escapeHtml(s.submitterName || 'Anonymous')} · ${date}</p>
+            ${repliesHtml}
+            ${replyFormHtml}
             ${adminControlsHtml}
           </div>
         `;
@@ -170,38 +203,94 @@ import { site } from '../../config/site';
         };
         upBtn?.addEventListener('click', () => vote('up'));
         downBtn?.addEventListener('click', () => vote('down'));
-        if (isAdmin) {
-          const hideBtn = div.querySelector('.admin-hide');
-          const replyBtn = div.querySelector('.admin-reply');
-          const deleteBtn = div.querySelector('.admin-delete');
-          hideBtn?.addEventListener('click', () => handleAdminAction(s.id, s.hidden ? 'unhide' : 'hide', undefined, loadSuggestions));
-          replyBtn?.addEventListener('click', () => {
-            const text = prompt('Reply to this suggestion:');
-            if (text) handleAdminAction(s.id, 'reply', text, loadSuggestions);
-          });
-          deleteBtn?.addEventListener('click', () => {
-            if (confirm('Permanently delete this suggestion?')) handleAdminAction(s.id, 'delete', undefined, loadSuggestions);
+        const hideBtn = div.querySelector('.admin-hide');
+        const deleteBtn = div.querySelector('.admin-delete');
+        hideBtn?.addEventListener('click', () => handleHideUnhide(div, s.id, !!s.hidden, loadSuggestions));
+        deleteBtn?.addEventListener('click', () => {
+          if (confirm('Permanently delete this suggestion?')) handleAdminAction(s.id, 'delete', loadSuggestions);
+        });
+        div.querySelectorAll('.admin-pin').forEach((btn) => {
+          btn.addEventListener('click', () => handleAdminAction(s.id, 'pin_reply', (btn as HTMLElement).dataset.replyId!, loadSuggestions));
+        });
+        const repliesToggle = div.querySelector('.replies-toggle');
+        const repliesList = div.querySelector('.replies-list');
+        if (repliesToggle && repliesList) {
+          repliesToggle.addEventListener('click', () => {
+            const collapsed = repliesList.classList.toggle('replies-list--collapsed');
+            (repliesToggle as HTMLElement).setAttribute('aria-expanded', String(!collapsed));
+            (repliesToggle as HTMLElement).textContent = `${replies.length} replies ${collapsed ? '▶' : '▼'}`;
           });
         }
+        const replyForm = div.querySelector('.suggestion-reply-form');
+        const replyAuthor = div.querySelector('.reply-author') as HTMLInputElement | null;
+        const replyTextInput = div.querySelector('.reply-text-input') as HTMLTextAreaElement | null;
+        const replySubmit = div.querySelector('.reply-submit');
+        replySubmit?.addEventListener('click', async () => {
+          const text = replyTextInput?.value?.trim();
+          if (!text) return;
+          try {
+            const res = await fetch(`/api/suggestions/${s.id}/reply`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text, authorName: replyAuthor?.value?.trim() || undefined }),
+              credentials: 'include',
+            });
+            const data = await res.json();
+            if (res.ok) {
+              if (replyTextInput) replyTextInput.value = '';
+              if (replyAuthor) replyAuthor.value = '';
+              loadSuggestions();
+            } else if (!res.ok) alert(data.error || 'Failed to add reply.');
+          } catch { alert('Network error.'); }
+        });
         return div;
       }
 
-      async function handleAdminAction(id: string, action: 'hide' | 'unhide' | 'reply' | 'delete', replyText?: string, onSuccess?: () => void) {
+      async function handleHideUnhide(cardEl: HTMLElement, id: string, currentlyHidden: boolean, onSuccess?: () => void) {
+        const action = currentlyHidden ? 'unhide' : 'hide';
+        const hideBtn = cardEl.querySelector('.admin-hide') as HTMLButtonElement | null;
+        const bodyEl = cardEl.querySelector('.suggestion-body');
+        if (hideBtn && bodyEl) {
+          hideBtn.textContent = action === 'hide' ? 'Unhide' : 'Hide';
+          hideBtn.dataset.action = action === 'hide' ? 'unhide' : 'hide';
+          cardEl.classList.toggle('suggestion-card--hidden', action === 'hide');
+          const badge = bodyEl.querySelector('.suggestion-hidden-badge');
+          if (action === 'hide') {
+            if (!badge) {
+              const span = document.createElement('span');
+              span.className = 'suggestion-hidden-badge';
+              span.textContent = 'Hidden';
+              bodyEl.insertBefore(span, bodyEl.firstChild);
+            }
+          } else if (badge) badge.remove();
+        }
+        try {
+          const res = await fetch(`/api/suggestions/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action }),
+            credentials: 'include',
+          });
+          if (res.ok && onSuccess) onSuccess();
+          else if (!res.ok) { if (hideBtn) { hideBtn.textContent = action === 'hide' ? 'Hide' : 'Unhide'; hideBtn.dataset.action = action; cardEl.classList.toggle('suggestion-card--hidden', currentlyHidden); } loadSuggestions(); }
+        } catch (e) { loadSuggestions(); }
+      }
+
+      async function handleAdminAction(id: string, action: 'delete' | 'pin_reply', replyId?: string, onSuccess?: () => void) {
         try {
           if (action === 'delete') {
             const res = await fetch(`/api/suggestions/${id}`, { method: 'DELETE', credentials: 'include' });
             if (res.ok && onSuccess) onSuccess();
             else if (!res.ok) console.error('Delete failed:', await res.text());
-          } else {
-            const body = action === 'reply' ? { action, replyText } : { action };
+          } else if (action === 'pin_reply' && replyId) {
             const res = await fetch(`/api/suggestions/${id}`, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(body),
+              body: JSON.stringify({ action, replyId }),
               credentials: 'include',
             });
             if (res.ok && onSuccess) onSuccess();
-            else if (!res.ok) console.error('Admin action failed:', await res.text());
+            else if (!res.ok) console.error('Pin failed:', await res.text());
           }
         } catch (e) {
           console.error('Admin action error:', e);

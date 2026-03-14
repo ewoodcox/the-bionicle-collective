@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { i as isAuthenticated } from '../../../chunks/adminAuth_CE1MGqB7.mjs';
-import { d as deleteSuggestion, c as addAdminReply, u as unhideSuggestion, h as hideSuggestion, e as deleteSuggestion$1, f as addAdminReply$1, i as unhideSuggestion$1, j as hideSuggestion$1 } from '../../../chunks/suggestionsStore_kPF1oB8s.mjs';
+import { e as deleteSuggestion, p as pinReply, u as unhideSuggestion, h as hideSuggestion, f as deleteSuggestion$1, i as pinReply$1, j as unhideSuggestion$1, k as hideSuggestion$1 } from '../../../chunks/suggestionsStore_DhT9FciC.mjs';
 export { renderers } from '../../../renderers.mjs';
 
 const prerender = false;
@@ -11,14 +11,14 @@ function getStore(locals) {
     return {
       hide: (id) => hideSuggestion(bucket, id),
       unhide: (id) => unhideSuggestion(bucket, id),
-      addReply: (id, text) => addAdminReply(bucket, id, text),
+      pinReply: (id, replyId) => pinReply(bucket, id, replyId),
       delete: (id) => deleteSuggestion(bucket, id)
     };
   }
   return {
     hide: (id) => hideSuggestion$1(id),
     unhide: (id) => unhideSuggestion$1(id),
-    addReply: (id, text) => addAdminReply$1(id, text),
+    pinReply: (id, replyId) => pinReply$1(id, replyId),
     delete: (id) => deleteSuggestion$1(id)
   };
 }
@@ -75,17 +75,17 @@ const PATCH = async ({ params, request, locals }) => {
       headers: { "Content-Type": "application/json" }
     });
   }
-  if (action === "reply") {
-    const replyText = String(body?.replyText ?? "").trim();
-    if (!replyText) {
-      return new Response(JSON.stringify({ error: "replyText is required" }), {
+  if (action === "pin_reply") {
+    const replyId = String(body?.replyId ?? "").trim();
+    if (!replyId) {
+      return new Response(JSON.stringify({ error: "replyId is required" }), {
         status: 400,
         headers: { "Content-Type": "application/json" }
       });
     }
-    const s = await store.addReply(id, replyText);
+    const s = await store.pinReply(id, replyId);
     if (!s) {
-      return new Response(JSON.stringify({ error: "Suggestion not found" }), {
+      return new Response(JSON.stringify({ error: "Suggestion or reply not found" }), {
         status: 404,
         headers: { "Content-Type": "application/json" }
       });
@@ -96,7 +96,7 @@ const PATCH = async ({ params, request, locals }) => {
     });
   }
   return new Response(
-    JSON.stringify({ error: 'action must be "hide", "unhide", or "reply"' }),
+    JSON.stringify({ error: 'action must be "hide", "unhide", or "pin_reply"' }),
     { status: 400, headers: { "Content-Type": "application/json" } }
   );
 };

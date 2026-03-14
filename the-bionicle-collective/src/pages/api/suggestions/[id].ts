@@ -15,14 +15,14 @@ function getStore(locals: App.Locals) {
     return {
       hide: (id: string) => storeR2.hideSuggestion(bucket, id),
       unhide: (id: string) => storeR2.unhideSuggestion(bucket, id),
-      addReply: (id: string, text: string) => storeR2.addAdminReply(bucket, id, text),
+      pinReply: (id: string, replyId: string) => storeR2.pinReply(bucket, id, replyId),
       delete: (id: string) => storeR2.deleteSuggestion(bucket, id),
     };
   }
   return {
     hide: (id: string) => storeMem.hideSuggestion(id),
     unhide: (id: string) => storeMem.unhideSuggestion(id),
-    addReply: (id: string, text: string) => storeMem.addAdminReply(id, text),
+    pinReply: (id: string, replyId: string) => storeMem.pinReply(id, replyId),
     delete: (id: string) => storeMem.deleteSuggestion(id),
   };
 }
@@ -45,7 +45,7 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
     });
   }
 
-  let body: { action?: string; replyText?: string };
+  let body: { action?: string; replyId?: string };
   try {
     body = await request.json();
   } catch {
@@ -86,17 +86,17 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
     });
   }
 
-  if (action === 'reply') {
-    const replyText = String(body?.replyText ?? '').trim();
-    if (!replyText) {
-      return new Response(JSON.stringify({ error: 'replyText is required' }), {
+  if (action === 'pin_reply') {
+    const replyId = String(body?.replyId ?? '').trim();
+    if (!replyId) {
+      return new Response(JSON.stringify({ error: 'replyId is required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
-    const s = await store.addReply(id, replyText);
+    const s = await store.pinReply(id, replyId);
     if (!s) {
-      return new Response(JSON.stringify({ error: 'Suggestion not found' }), {
+      return new Response(JSON.stringify({ error: 'Suggestion or reply not found' }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' },
       });
@@ -108,7 +108,7 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
   }
 
   return new Response(
-    JSON.stringify({ error: 'action must be "hide", "unhide", or "reply"' }),
+    JSON.stringify({ error: 'action must be "hide", "unhide", or "pin_reply"' }),
     { status: 400, headers: { 'Content-Type': 'application/json' } }
   );
 };
