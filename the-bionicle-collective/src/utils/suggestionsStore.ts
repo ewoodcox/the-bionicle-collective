@@ -11,12 +11,16 @@ export interface Suggestion {
   upvotes: number;
   downvotes: number;
   createdAt: string;
+  hidden?: boolean;
+  adminReply?: { text: string; repliedAt: string };
 }
 
 let inMemorySuggestions: Suggestion[] = [];
 
-export async function listSuggestions(): Promise<Suggestion[]> {
-  return [...inMemorySuggestions].sort((a, b) => {
+export async function listSuggestions(includeHidden = false): Promise<Suggestion[]> {
+  let list = [...inMemorySuggestions];
+  if (!includeHidden) list = list.filter((s) => !s.hidden);
+  return list.sort((a, b) => {
     const scoreA = a.upvotes - a.downvotes;
     const scoreB = b.upvotes - b.downvotes;
     if (scoreB !== scoreA) return scoreB - scoreA;
@@ -56,4 +60,35 @@ export async function applyVote(
   if (direction === 'up') s.upvotes += 1;
   else s.downvotes += 1;
   return s;
+}
+
+export async function hideSuggestion(id: string): Promise<Suggestion | null> {
+  const idx = inMemorySuggestions.findIndex((s) => s.id === id);
+  if (idx < 0) return null;
+  inMemorySuggestions[idx].hidden = true;
+  return inMemorySuggestions[idx];
+}
+
+export async function unhideSuggestion(id: string): Promise<Suggestion | null> {
+  const idx = inMemorySuggestions.findIndex((s) => s.id === id);
+  if (idx < 0) return null;
+  inMemorySuggestions[idx].hidden = false;
+  return inMemorySuggestions[idx];
+}
+
+export async function addAdminReply(id: string, replyText: string): Promise<Suggestion | null> {
+  const idx = inMemorySuggestions.findIndex((s) => s.id === id);
+  if (idx < 0) return null;
+  inMemorySuggestions[idx].adminReply = {
+    text: replyText.slice(0, 1000),
+    repliedAt: new Date().toISOString(),
+  };
+  return inMemorySuggestions[idx];
+}
+
+export async function deleteSuggestion(id: string): Promise<boolean> {
+  const idx = inMemorySuggestions.findIndex((s) => s.id === id);
+  if (idx < 0) return false;
+  inMemorySuggestions.splice(idx, 1);
+  return true;
 }

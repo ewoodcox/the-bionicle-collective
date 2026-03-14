@@ -115,12 +115,24 @@ import { site } from '../../config/site';
         });
       }
 
-      function renderSuggestion(s: { id: string; title: string; description?: string; upvotes: number; downvotes: number; createdAt: string; submitterName?: string }) {
+      type SuggestionItem = { id: string; title: string; description?: string; upvotes: number; downvotes: number; createdAt: string; submitterName?: string; hidden?: boolean; adminReply?: { text: string; repliedAt: string } };
+
+      function renderSuggestion(s: SuggestionItem, isAdmin: boolean) {
         const score = s.upvotes - s.downvotes;
         const div = document.createElement('div');
-        div.className = 'suggestion-card';
+        div.className = 'suggestion-card' + (s.hidden ? ' suggestion-card--hidden' : '');
         div.dataset.id = s.id;
         const date = new Date(s.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' });
+        const adminReplyHtml = s.adminReply
+          ? `<div class="suggestion-admin-reply"><strong>Admin:</strong> ${escapeHtml(s.adminReply.text)} <span class="suggestion-admin-reply-date">${new Date(s.adminReply.repliedAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}</span></div>`
+          : '';
+        const adminControlsHtml = isAdmin
+          ? `<div class="suggestion-admin-controls">
+              <button type="button" class="admin-btn admin-hide" data-action="${s.hidden ? 'unhide' : 'hide'}">${s.hidden ? 'Unhide' : 'Hide'}</button>
+              <button type="button" class="admin-btn admin-reply">Reply</button>
+              <button type="button" class="admin-btn admin-delete">Delete</button>
+            </div>`
+          : '';
         div.innerHTML = `
           <div class="suggestion-votes">
             <button type="button" class="vote-btn vote-up" aria-label="Upvote" data-direction="up">+</button>
@@ -128,9 +140,12 @@ import { site } from '../../config/site';
             <button type="button" class="vote-btn vote-down" aria-label="Downvote" data-direction="down">−</button>
           </div>
           <div class="suggestion-body">
+            ${s.hidden ? '<span class="suggestion-hidden-badge">Hidden</span>' : ''}
             <h3 class="suggestion-title">${escapeHtml(s.title)}</h3>
             ${s.description ? `<p class="suggestion-desc">${escapeHtml(s.description)}</p>` : ''}
+            ${adminReplyHtml}
             <p class="suggestion-meta">${escapeHtml(s.submitterName || 'Anonymous')} · ${date}</p>
+            ${adminControlsHtml}
           </div>
         `;
         const upBtn = div.querySelector('.vote-up');
@@ -155,7 +170,42 @@ import { site } from '../../config/site';
         };
         upBtn?.addEventListener('click', () => vote('up'));
         downBtn?.addEventListener('click', () => vote('down'));
+        if (isAdmin) {
+          const hideBtn = div.querySelector('.admin-hide');
+          const replyBtn = div.querySelector('.admin-reply');
+          const deleteBtn = div.querySelector('.admin-delete');
+          hideBtn?.addEventListener('click', () => handleAdminAction(s.id, s.hidden ? 'unhide' : 'hide', undefined, loadSuggestions));
+          replyBtn?.addEventListener('click', () => {
+            const text = prompt('Reply to this suggestion:');
+            if (text) handleAdminAction(s.id, 'reply', text, loadSuggestions);
+          });
+          deleteBtn?.addEventListener('click', () => {
+            if (confirm('Permanently delete this suggestion?')) handleAdminAction(s.id, 'delete', undefined, loadSuggestions);
+          });
+        }
         return div;
+      }
+
+      async function handleAdminAction(id: string, action: 'hide' | 'unhide' | 'reply' | 'delete', replyText?: string, onSuccess?: () => void) {
+        try {
+          if (action === 'delete') {
+            const res = await fetch(`/api/suggestions/${id}`, { method: 'DELETE', credentials: 'include' });
+            if (res.ok && onSuccess) onSuccess();
+            else if (!res.ok) console.error('Delete failed:', await res.text());
+          } else {
+            const body = action === 'reply' ? { action, replyText } : { action };
+            const res = await fetch(`/api/suggestions/${id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
+              credentials: 'include',
+            });
+            if (res.ok && onSuccess) onSuccess();
+            else if (!res.ok) console.error('Admin action failed:', await res.text());
+          }
+        } catch (e) {
+          console.error('Admin action error:', e);
+        }
       }
 
       function escapeHtml(text: string) {
@@ -167,7 +217,10 @@ import { site } from '../../config/site';
       async function loadSuggestions() {
         if (!suggestionsList) return;
         try {
-          const res = await fetch('/api/suggestions');
+          const adminRes = await fetch('/api/admin/check', { credentials: 'include' });
+          const adminData = await adminRes.json();
+          const isAdmin = !!adminData?.ok;
+          const res = await fetch('/api/suggestions', { credentials: 'include' });
           const data = await res.json();
           if (res.ok && Array.isArray(data.suggestions)) {
             suggestionsList.innerHTML = '';
@@ -178,8 +231,8 @@ import { site } from '../../config/site';
               suggestionsList.appendChild(p);
             } else {
               const votes = (document.cookie.match(/suggestion_votes=([^;]+)/)?.[1]) ? JSON.parse(decodeURIComponent(document.cookie.match(/suggestion_votes=([^;]+)/)![1])) : {};
-              data.suggestions.forEach((s: { id: string; title: string; description?: string; upvotes: number; downvotes: number; createdAt: string; submitterName?: string }) => {
-                const card = renderSuggestion(s);
+              data.suggestions.forEach((s: SuggestionItem) => {
+                const card = renderSuggestion(s, isAdmin);
                 const upBtn = card.querySelector('.vote-up');
                 const downBtn = card.querySelector('.vote-down');
                 if (votes[s.id] === 'up') upBtn?.classList.add('voted');

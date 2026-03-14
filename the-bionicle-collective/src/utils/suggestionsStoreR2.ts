@@ -16,6 +16,8 @@ export interface Suggestion {
   upvotes: number;
   downvotes: number;
   createdAt: string;
+  hidden?: boolean;
+  adminReply?: { text: string; repliedAt: string };
 }
 
 type StoreShape = { suggestions: Suggestion[] };
@@ -42,10 +44,13 @@ function parseStore(raw: string | null): Suggestion[] {
   return [];
 }
 
-export async function getSuggestions(bucket: R2Bucket): Promise<Suggestion[]> {
+export async function getSuggestions(bucket: R2Bucket, includeHidden = false): Promise<Suggestion[]> {
   const object = await bucket.get(R2_KEY);
   const raw = object ? await object.text() : null;
-  const suggestions = parseStore(raw);
+  let suggestions = parseStore(raw);
+  if (!includeHidden) {
+    suggestions = suggestions.filter((s) => !s.hidden);
+  }
   return suggestions.sort((a, b) => {
     const scoreA = a.upvotes - a.downvotes;
     const scoreB = b.upvotes - b.downvotes;
@@ -141,4 +146,67 @@ export async function applyVote(
     httpMetadata: { contentType: 'application/json' },
   });
   return s;
+}
+
+/** Hide a suggestion (admin only). */
+export async function hideSuggestion(bucket: R2Bucket, suggestionId: string): Promise<Suggestion | null> {
+  const object = await bucket.get(R2_KEY);
+  const raw = object ? await object.text() : null;
+  const suggestions = parseStore(raw);
+  const idx = suggestions.findIndex((s) => s.id === suggestionId);
+  if (idx < 0) return null;
+  suggestions[idx].hidden = true;
+  await bucket.put(R2_KEY, JSON.stringify({ suggestions }), {
+    httpMetadata: { contentType: 'application/json' },
+  });
+  return suggestions[idx];
+}
+
+/** Unhide a suggestion (admin only). */
+export async function unhideSuggestion(bucket: R2Bucket, suggestionId: string): Promise<Suggestion | null> {
+  const object = await bucket.get(R2_KEY);
+  const raw = object ? await object.text() : null;
+  const suggestions = parseStore(raw);
+  const idx = suggestions.findIndex((s) => s.id === suggestionId);
+  if (idx < 0) return null;
+  suggestions[idx].hidden = false;
+  await bucket.put(R2_KEY, JSON.stringify({ suggestions }), {
+    httpMetadata: { contentType: 'application/json' },
+  });
+  return suggestions[idx];
+}
+
+/** Add admin reply to a suggestion. */
+export async function addAdminReply(
+  bucket: R2Bucket,
+  suggestionId: string,
+  replyText: string
+): Promise<Suggestion | null> {
+  const object = await bucket.get(R2_KEY);
+  const raw = object ? await object.text() : null;
+  const suggestions = parseStore(raw);
+  const idx = suggestions.findIndex((s) => s.id === suggestionId);
+  if (idx < 0) return null;
+  suggestions[idx].adminReply = {
+    text: replyText.slice(0, 1000),
+    repliedAt: new Date().toISOString(),
+  };
+  await bucket.put(R2_KEY, JSON.stringify({ suggestions }), {
+    httpMetadata: { contentType: 'application/json' },
+  });
+  return suggestions[idx];
+}
+
+/** Delete a suggestion permanently (admin only). */
+export async function deleteSuggestion(bucket: R2Bucket, suggestionId: string): Promise<boolean> {
+  const object = await bucket.get(R2_KEY);
+  const raw = object ? await object.text() : null;
+  const suggestions = parseStore(raw);
+  const idx = suggestions.findIndex((s) => s.id === suggestionId);
+  if (idx < 0) return false;
+  suggestions.splice(idx, 1);
+  await bucket.put(R2_KEY, JSON.stringify({ suggestions }), {
+    httpMetadata: { contentType: 'application/json' },
+  });
+  return true;
 }

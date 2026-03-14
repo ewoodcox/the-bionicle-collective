@@ -14,10 +14,13 @@ function parseStore(raw) {
   }
   return [];
 }
-async function getSuggestions(bucket) {
+async function getSuggestions(bucket, includeHidden = false) {
   const object = await bucket.get(R2_KEY);
   const raw = object ? await object.text() : null;
-  const suggestions = parseStore(raw);
+  let suggestions = parseStore(raw);
+  if (!includeHidden) {
+    suggestions = suggestions.filter((s) => !s.hidden);
+  }
   return suggestions.sort((a, b) => {
     const scoreA = a.upvotes - a.downvotes;
     const scoreB = b.upvotes - b.downvotes;
@@ -87,10 +90,63 @@ async function applyVote$1(bucket, suggestionId, direction, previousDirection) {
   });
   return s;
 }
+async function hideSuggestion$1(bucket, suggestionId) {
+  const object = await bucket.get(R2_KEY);
+  const raw = object ? await object.text() : null;
+  const suggestions = parseStore(raw);
+  const idx = suggestions.findIndex((s) => s.id === suggestionId);
+  if (idx < 0) return null;
+  suggestions[idx].hidden = true;
+  await bucket.put(R2_KEY, JSON.stringify({ suggestions }), {
+    httpMetadata: { contentType: "application/json" }
+  });
+  return suggestions[idx];
+}
+async function unhideSuggestion$1(bucket, suggestionId) {
+  const object = await bucket.get(R2_KEY);
+  const raw = object ? await object.text() : null;
+  const suggestions = parseStore(raw);
+  const idx = suggestions.findIndex((s) => s.id === suggestionId);
+  if (idx < 0) return null;
+  suggestions[idx].hidden = false;
+  await bucket.put(R2_KEY, JSON.stringify({ suggestions }), {
+    httpMetadata: { contentType: "application/json" }
+  });
+  return suggestions[idx];
+}
+async function addAdminReply$1(bucket, suggestionId, replyText) {
+  const object = await bucket.get(R2_KEY);
+  const raw = object ? await object.text() : null;
+  const suggestions = parseStore(raw);
+  const idx = suggestions.findIndex((s) => s.id === suggestionId);
+  if (idx < 0) return null;
+  suggestions[idx].adminReply = {
+    text: replyText.slice(0, 1e3),
+    repliedAt: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  await bucket.put(R2_KEY, JSON.stringify({ suggestions }), {
+    httpMetadata: { contentType: "application/json" }
+  });
+  return suggestions[idx];
+}
+async function deleteSuggestion$1(bucket, suggestionId) {
+  const object = await bucket.get(R2_KEY);
+  const raw = object ? await object.text() : null;
+  const suggestions = parseStore(raw);
+  const idx = suggestions.findIndex((s) => s.id === suggestionId);
+  if (idx < 0) return false;
+  suggestions.splice(idx, 1);
+  await bucket.put(R2_KEY, JSON.stringify({ suggestions }), {
+    httpMetadata: { contentType: "application/json" }
+  });
+  return true;
+}
 
 let inMemorySuggestions = [];
-async function listSuggestions() {
-  return [...inMemorySuggestions].sort((a, b) => {
+async function listSuggestions(includeHidden = false) {
+  let list = [...inMemorySuggestions];
+  if (!includeHidden) list = list.filter((s) => !s.hidden);
+  return list.sort((a, b) => {
     const scoreA = a.upvotes - a.downvotes;
     const scoreB = b.upvotes - b.downvotes;
     if (scoreB !== scoreA) return scoreB - scoreA;
@@ -121,5 +177,32 @@ async function applyVote(id, direction, previousDirection) {
   else s.downvotes += 1;
   return s;
 }
+async function hideSuggestion(id) {
+  const idx = inMemorySuggestions.findIndex((s) => s.id === id);
+  if (idx < 0) return null;
+  inMemorySuggestions[idx].hidden = true;
+  return inMemorySuggestions[idx];
+}
+async function unhideSuggestion(id) {
+  const idx = inMemorySuggestions.findIndex((s) => s.id === id);
+  if (idx < 0) return null;
+  inMemorySuggestions[idx].hidden = false;
+  return inMemorySuggestions[idx];
+}
+async function addAdminReply(id, replyText) {
+  const idx = inMemorySuggestions.findIndex((s) => s.id === id);
+  if (idx < 0) return null;
+  inMemorySuggestions[idx].adminReply = {
+    text: replyText.slice(0, 1e3),
+    repliedAt: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  return inMemorySuggestions[idx];
+}
+async function deleteSuggestion(id) {
+  const idx = inMemorySuggestions.findIndex((s) => s.id === id);
+  if (idx < 0) return false;
+  inMemorySuggestions.splice(idx, 1);
+  return true;
+}
 
-export { applyVote$1 as a, applyVote as b, addSuggestion$1 as c, getSuggestions as d, addSuggestion as e, getPreviousVote as g, listSuggestions as l, recordVote as r };
+export { applyVote$1 as a, applyVote as b, addAdminReply$1 as c, deleteSuggestion$1 as d, deleteSuggestion as e, addAdminReply as f, getPreviousVote as g, hideSuggestion$1 as h, unhideSuggestion as i, hideSuggestion as j, addSuggestion$1 as k, getSuggestions as l, addSuggestion as m, listSuggestions as n, recordVote as r, unhideSuggestion$1 as u };

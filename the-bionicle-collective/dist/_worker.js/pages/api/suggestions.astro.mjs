@@ -1,6 +1,7 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { c as addSuggestion, d as getSuggestions, e as addSuggestion$1, l as listSuggestions } from '../../chunks/suggestionsStore_DK1cpA_m.mjs';
+import { k as addSuggestion, l as getSuggestions, m as addSuggestion$1, n as listSuggestions } from '../../chunks/suggestionsStore_kPF1oB8s.mjs';
 import { a as checkRateLimitSuggestions } from '../../chunks/rateLimitR2_BHQfaWfr.mjs';
+import { i as isAuthenticated } from '../../chunks/adminAuth_CE1MGqB7.mjs';
 export { renderers } from '../../renderers.mjs';
 
 const prerender = false;
@@ -9,18 +10,20 @@ function getStore(locals) {
   const bucket = env?.BIONICLE_COLLECTION;
   if (bucket) {
     return {
-      list: () => getSuggestions(bucket),
+      list: (includeHidden) => getSuggestions(bucket, includeHidden),
       add: (data) => addSuggestion(bucket, data)
     };
   }
   return {
-    list: () => listSuggestions(),
+    list: (includeHidden) => listSuggestions(includeHidden),
     add: (data) => addSuggestion$1(data)
   };
 }
-const GET = async ({ locals }) => {
+const GET = async ({ request, locals }) => {
+  const env = locals.runtime?.env;
+  const includeHidden = await isAuthenticated(request, env);
   const store = getStore(locals);
-  const suggestions = await store.list();
+  const suggestions = await store.list(includeHidden);
   return new Response(JSON.stringify({ suggestions }), {
     status: 200,
     headers: {

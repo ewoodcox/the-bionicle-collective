@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { f as createComponent, l as renderComponent, r as renderTemplate, m as maybeRenderHead, o as renderScript } from '../chunks/astro/server_DXfHa-2P.mjs';
-import { $ as $$Layout } from '../chunks/Layout_CPvPB-j_.mjs';
+import { $ as $$Layout } from '../chunks/Layout_BrcL0Ql7.mjs';
 export { renderers } from '../renderers.mjs';
 
 const $$Index = createComponent(async ($$result, $$props, $$slots) => {

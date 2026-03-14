@@ -3,6 +3,7 @@ import type { APIRoute } from 'astro';
 import * as storeR2 from '../../../utils/suggestionsStoreR2';
 import * as storeMem from '../../../utils/suggestionsStore';
 import { checkRateLimitSuggestions } from '../../../utils/rateLimitR2';
+import { isAuthenticated } from '../../../utils/adminAuth';
 
 export const prerender = false;
 
@@ -13,21 +14,23 @@ function getStore(locals: App.Locals) {
   const bucket = env?.BIONICLE_COLLECTION;
   if (bucket) {
     return {
-      list: () => storeR2.getSuggestions(bucket),
+      list: (includeHidden: boolean) => storeR2.getSuggestions(bucket, includeHidden),
       add: (data: { title: string; description: string; submitterName?: string }) =>
         storeR2.addSuggestion(bucket, data),
     };
   }
   return {
-    list: () => storeMem.listSuggestions(),
+    list: (includeHidden: boolean) => storeMem.listSuggestions(includeHidden),
     add: (data: { title: string; description: string; submitterName?: string }) =>
       storeMem.addSuggestion(data),
   };
 }
 
-export const GET: APIRoute = async ({ locals }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  const env = (locals as { runtime?: { env?: Env } }).runtime?.env;
+  const includeHidden = await isAuthenticated(request, env);
   const store = getStore(locals);
-  const suggestions = await store.list();
+  const suggestions = await store.list(includeHidden);
   return new Response(JSON.stringify({ suggestions }), {
     status: 200,
     headers: {
