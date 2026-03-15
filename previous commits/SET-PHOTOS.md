@@ -4,21 +4,21 @@ To add your own photos for sets, you only need to **put image files in one folde
 
 ## What you need
 
-1. **Folder**  
+1. **Folder**
    Put all set photos in:
    ```text
    public/set-photos/
    ```
 
-2. **Filename = Set ID + `.jpg`**  
-   Each file must be named exactly like the set’s ID, with a `.jpg` extension, for example:
+2. **Filename = Set ID + `.jpg`**
+   Each file must be named exactly like the set's ID, with a `.jpg` extension, for example:
    - `tahu-2001.jpg`
    - `gali-2001.jpg`
-   - `8534-2001.jpg` (if that’s the set ID)
+   - `8534-2001.jpg` (if that's the set ID)
 
-3. **Finding the Set ID**  
-   - Open any set’s page (e.g. “Tahu” from 2001).  
-   - The URL is: `.../collection/<set-id>/`  
+3. **Finding the Set ID**
+   - Open any set's page (e.g. "Tahu" from 2001).
+   - The URL is: `.../collection/<set-id>/`
    - So for `.../collection/tahu-2001/` the set ID is **`tahu-2001`** → your file should be **`tahu-2001.jpg`**.
 
 ## How it works

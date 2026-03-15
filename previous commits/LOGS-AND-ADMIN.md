@@ -7,7 +7,7 @@
 
 ## Log out from edit.bioniclecollective.com
 
-Use the **Log out** link in the header (on any page on the edit subdomain) or on the home page when you’re logged in. That clears the admin cookie and sends you back to the login form.
+Use the **Log out** link in the header (on any page on the edit subdomain) or on the home page when you're logged in. That clears the admin cookie and sends you back to the login form.
 
 ## Where to set ADMIN_SECRET (checklist)
 
@@ -15,26 +15,26 @@ The app reads `ADMIN_SECRET` (or `COLLECTION_EDIT_SECRET`) from the **Cloudflare
 
 ### Production (edit.bioniclecollective.com)
 
-1. **Cloudflare dashboard**  
-   - Go to **Workers & Pages** → open the **Pages project** that serves **edit.bioniclecollective.com** (the one whose custom domain is the edit subdomain).  
-   - **Settings** → **Environment variables** (or **Variables and Secrets**).  
-   - **Add** → name: `ADMIN_SECRET`, value: your secret.  
-   - Choose **Production** (and **Preview** if you use preview deployments).  
+1. **Cloudflare dashboard**
+   - Go to **Workers & Pages** → open the **Pages project** that serves **edit.bioniclecollective.com** (the one whose custom domain is the edit subdomain).
+   - **Settings** → **Environment variables** (or **Variables and Secrets**).
+   - **Add** → name: `ADMIN_SECRET`, value: your secret.
+   - Choose **Production** (and **Preview** if you use preview deployments).
    - Save.
 
-2. **Redeploy**  
+2. **Redeploy**
    - Env vars apply only to **new** deployments. After adding or changing `ADMIN_SECRET`, trigger a new deploy (e.g. **Deployments** → **Create deployment**, or push a commit if you use Git).
 
 3. **If you have two Pages projects** (e.g. one for main site, one for edit), set `ADMIN_SECRET` on the **edit** project (the one with custom domain `edit.bioniclecollective.com`), then redeploy that project.
 
 ### Local development
 
-4. **`.dev.vars`** (recommended for local)  
-   - In the **project root** (same folder as `wrangler.jsonc`), create or edit **`.dev.vars`**.  
-   - Add: `ADMIN_SECRET=your_secret_here`  
+4. **`.dev.vars`** (recommended for local)
+   - In the **project root** (same folder as `wrangler.jsonc`), create or edit **`.dev.vars`**.
+   - Add: `ADMIN_SECRET=your_secret_here`
    - Restart the dev server (`npm run dev`).
 
-5. **Optional: `.env`**  
+5. **Optional: `.env`**
    - You can put `ADMIN_SECRET=...` in **`.env`** for reference; some Wrangler setups load `.env` in local dev. If login works with `.dev.vars` but not with only `.env`, rely on **`.dev.vars`** for local.
 
 ### Verify

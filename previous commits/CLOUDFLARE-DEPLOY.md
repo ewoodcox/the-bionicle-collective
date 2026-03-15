@@ -11,18 +11,18 @@ This guide covers hosting the site on Cloudflare Pages with your domain, KV-back
    - **Build command:** `npm run build`
    - **Build output directory:** `dist`
    - **Root directory:** Leave blank if the repo root is this project; otherwise set it to the project folder (e.g. `the-bionicle-collective`).
-4. Deploy. You’ll get a `*.pages.dev` URL.
+4. Deploy. You'll get a `*.pages.dev` URL.
 
 ## 2. Set your domain in the project
 
-In **`astro.config.mjs`**, set `site` to your real domain (e.g. `https://yourdomain.com`). It’s already set to `https://thebioniclecollective.com`; change it if you use a different domain.
+In **`astro.config.mjs`**, set `site` to your real domain (e.g. `https://yourdomain.com`). It's already set to `https://thebioniclecollective.com`; change it if you use a different domain.
 
 ## 3. KV namespaces and bindings
 
-The collection “In my collection” data is stored in Cloudflare KV when the app runs on Cloudflare. You need two KV namespaces:
+The collection "In my collection" data is stored in Cloudflare KV when the app runs on Cloudflare. You need two KV namespaces:
 
 1. **SESSION** – Used by the Astro Cloudflare adapter for sessions. Create one and note its ID.
-2. **COLLECTION_STORE** – Used for “In my collection” (date acquired, notes, etc.). Create one and note its ID.
+2. **COLLECTION_STORE** – Used for "In my collection" (date acquired, notes, etc.). Create one and note its ID.
 
 **Create namespaces (Wrangler CLI):**
 
@@ -47,13 +47,13 @@ If you deploy via **Wrangler** (`npx wrangler pages deploy dist`) instead of Git
 
 ## 4. Restrict editing to you only
 
-Only you should be able to save “In my collection” changes. Two options:
+Only you should be able to save "In my collection" changes. Two options:
 
 ### Option A – Cloudflare Access (recommended)
 
 1. In the dashboard: **Zero Trust** → **Access** → **Applications** → **Add an application**.
 2. Protect the path used for saving, e.g. **PUT** requests to `/api/collection/*`, or the whole site if you prefer.
-3. Add a **policy** that allows only your email (or a group you’re in). When someone (including you) hits the edit API, Cloudflare will challenge for login; only allowed users can proceed.
+3. Add a **policy** that allows only your email (or a group you're in). When someone (including you) hits the edit API, Cloudflare will challenge for login; only allowed users can proceed.
 
 No code changes needed; the Edit button and API stay as they are.
 
@@ -61,7 +61,7 @@ No code changes needed; the Edit button and API stay as they are.
 
 1. Generate a long random secret (e.g. `openssl rand -hex 32`).
 2. In your Pages project: **Settings** → **Functions** → **Environment variables** → **Add** → **Encrypted** (secret). Name: `COLLECTION_EDIT_SECRET`, value: your secret.
-3. When you want to edit on the live site, click **“Unlock editing”** on a set page, enter that secret, then use **Edit** and **Save**. The site sends the secret in a header; the API only accepts PUTs when the header matches.
+3. When you want to edit on the live site, click **"Unlock editing"** on a set page, enter that secret, then use **Edit** and **Save**. The site sends the secret in a header; the API only accepts PUTs when the header matches.
 
 If `COLLECTION_EDIT_SECRET` is not set, the API does not require the key (useful for local dev or if you rely only on Access).
 
@@ -74,7 +74,7 @@ If `COLLECTION_EDIT_SECRET` is not set, the API does not require the key (useful
 
 ## 6. Optional: Pre-fill KV with existing data
 
-If you have a local **`src/data/collection-store.json`** and want the same “In my collection” data on Cloudflare:
+If you have a local **`src/data/collection-store.json`** and want the same "In my collection" data on Cloudflare:
 
 1. Create the COLLECTION_STORE KV namespace and bind it (step 3).
 2. From the project root, run:
@@ -98,8 +98,8 @@ npx wrangler kv key put "collection-store" --path=src/data/collection-store.json
 | 1 | Connect repo to Cloudflare Pages; set build command and output directory. |
 | 2 | Set `site` in `astro.config.mjs` to your domain. |
 | 3 | Create SESSION and COLLECTION_STORE KV namespaces; put IDs in `wrangler.jsonc`; add KV bindings in the Pages project. |
-| 4 | Restrict edits: use Cloudflare Access and/or set `COLLECTION_EDIT_SECRET` and use “Unlock editing” on the site. |
+| 4 | Restrict edits: use Cloudflare Access and/or set `COLLECTION_EDIT_SECRET` and use "Unlock editing" on the site. |
 | 5 | Add custom domain in Pages and configure DNS. |
 | 6 | (Optional) Run the upload script to seed KV from `collection-store.json`. |
 
-After this, the site is hosted on Cloudflare at your domain, collection data persists in KV, and only you can change “In my collection” (via Access and/or the secret key).
+After this, the site is hosted on Cloudflare at your domain, collection data persists in KV, and only you can change "In my collection" (via Access and/or the secret key).

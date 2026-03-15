@@ -1,9 +1,15 @@
 /**
  * Collection store backed by Cloudflare R2.
- * Reads/writes collection.json in the bound R2 bucket.
+ * Reads/writes collection-store.json in the bound R2 bucket.
+ * This is the master reference for "In my collection" bios; R2 is authoritative in production.
+ *
+ * Migration: If collection-store.json is missing but collection.json (legacy) exists, we read from
+ * legacy and write to the new key so future reads use the canonical location.
  */
+/// <reference types="@cloudflare/workers-types" />
 
-const R2_KEY = 'collection.json';
+const R2_KEY = 'collection-store.json';
+const LEGACY_KEY = 'collection.json';
 
 export interface CollectionEntry {
   acquiredDate?: string;
@@ -25,12 +31,24 @@ function parseStore(raw: string | null): StoreShape {
   return {};
 }
 
+async function getStoreRaw(bucket: R2Bucket): Promise<string | null> {
+  let object = await bucket.get(R2_KEY);
+  let raw = object ? await object.text() : null;
+  if (!raw) {
+    object = await bucket.get(LEGACY_KEY);
+    raw = object ? await object.text() : null;
+    if (raw) {
+      await bucket.put(R2_KEY, raw, { httpMetadata: { contentType: 'application/json' } });
+    }
+  }
+  return raw;
+}
+
 export async function getCollectionEntry(
   bucket: R2Bucket,
   setId: string
 ): Promise<CollectionEntry | null> {
-  const object = await bucket.get(R2_KEY);
-  const raw = object ? await object.text() : null;
+  const raw = await getStoreRaw(bucket);
   const store = parseStore(raw);
   return store[setId] ?? null;
 }
@@ -40,8 +58,7 @@ export async function upsertCollectionEntry(
   setId: string,
   data: CollectionEntry
 ): Promise<CollectionEntry> {
-  const object = await bucket.get(R2_KEY);
-  const raw = object ? await object.text() : null;
+  const raw = await getStoreRaw(bucket);
   const store = parseStore(raw);
   const existing = store[setId] ?? {};
   const merged: CollectionEntry = {

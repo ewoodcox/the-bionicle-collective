@@ -48,7 +48,7 @@ The set detail page shows an “In my collection” block when any of these are 
 npm run build
 ```
 
-Output is in `dist/`. This project is set up for **Cloudflare Pages** (server mode with KV for “In my collection” data). See **`docs/CLOUDFLARE-DEPLOY.md`** for deployment steps, custom domain, KV bindings, and restricting edits to you only.
+Output is in `dist/`. This project is set up for **Cloudflare Pages** (server mode with KV for “In my collection” data). See **`../previous commits/CLOUDFLARE-DEPLOY.md`** for deployment steps, custom domain, KV bindings, and restricting edits to you only.
 
 ## Project structure
 
