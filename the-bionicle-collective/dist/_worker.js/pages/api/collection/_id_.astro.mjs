@@ -39,7 +39,8 @@ async function upsertCollectionEntry$1(setId, data) {
   return merged;
 }
 
-const R2_KEY = "collection.json";
+const R2_KEY = "collection-store.json";
+const LEGACY_KEY = "collection.json";
 function parseStore(raw) {
   if (!raw) return {};
   try {
@@ -49,15 +50,25 @@ function parseStore(raw) {
   }
   return {};
 }
+async function getStoreRaw(bucket) {
+  let object = await bucket.get(R2_KEY);
+  let raw = object ? await object.text() : null;
+  if (!raw) {
+    object = await bucket.get(LEGACY_KEY);
+    raw = object ? await object.text() : null;
+    if (raw) {
+      await bucket.put(R2_KEY, raw, { httpMetadata: { contentType: "application/json" } });
+    }
+  }
+  return raw;
+}
 async function getCollectionEntry(bucket, setId) {
-  const object = await bucket.get(R2_KEY);
-  const raw = object ? await object.text() : null;
+  const raw = await getStoreRaw(bucket);
   const store = parseStore(raw);
   return store[setId] ?? null;
 }
 async function upsertCollectionEntry(bucket, setId, data) {
-  const object = await bucket.get(R2_KEY);
-  const raw = object ? await object.text() : null;
+  const raw = await getStoreRaw(bucket);
   const store = parseStore(raw);
   const existing = store[setId] ?? {};
   const merged = {
@@ -73,6 +84,7 @@ async function upsertCollectionEntry(bucket, setId, data) {
   return merged;
 }
 
+const __vite_import_meta_env__ = {"ASSETS_PREFIX": undefined, "BASE_URL": "/", "DEV": false, "MODE": "production", "PROD": true, "SITE": "https://bioniclecollective.com", "SSR": true};
 const prerender = false;
 function getStore(locals) {
   const env = locals.runtime?.env;
@@ -112,6 +124,16 @@ const PUT = async ({ params, request, locals }) => {
     return new Response(JSON.stringify({ error: "Missing id" }), { status: 400 });
   }
   const env = locals.runtime?.env;
+  const bucket = env?.BIONICLE_COLLECTION;
+  const isProduction = !Object.assign(__vite_import_meta_env__, {})?.DEV;
+  if (isProduction && !bucket) {
+    return new Response(
+      JSON.stringify({
+        error: "Collection storage (R2) is not configured. In Cloudflare Pages → your project → Settings → Functions, add an R2 bucket binding with variable name BIONICLE_COLLECTION linked to your R2 bucket."
+      }),
+      { status: 503, headers: { "Content-Type": "application/json" } }
+    );
+  }
   if (isAuthConfigured(env)) {
     const ok = await isAuthenticated(request, env);
     if (!ok) {
@@ -128,12 +150,21 @@ const PUT = async ({ params, request, locals }) => {
     return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400 });
   }
   const store = getStore(locals);
-  const saved = await store.put(id, {
-    acquiredDate: typeof body.acquiredDate === "string" ? body.acquiredDate : "",
-    acquiredFrom: typeof body.acquiredFrom === "string" ? body.acquiredFrom : "",
-    status: typeof body.status === "string" ? body.status : "",
-    notes: typeof body.notes === "string" ? body.notes : ""
-  });
+  let saved;
+  try {
+    saved = await store.put(id, {
+      acquiredDate: typeof body.acquiredDate === "string" ? body.acquiredDate : "",
+      acquiredFrom: typeof body.acquiredFrom === "string" ? body.acquiredFrom : "",
+      status: typeof body.status === "string" ? body.status : "",
+      notes: typeof body.notes === "string" ? body.notes : ""
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return new Response(
+      JSON.stringify({ error: "Failed to save collection entry", details: message }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
   return new Response(JSON.stringify(saved), {
     status: 200,
     headers: { "Content-Type": "application/json" }

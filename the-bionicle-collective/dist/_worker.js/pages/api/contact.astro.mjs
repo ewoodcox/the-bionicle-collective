@@ -2,15 +2,41 @@ globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as checkRateLimitContact } from '../../chunks/rateLimitR2_B0zxt9YQ.mjs';
 export { renderers } from '../../renderers.mjs';
 
+const MAILCHANNELS_API = "https://api.mailchannels.net/tx/v1/send";
+async function sendEmailViaMailChannels(options) {
+  const { to, from, fromName, replyTo, subject, text } = options;
+  const res = await fetch(MAILCHANNELS_API, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      personalizations: [
+        {
+          to: [{ email: to }],
+          headers: { "Reply-To": replyTo }
+        }
+      ],
+      from: { email: from, name: fromName },
+      subject,
+      content: [{ type: "text/plain", value: text }]
+    })
+  });
+  if (res.ok) {
+    return { ok: true };
+  }
+  const errText = await res.text();
+  console.error("MailChannels API error:", res.status, errText);
+  return { ok: false, error: errText };
+}
+
 const prerender = false;
-const RESEND_API = "https://api.resend.com/emails";
+const CONTACT_EMAIL = "contact@bioniclecollective.com";
+const FROM_EMAIL = "noreply@bioniclecollective.com";
 function getEnv(locals) {
   return locals.runtime?.env ?? {};
 }
 const POST = async ({ request, locals }) => {
   const env = getEnv(locals);
-  const apiKey = env.RESEND_API_KEY;
-  const ownerEmail = env.OWNER_EMAIL;
+  const ownerEmail = env.OWNER_EMAIL ?? CONTACT_EMAIL;
   const ip = request.headers.get("CF-Connecting-IP") ?? request.headers.get("X-Forwarded-For")?.split(",")[0]?.trim() ?? "unknown";
   const bucket = env.BIONICLE_COLLECTION;
   const rateOk = await checkRateLimitContact(bucket, ip);
@@ -18,12 +44,6 @@ const POST = async ({ request, locals }) => {
     return new Response(
       JSON.stringify({ error: "Too many requests. Please try again later." }),
       { status: 429, headers: { "Content-Type": "application/json" } }
-    );
-  }
-  if (!apiKey || !ownerEmail) {
-    return new Response(
-      JSON.stringify({ error: "Contact form is not configured. Please try again later." }),
-      { status: 503, headers: { "Content-Type": "application/json" } }
     );
   }
   let body;
@@ -60,23 +80,16 @@ Subject: ${subject}
 ---
 
 ${message}`;
-  const res = await fetch(RESEND_API, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      from: "The Bionicle Collective <onboarding@resend.dev>",
-      to: [ownerEmail],
-      reply_to: email,
-      subject: `[Community] ${subject}`,
-      text: emailBody
-    })
+  const { ok, error } = await sendEmailViaMailChannels({
+    to: ownerEmail,
+    from: FROM_EMAIL,
+    fromName: "The Bionicle Collective",
+    replyTo: email,
+    subject: `[Community] ${subject}`,
+    text: emailBody
   });
-  if (!res.ok) {
-    const err = await res.text();
-    console.error("Resend API error:", res.status, err);
+  if (!ok) {
+    console.error("MailChannels send failed:", error);
     return new Response(
       JSON.stringify({ error: "Failed to send message. Please try again later." }),
       { status: 502, headers: { "Content-Type": "application/json" } }

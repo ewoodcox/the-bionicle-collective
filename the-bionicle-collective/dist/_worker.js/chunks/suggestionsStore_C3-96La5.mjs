@@ -18,11 +18,14 @@ function ensureReplies$1(s) {
   let replies = s.replies ?? [];
   if (s.adminReply && !replies.some((r) => r.text === s.adminReply.text)) {
     replies = [
-      { id: crypto.randomUUID(), text: s.adminReply.text, createdAt: s.adminReply.repliedAt, pinned: true },
+      { id: crypto.randomUUID(), text: s.adminReply.text, authorName: "Admin", createdAt: s.adminReply.repliedAt, pinned: true },
       ...replies
     ];
     s.replies = replies;
     delete s.adminReply;
+  }
+  for (const r of replies) {
+    if (r.pinned && !r.authorName) r.authorName = "Admin";
   }
   return s;
 }

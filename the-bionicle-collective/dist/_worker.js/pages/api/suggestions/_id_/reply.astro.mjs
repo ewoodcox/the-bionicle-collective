@@ -1,6 +1,7 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { a as addReply, b as addReply$1 } from '../../../../chunks/suggestionsStore_DhT9FciC.mjs';
+import { a as addReply, b as addReply$1 } from '../../../../chunks/suggestionsStore_C3-96La5.mjs';
 import { a as checkRateLimitReplies } from '../../../../chunks/rateLimitR2_B0zxt9YQ.mjs';
+import { i as isAuthenticated } from '../../../../chunks/adminAuth_CE1MGqB7.mjs';
 export { renderers } from '../../../../renderers.mjs';
 
 const prerender = false;
@@ -50,7 +51,9 @@ const POST = async ({ params, request, locals }) => {
       headers: { "Content-Type": "application/json" }
     });
   }
-  const authorName = body?.authorName != null ? String(body.authorName).trim() : void 0;
+  const envForAuth = locals.runtime?.env;
+  const isAdmin = await isAuthenticated(request, envForAuth);
+  const authorName = isAdmin ? "Admin" : body?.authorName != null ? String(body.authorName).trim() : void 0;
   const store = getStore(locals);
   const suggestion = await store.addReply(id, { text, authorName });
   if (!suggestion) {

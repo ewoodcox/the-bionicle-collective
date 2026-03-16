@@ -54,8 +54,10 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 
   const env = (locals as { runtime?: { env?: Env } }).runtime?.env;
   const bucket = env?.BIONICLE_COLLECTION;
-  // In Cloudflare Workers, R2 must be bound; file store (fs) does not exist and would crash
-  if (env && !bucket) {
+  // In Cloudflare Workers, R2 must be bound; file store (fs) does not exist and would crash.
+  // In production (import.meta.env.DEV=false) we always need the bucket.
+  const isProduction = !(import.meta as { env?: { DEV?: boolean } }).env?.DEV;
+  if (isProduction && !bucket) {
     return new Response(
       JSON.stringify({
         error:
@@ -83,12 +85,21 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
   }
 
   const store = getStore(locals);
-  const saved = await store.put(id, {
-    acquiredDate: typeof body.acquiredDate === 'string' ? body.acquiredDate : '',
-    acquiredFrom: typeof body.acquiredFrom === 'string' ? body.acquiredFrom : '',
-    status: typeof body.status === 'string' ? body.status : '',
-    notes: typeof body.notes === 'string' ? body.notes : '',
-  });
+  let saved: { acquiredDate?: string; acquiredFrom?: string; status?: string; notes?: string };
+  try {
+    saved = await store.put(id, {
+      acquiredDate: typeof body.acquiredDate === 'string' ? body.acquiredDate : '',
+      acquiredFrom: typeof body.acquiredFrom === 'string' ? body.acquiredFrom : '',
+      status: typeof body.status === 'string' ? body.status : '',
+      notes: typeof body.notes === 'string' ? body.notes : '',
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return new Response(
+      JSON.stringify({ error: 'Failed to save collection entry', details: message }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
 
   return new Response(JSON.stringify(saved), {
     status: 200,
