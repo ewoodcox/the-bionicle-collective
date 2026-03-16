@@ -52,10 +52,10 @@ Email and API configuration should be established **through Cloudflare** (dashbo
 - **Inbound email**: Use **Cloudflare Email Routing** (Dashboard → Email → Email Routing).
   - Create catch-all or specific addresses (e.g. `contact@bioniclecollective.com`).
   - Forward to your real inbox; no code required.
-- **Contact form (outbound)**: Prefer **MailChannels** (Cloudflare ecosystem) for sending from Workers instead of Resend.
-  - MailChannels offers free sending from Workers when correctly configured.
-  - Configure via Cloudflare dashboard and a Worker that calls MailChannels API.
-- If using Resend for the contact form, it should be configured as an env var (`RESEND_API_KEY`) in the Cloudflare project settings, not in wrangler config or `.dev.vars` for production.
+- **Contact form (outbound)**: Uses **MailChannels** (Cloudflare ecosystem) for sending from Workers.
+  - Requires Domain Lockdown DNS (see `docs/EMAIL-MAILCHANNELS-SETUP.md`).
+  - No API key needed when DNS is correctly configured.
+  - Optional: `OWNER_EMAIL` env var to override recipient (default: `contact@bioniclecollective.com`).
 
 ---
 

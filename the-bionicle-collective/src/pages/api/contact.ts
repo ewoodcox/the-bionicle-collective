@@ -1,11 +1,14 @@
 /// <reference types="@cloudflare/workers-types" />
 import type { APIRoute } from 'astro';
 import { checkRateLimitContact } from '../../utils/rateLimitR2';
-import { createResendClient } from '../../utils/resend';
+import { sendEmailViaMailChannels } from '../../utils/mailchannels';
 
 export const prerender = false;
 
-type Env = { RESEND_API_KEY?: string; OWNER_EMAIL?: string; BIONICLE_COLLECTION?: R2Bucket };
+const CONTACT_EMAIL = 'contact@bioniclecollective.com';
+const FROM_EMAIL = 'noreply@bioniclecollective.com';
+
+type Env = { OWNER_EMAIL?: string; BIONICLE_COLLECTION?: R2Bucket };
 
 function getEnv(locals: App.Locals): Env {
   return (locals as { runtime?: { env?: Env } }).runtime?.env ?? {};
@@ -13,8 +16,7 @@ function getEnv(locals: App.Locals): Env {
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const env = getEnv(locals);
-  const apiKey = env.RESEND_API_KEY;
-  const ownerEmail = env.OWNER_EMAIL;
+  const ownerEmail = env.OWNER_EMAIL ?? CONTACT_EMAIL;
 
   const ip = request.headers.get('CF-Connecting-IP') ?? request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() ?? 'unknown';
   const bucket = env.BIONICLE_COLLECTION;
@@ -23,13 +25,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return new Response(
       JSON.stringify({ error: 'Too many requests. Please try again later.' }),
       { status: 429, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
-  if (!apiKey || !ownerEmail) {
-    return new Response(
-      JSON.stringify({ error: 'Contact form is not configured. Please try again later.' }),
-      { status: 503, headers: { 'Content-Type': 'application/json' } }
     );
   }
 
@@ -66,17 +61,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const fromName = name || 'Anonymous';
   const emailBody = `You received a message from the Community page:\n\nFrom: ${fromName} <${email}>\nSubject: ${subject}\n\n---\n\n${message}`;
 
-  const resend = createResendClient(apiKey);
-  const { error } = await resend.emails.send({
-    from: 'The Bionicle Collective <onboarding@resend.dev>',
-    to: [ownerEmail],
+  const { ok, error } = await sendEmailViaMailChannels({
+    to: ownerEmail,
+    from: FROM_EMAIL,
+    fromName: 'The Bionicle Collective',
     replyTo: email,
     subject: `[Community] ${subject}`,
     text: emailBody,
   });
 
-  if (error) {
-    console.error('Resend API error:', error);
+  if (!ok) {
+    console.error('MailChannels send failed:', error);
     return new Response(
       JSON.stringify({ error: 'Failed to send message. Please try again later.' }),
       { status: 502, headers: { 'Content-Type': 'application/json' } }

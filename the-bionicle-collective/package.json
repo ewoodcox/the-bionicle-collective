@@ -15,8 +15,7 @@
   "dependencies": {
     "@astrojs/cloudflare": "^12.6.12",
     "astro": "^5.17.3",
-    "html-escaper": "^3.0.3",
-    "resend": "^6.9.3"
+    "html-escaper": "^3.0.3"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260301.1",
