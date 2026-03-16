@@ -53,6 +53,18 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
   }
 
   const env = (locals as { runtime?: { env?: Env } }).runtime?.env;
+  const bucket = env?.BIONICLE_COLLECTION;
+  // In Cloudflare Workers, R2 must be bound; file store (fs) does not exist and would crash
+  if (env && !bucket) {
+    return new Response(
+      JSON.stringify({
+        error:
+          'Collection storage (R2) is not configured. In Cloudflare Pages → your project → Settings → Functions, add an R2 bucket binding with variable name BIONICLE_COLLECTION linked to your R2 bucket.',
+      }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
   if (isAuthConfigured(env)) {
     const ok = await isAuthenticated(request, env);
     if (!ok) {
@@ -83,4 +95,3 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
     headers: { 'Content-Type': 'application/json' },
   });
 };
-
