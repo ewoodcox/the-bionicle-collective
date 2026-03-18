@@ -1,14 +1,12 @@
-import type { APIRoute } from 'astro';
-import { getCollectionEntry, upsertCollectionEntry } from '../../../utils/collectionStore';
 import * as storeR2 from '../../../utils/collectionStoreR2';
 import { isAuthConfigured, isAuthenticated } from '../../../utils/adminAuth';
 
 // Dynamic API route: don't prerender at build, run only on request.
 export const prerender = false;
 
-type Env = { BIONICLE_COLLECTION?: R2Bucket; ADMIN_SECRET?: string; COLLECTION_EDIT_SECRET?: string };
+type Env = { BIONICLE_COLLECTION?: any; ADMIN_SECRET?: string; COLLECTION_EDIT_SECRET?: string };
 
-function getStore(locals: App.Locals) {
+async function getStore(locals: any) {
   const env = (locals as { runtime?: { env?: Env } }).runtime?.env;
   const bucket = env?.BIONICLE_COLLECTION;
   if (bucket) {
@@ -18,55 +16,77 @@ function getStore(locals: App.Locals) {
         storeR2.upsertCollectionEntry(bucket, id, data),
     };
   }
-  return {
-    get: (id: string) => getCollectionEntry(id),
-    put: (id: string, data: { acquiredDate?: string; acquiredFrom?: string; status?: string; notes?: string }) =>
-      upsertCollectionEntry(id, data),
-  };
+  // IMPORTANT:
+  // Cloudflare Workers cannot use Node's `fs`, so we only allow the file-backed store in dev.
+  // Removing the static import prevents Worker startup crashes that lead to empty 500 responses.
+  if ((import.meta as { env?: { DEV?: boolean } }).env?.DEV) {
+    const storeFs = await import('../../../utils/collectionStore');
+    return {
+      get: (id: string) => storeFs.getCollectionEntry(id),
+      put: (id: string, data: { acquiredDate?: string; acquiredFrom?: string; status?: string; notes?: string }) =>
+        storeFs.upsertCollectionEntry(id, data),
+    };
+  }
+  return null;
 }
 
-export const GET: APIRoute = async ({ params, locals }) => {
+export const GET = async ({ params, locals }) => {
   const id = params.id;
   if (!id) {
     return new Response(JSON.stringify({ error: 'Missing id' }), { status: 400 });
   }
 
-  const store = getStore(locals);
-  const entry = await store.get(id);
-  const payload = {
-    acquiredDate: entry?.acquiredDate ?? '',
-    acquiredFrom: entry?.acquiredFrom ?? '',
-    status: entry?.status ?? '',
-    notes: entry?.notes ?? '',
-  };
-
-  return new Response(JSON.stringify(payload), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-  });
-};
-
-export const PUT: APIRoute = async ({ params, request, locals }) => {
-  const id = params.id;
-  if (!id) {
-    return new Response(JSON.stringify({ error: 'Missing id' }), { status: 400 });
-  }
-
-  const env = (locals as { runtime?: { env?: Env } }).runtime?.env;
-  const bucket = env?.BIONICLE_COLLECTION;
-  // In Cloudflare Workers, R2 must be bound; file store (fs) does not exist and would crash.
-  // In production (import.meta.env.DEV=false) we always need the bucket.
-  const isProduction = !(import.meta as { env?: { DEV?: boolean } }).env?.DEV;
-  if (isProduction && !bucket) {
+  const store = await getStore(locals);
+  if (!store) {
     return new Response(
       JSON.stringify({
         error:
-          'Collection storage (R2) is not configured. In Cloudflare Pages → your project → Settings → Functions, add an R2 bucket binding with variable name BIONICLE_COLLECTION linked to your R2 bucket.',
+          'Collection storage (R2) is not configured. In Cloudflare Pages → your project → Settings → Functions, add an R2 bucket binding with variable name `BIONICLE_COLLECTION` linked to your R2 bucket.',
       }),
       { status: 503, headers: { 'Content-Type': 'application/json' } }
     );
   }
 
+  try {
+    const entry = await store.get(id);
+    const payload = {
+      acquiredDate: entry?.acquiredDate ?? '',
+      acquiredFrom: entry?.acquiredFrom ?? '',
+      status: entry?.status ?? '',
+      notes: entry?.notes ?? '',
+    };
+
+    return new Response(JSON.stringify(payload), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return new Response(JSON.stringify({ error: 'Failed to load collection entry', details: message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+};
+
+export const PUT = async ({ params, request, locals }) => {
+  const id = params.id;
+  if (!id) {
+    return new Response(JSON.stringify({ error: 'Missing id' }), { status: 400 });
+  }
+
+  const store = await getStore(locals);
+  if (!store) {
+    return new Response(
+      JSON.stringify({
+        error:
+          'Collection storage (R2) is not configured. In Cloudflare Pages → your project → Settings → Functions, add an R2 bucket binding with variable name `BIONICLE_COLLECTION` linked to your R2 bucket.',
+      }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const env = (locals as { runtime?: { env?: Env } }).runtime?.env;
   if (isAuthConfigured(env)) {
     const ok = await isAuthenticated(request, env);
     if (!ok) {
@@ -84,7 +104,6 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
     return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400 });
   }
 
-  const store = getStore(locals);
   let saved: { acquiredDate?: string; acquiredFrom?: string; status?: string; notes?: string };
   try {
     saved = await store.put(id, {

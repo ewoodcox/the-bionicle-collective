@@ -6,8 +6,6 @@
  * Migration: If collection-store.json is missing but collection.json (legacy) exists, we read from
  * legacy and write to the new key so future reads use the canonical location.
  */
-/// <reference types="@cloudflare/workers-types" />
-
 const R2_KEY = 'collection-store.json';
 const LEGACY_KEY = 'collection.json';
 
@@ -31,30 +29,61 @@ function parseStore(raw: string | null): StoreShape {
   return {};
 }
 
-async function getStoreRaw(bucket: R2Bucket): Promise<string | null> {
-  let object = await bucket.get(R2_KEY);
-  let raw = object ? await object.text() : null;
+async function getStoreRaw(bucket: any): Promise<string | null> {
+  let object: any = null;
+  try {
+    object = await bucket.get(R2_KEY);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`R2 get failed for key "${R2_KEY}": ${message}`);
+  }
+
+  let raw: string | null = null;
+  if (object) {
+    try {
+      raw = await object.text();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      throw new Error(`R2 read failed for key "${R2_KEY}": ${message}`);
+    }
+  }
   if (!raw) {
-    object = await bucket.get(LEGACY_KEY);
-    raw = object ? await object.text() : null;
+    try {
+      object = await bucket.get(LEGACY_KEY);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      throw new Error(`R2 get failed for legacy key "${LEGACY_KEY}": ${message}`);
+    }
+    if (object) {
+      try {
+        raw = await object.text();
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        throw new Error(`R2 read failed for legacy key "${LEGACY_KEY}": ${message}`);
+      }
+    } else {
+      raw = null;
+    }
     if (raw) {
-      await bucket.put(R2_KEY, raw, { httpMetadata: { contentType: 'application/json' } });
+      try {
+        await bucket.put(R2_KEY, raw, { httpMetadata: { contentType: 'application/json' } });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        throw new Error(`R2 put failed for key "${R2_KEY}" (migration from legacy): ${message}`);
+      }
     }
   }
   return raw;
 }
 
-export async function getCollectionEntry(
-  bucket: R2Bucket,
-  setId: string
-): Promise<CollectionEntry | null> {
+export async function getCollectionEntry(bucket: any, setId: string): Promise<CollectionEntry | null> {
   const raw = await getStoreRaw(bucket);
   const store = parseStore(raw);
   return store[setId] ?? null;
 }
 
 export async function upsertCollectionEntry(
-  bucket: R2Bucket,
+  bucket: any,
   setId: string,
   data: CollectionEntry
 ): Promise<CollectionEntry> {
@@ -68,8 +97,13 @@ export async function upsertCollectionEntry(
     notes: data.notes ?? existing.notes ?? '',
   };
   store[setId] = merged;
-  await bucket.put(R2_KEY, JSON.stringify(store), {
-    httpMetadata: { contentType: 'application/json' },
-  });
+  try {
+    await bucket.put(R2_KEY, JSON.stringify(store), {
+      httpMetadata: { contentType: 'application/json' },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`R2 put failed for key "${R2_KEY}": ${message}`);
+  }
   return merged;
 }
