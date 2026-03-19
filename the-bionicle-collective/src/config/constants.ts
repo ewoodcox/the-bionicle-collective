@@ -19,5 +19,6 @@ export function getYearGroup(year: number): string {
 export function getYearsForGroup(groupId: string): number[] {
   if (groupId === 'gen1') return [2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010];
   if (groupId === 'gen2') return [2015, 2016];
+  if (groupId === 'media') return [2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2015, 2016];
   return [];
 }

@@ -1,0 +1,124 @@
+[
+  {
+    "id": "comics-2001-issue-1",
+    "title": "BIONICLE Comics",
+    "issueNumber": "Issue 1",
+    "category": "comics",
+    "year": 2001,
+    "imageUrl": "https://placehold.co/280x280?text=Comics%201001",
+    "sourceUrl": "https://biosector01.com/wiki/"
+  },
+  {
+    "id": "comics-2001-issue-2",
+    "title": "BIONICLE Comics",
+    "issueNumber": "Issue 2",
+    "category": "comics",
+    "year": 2001,
+    "imageUrl": "https://placehold.co/280x280?text=Comics%201002",
+    "sourceUrl": "https://biosector01.com/wiki/"
+  },
+  {
+    "id": "disks-2001-1",
+    "title": "BIONICLE Disks (2001)",
+    "category": "disks",
+    "year": 2001,
+    "imageUrl": "https://placehold.co/280x280?text=Disks%202001",
+    "sourceUrl": "https://biosector01.com/wiki/"
+  },
+  {
+    "id": "games-2001-1",
+    "title": "BIONICLE Games (2001)",
+    "category": "games",
+    "year": 2001,
+    "imageUrl": "https://placehold.co/280x280?text=Games%202001",
+    "sourceUrl": "https://biosector01.com/wiki/"
+  },
+  {
+    "id": "cards-2001-1",
+    "title": "BIONICLE Cards (2001)",
+    "category": "cards",
+    "year": 2001,
+    "imageUrl": "https://placehold.co/280x280?text=Cards%202001",
+    "sourceUrl": "https://biosector01.com/wiki/"
+  },
+
+  {
+    "id": "books-2001-volume-1",
+    "title": "BIONICLE Books",
+    "issueNumber": "Volume 1",
+    "category": "books",
+    "year": 2001,
+    "imageUrl": "https://placehold.co/280x280?text=Books%201201",
+    "sourceUrl": "https://biosector01.com/wiki/"
+  },
+  {
+    "id": "books-2001-volume-2",
+    "title": "BIONICLE Books",
+    "issueNumber": "Volume 2",
+    "category": "books",
+    "year": 2001,
+    "imageUrl": "https://placehold.co/280x280?text=Books%201202",
+    "sourceUrl": "https://biosector01.com/wiki/"
+  },
+
+  {
+    "id": "comics-2015-issue-1",
+    "title": "BIONICLE Comics",
+    "issueNumber": "Issue 1",
+    "category": "comics",
+    "year": 2015,
+    "imageUrl": "https://placehold.co/280x280?text=Comics%2015101",
+    "sourceUrl": "https://biosector01.com/wiki/"
+  },
+  {
+    "id": "comics-2015-issue-2",
+    "title": "BIONICLE Comics",
+    "issueNumber": "Issue 2",
+    "category": "comics",
+    "year": 2015,
+    "imageUrl": "https://placehold.co/280x280?text=Comics%2015102",
+    "sourceUrl": "https://biosector01.com/wiki/"
+  },
+  {
+    "id": "books-2015-volume-1",
+    "title": "BIONICLE Books",
+    "issueNumber": "Volume 1",
+    "category": "books",
+    "year": 2015,
+    "imageUrl": "https://placehold.co/280x280?text=Books%2025101",
+    "sourceUrl": "https://biosector01.com/wiki/"
+  },
+  {
+    "id": "books-2015-volume-2",
+    "title": "BIONICLE Books",
+    "issueNumber": "Volume 2",
+    "category": "books",
+    "year": 2015,
+    "imageUrl": "https://placehold.co/280x280?text=Books%2025102",
+    "sourceUrl": "https://biosector01.com/wiki/"
+  },
+  {
+    "id": "disks-2015-1",
+    "title": "BIONICLE Disks (2015)",
+    "category": "disks",
+    "year": 2015,
+    "imageUrl": "https://placehold.co/280x280?text=Disks%202015",
+    "sourceUrl": "https://biosector01.com/wiki/"
+  },
+  {
+    "id": "games-2015-1",
+    "title": "BIONICLE Games (2015)",
+    "category": "games",
+    "year": 2015,
+    "imageUrl": "https://placehold.co/280x280?text=Games%202015",
+    "sourceUrl": "https://biosector01.com/wiki/"
+  },
+  {
+    "id": "cards-2015-1",
+    "title": "BIONICLE Cards (2015)",
+    "category": "cards",
+    "year": 2015,
+    "imageUrl": "https://placehold.co/280x280?text=Cards%202015",
+    "sourceUrl": "https://biosector01.com/wiki/"
+  }
+]

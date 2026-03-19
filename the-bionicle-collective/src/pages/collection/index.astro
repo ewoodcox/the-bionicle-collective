@@ -4,6 +4,7 @@ import { sets } from '../../data/sets';
 import { getSetDisplayLabel, getSetNumber, getSetSortKey, getMissingSetEntries } from '../../data/setNamesByYear';
 import { YEAR_GROUPS, getYearGroup, getYearsForGroup } from '../../config/constants';
 import { getMasksByYear, getKanohiYears } from '../../data/kanohi';
+import { MEDIA_CATEGORIES, mediaItems, getMediaCardName, type MediaCategoryId } from '../../data/media';
 import type { SetRecord } from '../../data/sets';
 
 const byGroup = new Map<string, SetRecord[]>();
@@ -28,7 +29,7 @@ const groupsWithData = VISIBLE_GROUPS.filter((g) => {
         return theme === 'Combiner Models' || theme === 'Alternate Models';
       }) || hasKanohi
     );
-  if (g.id === 'media') return sets.some((s) => (s.theme ?? '').toLowerCase().includes('media'));
+  if (g.id === 'media') return mediaItems.length > 0;
   return (byGroup.get(g.id) ?? []).length > 0;
 });
 const defaultGroupId =
@@ -75,7 +76,7 @@ const defaultGroupId =
             return theme === 'Combiner Models' || theme === 'Alternate Models';
           })
         : group.id === 'media'
-        ? sets.filter((s) => (s.theme ?? '').toLowerCase().includes('media'))
+        ? mediaItems
         : (byGroup.get(group.id) ?? []).filter((s) => {
             const theme = s.theme ?? '';
             return theme !== 'Combiner Models' && theme !== 'Alternate Models';
@@ -294,57 +295,155 @@ const defaultGroupId =
                 </button>
               ))}
             </div>
-            {yearsWithData.map((y) => {
-              const yearKey = String(y);
-              const yearItems = items.filter((s) => Number(s.year) === y);
-              const ownedSetNumbers = new Set(yearItems.map((s) => getSetNumber(s)));
-              const missingEntries = getMissingSetEntries(y, ownedSetNumbers);
-              return (
-                <div
-                  class="year-pane"
-                  id={`${group.id}-year-${yearKey}`}
-                  role="tabpanel"
-                  aria-labelledby={`${group.id}-tab-${y}`}
-                  data-year={yearKey}
-                  data-group-id={group.id}
-                  data-active={y === firstYear}
-                >
-                  <div class="set-grid">
-                    {yearItems.map((set) => (
-                      <a href={`/collection/${set.id}/?gen=${group.id}&year=${y}`} class="set-card">
-                        <img src={`/set-photos/${set.id}.jpg`} data-fallback={set.imageUrl} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" onerror="this.onerror=null;this.src=this.dataset.fallback" />
-                        <div class="info">
-                          <div class="name">{getSetDisplayLabel(set)}</div>
-                          <div class="meta">{set.year}</div>
-                        </div>
-                      </a>
-                    ))}
-                  </div>
-                  {missingEntries.length > 0 && (
-                    <div class="missing-section">
-                      <h3 class="missing-heading">Missing</h3>
-                      <div class="set-grid">
-                        {missingEntries.map((entry) => (
-                          <div class="set-card set-card--missing">
-                            <img
-                              src={`https://placehold.co/160x160?text=${encodeURIComponent(entry.setNumber)}`}
-                              alt={`${entry.setNumber} - ${entry.name}`}
-                              width="160"
-                              height="160"
-                              loading="lazy"
-                            />
-                            <div class="info">
-                              <div class="name">{entry.setNumber} - {entry.name}</div>
-                              <div class="meta">{y}</div>
-                            </div>
-                          </div>
+            {group.id === 'media'
+              ? yearsWithData.map((y) => {
+                  const yearKey = String(y);
+                  const yearItems = items.filter((m) => Number(m.year) === y);
+                  const firstCategoryId = MEDIA_CATEGORIES[0]?.id ?? 'comics';
+                  return (
+                    <div
+                      class="year-pane"
+                      id={`${group.id}-year-${yearKey}`}
+                      role="tabpanel"
+                      aria-labelledby={`${group.id}-tab-${y}`}
+                      data-year={yearKey}
+                      data-group-id={group.id}
+                      data-active={y === firstYear}
+                    >
+                      <div class="media-category-tabs" role="tablist" aria-label={`Select media category for ${y}`}>
+                        {MEDIA_CATEGORIES.map((cat) => (
+                          <button
+                            type="button"
+                            class="media-category-tab"
+                            role="tab"
+                            aria-selected={cat.id === firstCategoryId}
+                            aria-controls={`media-${yearKey}-${cat.id}`}
+                            id={`media-${yearKey}-tab-${cat.id}`}
+                            data-category={cat.id}
+                          >
+                            {cat.label}
+                          </button>
                         ))}
                       </div>
+
+                      {MEDIA_CATEGORIES.map((cat) => {
+                        const catItems = yearItems.filter((m) => m.category === cat.id);
+                        return (
+                          <div
+                            class="media-category-pane"
+                            data-category={cat.id}
+                            data-active={cat.id === firstCategoryId}
+                            role="tabpanel"
+                            aria-labelledby={`media-${yearKey}-tab-${cat.id}`}
+                            id={`media-${yearKey}-${cat.id}`}
+                          >
+                            {catItems.length === 0 ? (
+                              <p class="collection-empty">No {cat.label} entries for {y}.</p>
+                            ) : (
+                              <div class="set-grid">
+                                {catItems.map((m) => (
+                                  <div
+                                    class="set-card media-card"
+                                    role="link"
+                                    tabindex="0"
+                                    data-media-id={m.id}
+                                    data-media-href={`/media/${m.id}/?gen=${group.id}&year=${y}&category=${cat.id}`}
+                                    aria-label={`${getMediaCardName(m)}, ${m.year} ${cat.label}`}
+                                  >
+                                    <img
+                                      src={`/set-photos/${m.id}.jpg`}
+                                      data-fallback={m.imageUrl}
+                                      alt={m.title}
+                                      width="160"
+                                      height="160"
+                                      loading="lazy"
+                                      onerror="this.onerror=null;this.src=this.dataset.fallback"
+                                    />
+                                    <div class="info">
+                                      <div class="name">{getMediaCardName(m)}</div>
+                                      <div class="meta">
+                                        {m.year} · {cat.label}
+                                      </div>
+                                    </div>
+
+                                    <label
+                                      class="media-card-checkbox-wrap"
+                                      aria-label={`${getMediaCardName(m)} - mark as owned`}
+                                      data-edit-only
+                                      onClick="event.stopPropagation();"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        class="media-card-checkbox"
+                                        data-media-id={m.id}
+                                        onClick="event.stopPropagation();"
+                                      />
+                                      <span class="media-card-checkbox-box" aria-hidden="true"></span>
+                                    </label>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                      <div class="media-save-row" data-edit-only>
+                        <button type="button" class="media-save-btn">Save Media ownership</button>
+                      </div>
                     </div>
-                  )}
-                </div>
-              );
-            })}
+                  );
+                })
+              : yearsWithData.map((y) => {
+                  const yearKey = String(y);
+                  const yearItems = items.filter((s) => Number(s.year) === y);
+                  const ownedSetNumbers = new Set(yearItems.map((s) => getSetNumber(s)));
+                  const missingEntries = getMissingSetEntries(y, ownedSetNumbers);
+                  return (
+                    <div
+                      class="year-pane"
+                      id={`${group.id}-year-${yearKey}`}
+                      role="tabpanel"
+                      aria-labelledby={`${group.id}-tab-${y}`}
+                      data-year={yearKey}
+                      data-group-id={group.id}
+                      data-active={y === firstYear}
+                    >
+                      <div class="set-grid">
+                        {yearItems.map((set) => (
+                          <a href={`/collection/${set.id}/?gen=${group.id}&year=${y}`} class="set-card">
+                            <img src={`/set-photos/${set.id}.jpg`} data-fallback={set.imageUrl} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" onerror="this.onerror=null;this.src=this.dataset.fallback" />
+                            <div class="info">
+                              <div class="name">{getSetDisplayLabel(set)}</div>
+                              <div class="meta">{set.year}</div>
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+                      {missingEntries.length > 0 && (
+                        <div class="missing-section">
+                          <h3 class="missing-heading">Missing</h3>
+                          <div class="set-grid">
+                            {missingEntries.map((entry) => (
+                              <div class="set-card set-card--missing">
+                                <img
+                                  src={`https://placehold.co/160x160?text=${encodeURIComponent(entry.setNumber)}`}
+                                  alt={`${entry.setNumber} - ${entry.name}`}
+                                  width="160"
+                                  height="160"
+                                  loading="lazy"
+                                />
+                                <div class="info">
+                                  <div class="name">{entry.setNumber} - {entry.name}</div>
+                                  <div class="meta">{y}</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
           </>
         ) : (
           <div class="set-grid">
@@ -403,6 +502,26 @@ const defaultGroupId =
                 panes.forEach((pane) => {
                   pane.setAttribute('data-active', pane.getAttribute('data-year') === firstYear ? 'true' : 'false');
                 });
+
+                // Media tab has an additional category layer. When switching groups,
+                // reset the category selection in the newly active year pane.
+                if (cgId === 'media') {
+                  const activePane = Array.from(panes).find((pane) => pane.getAttribute('data-year') === firstYear);
+                  const defaultBtn = activePane?.querySelector('.media-category-tab[data-category]');
+                  const defaultCategory = defaultBtn?.getAttribute('data-category');
+                  if (activePane && defaultCategory) {
+                    const catButtons = activePane.querySelectorAll('.media-category-tab[data-category]');
+                    catButtons.forEach((btn) => {
+                      const active = btn.getAttribute('data-category') === defaultCategory;
+                      btn.setAttribute('aria-selected', active ? 'true' : 'false');
+                      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+                    });
+                    const catPanes = activePane.querySelectorAll('.media-category-pane[data-category]');
+                    catPanes.forEach((pane) => {
+                      pane.setAttribute('data-active', pane.getAttribute('data-category') === defaultCategory ? 'true' : 'false');
+                    });
+                  }
+                }
               }
             } else {
               url.searchParams.delete('year');
@@ -424,6 +543,28 @@ const defaultGroupId =
 
       const savedYear = params.get('year');
 
+      // Media tab: category selection inside each active year pane.
+      document.querySelectorAll('.media-category-tab[data-category]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const yearPane = btn.closest('.year-pane[data-group-id="media"]');
+          if (!yearPane) return;
+          const category = btn.getAttribute('data-category');
+          if (!category) return;
+
+          const catButtons = yearPane.querySelectorAll('.media-category-tab[data-category]');
+          catButtons.forEach((b) => {
+            const active = b.getAttribute('data-category') === category;
+            b.setAttribute('aria-selected', active ? 'true' : 'false');
+            b.setAttribute('aria-pressed', active ? 'true' : 'false');
+          });
+
+          const catPanes = yearPane.querySelectorAll('.media-category-pane[data-category]');
+          catPanes.forEach((pane) => {
+            pane.setAttribute('data-active', pane.getAttribute('data-category') === category ? 'true' : 'false');
+          });
+        });
+      });
+
       document.querySelectorAll('.year-carousel').forEach((carousel) => {
         const groupId = carousel.getAttribute('data-group-id');
         if (!groupId) return;
@@ -440,6 +581,25 @@ const defaultGroupId =
           panes.forEach((pane) => {
             pane.setAttribute('data-active', pane.getAttribute('data-year') === year ? 'true' : 'false');
           });
+
+          // Media tab has a second category layer. Reset it whenever the year changes.
+          if (groupId === 'media') {
+            const activePane = Array.from(panes).find((pane) => pane.getAttribute('data-year') === year);
+            const defaultBtn = activePane?.querySelector('.media-category-tab[data-category]');
+            const defaultCategory = defaultBtn?.getAttribute('data-category');
+            if (activePane && defaultCategory) {
+              const catButtons = activePane.querySelectorAll('.media-category-tab[data-category]');
+              catButtons.forEach((btn) => {
+                const active = btn.getAttribute('data-category') === defaultCategory;
+                btn.setAttribute('aria-selected', active ? 'true' : 'false');
+                btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+              });
+              const catPanes = activePane.querySelectorAll('.media-category-pane[data-category]');
+              catPanes.forEach((pane) => {
+                pane.setAttribute('data-active', pane.getAttribute('data-category') === defaultCategory ? 'true' : 'false');
+              });
+            }
+          }
           if (updateUrl && yearValues.includes(year)) {
             const url = new URL(window.location.href);
             url.searchParams.set('year', year);
@@ -459,6 +619,119 @@ const defaultGroupId =
           if (btn.getAttribute('aria-selected') === 'true') btn.setAttribute('aria-pressed', 'true');
         });
       });
+    })();
+
+    (function () {
+      // Only select the card containers (not the checkbox inputs).
+      const mediaCards = document.querySelectorAll('.media-card[data-media-href]');
+      if (mediaCards.length === 0) return;
+
+      const isEditHost = window.location.hostname === 'edit.bioniclecollective.com';
+      if (isEditHost) {
+        document.documentElement.setAttribute('data-host', 'edit');
+      }
+
+      function applyOwnedState(ownedIds) {
+        const owned = new Set(ownedIds || []);
+        mediaCards.forEach((card) => {
+          const id = card.getAttribute('data-media-id');
+          const isOwned = owned.has(id);
+          if (isOwned) {
+            card.classList.remove('set-card--missing');
+          } else {
+            card.classList.add('set-card--missing');
+          }
+
+          const cb = card.querySelector('.media-card-checkbox');
+          if (cb instanceof HTMLInputElement) cb.checked = isOwned;
+
+          // Keep aria-label consistent for accessibility.
+          const label = card.getAttribute('aria-label');
+          const base = label ? label.replace(/, (owned|not owned)\.?$/, '') : '';
+          card.setAttribute('aria-label', base + (isOwned ? ', owned' : ', not owned'));
+        });
+      }
+
+      // Navigate to detail page when clicking a card (checkbox clicks stop propagation).
+      mediaCards.forEach((card) => {
+        const href = card.getAttribute('data-media-href');
+        if (!href) return;
+        card.addEventListener('click', () => {
+          window.location.href = href;
+        });
+      });
+
+      fetch('/api/media/collection')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (data && Array.isArray(data.ownedIds)) applyOwnedState(data.ownedIds);
+        })
+        .catch(() => {});
+
+      if (isEditHost) {
+        // Immediate UI update on toggle; persistence happens via the Save button.
+        mediaCards.forEach((card) => {
+          const cb = card.querySelector('.media-card-checkbox');
+          if (!(cb instanceof HTMLInputElement)) return;
+          cb.addEventListener('change', () => {
+            const isOwned = cb.checked;
+            if (isOwned) {
+              card.classList.remove('set-card--missing');
+            } else {
+              card.classList.add('set-card--missing');
+            }
+          });
+        });
+
+        document.querySelectorAll('.media-save-btn').forEach((btn) => {
+          if (!(btn instanceof HTMLButtonElement)) return;
+          btn.addEventListener('click', async () => {
+            if (btn.disabled) return;
+            btn.disabled = true;
+            try {
+              const checkboxes = document.querySelectorAll('.media-card-checkbox');
+              const ownedIds = Array.from(checkboxes)
+                .filter((cb) => cb instanceof HTMLInputElement && cb.checked)
+                .map((cb) => cb.getAttribute('data-media-id'))
+                .filter((id) => typeof id === 'string');
+
+              const res = await fetch('/api/media/collection', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ownedIds }),
+                credentials: 'include',
+              });
+
+              if (!res.ok) {
+                if (res.status === 401) {
+                  alert('Session expired. Please log in again.');
+                } else {
+                  const err = await res.text();
+                  alert('Save failed (' + res.status + '). Check the console.');
+                  console.error('Media save failed:', res.status, err);
+                }
+                return;
+              }
+
+              let data;
+              try {
+                data = await res.json();
+              } catch {
+                applyOwnedState(ownedIds);
+                return;
+              }
+
+              if (data && Array.isArray(data.ownedIds)) {
+                applyOwnedState(data.ownedIds);
+              } else {
+                applyOwnedState(ownedIds);
+              }
+            } finally {
+              btn.disabled = false;
+            }
+          });
+        });
+      }
     })();
 
     (function () {
