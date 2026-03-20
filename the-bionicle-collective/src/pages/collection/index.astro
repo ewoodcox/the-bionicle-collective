@@ -94,7 +94,8 @@ const defaultGroupId =
     // - Comics/Books: single continuous carousel ordered by story eras (no year/category panes).
     // - Disks/Games/Cards: keep the existing year + category tab UI.
     const isMedia = group.id === 'media';
-    const mediaComicsBooksItems = isMedia ? items.filter((m) => m.category === 'comics' || m.category === 'books') : [];
+    const mediaComicsItems = isMedia ? items.filter((m) => m.category === 'comics') : [];
+    const mediaBooksItems = isMedia ? items.filter((m) => m.category === 'books') : [];
     const mediaOtherItems = isMedia ? items.filter((m) => m.category !== 'comics' && m.category !== 'books') : [];
     const mediaOtherCategories = isMedia ? MEDIA_CATEGORIES.filter((c) => c.id !== 'comics' && c.id !== 'books') : [];
     const otherYearsWithData = isMedia ? years.filter((y) => mediaOtherItems.some((s) => Number(s.year) === y)) : [];
@@ -313,67 +314,152 @@ const defaultGroupId =
 
             {group.id === 'media' ? (
               <>
-                {mediaComicsBooksItems.length > 0 && (
+                {mediaComicsItems.length > 0 && (
                   <div class="media-era-carousel-section">
-                    <div class="media-era-carousel-header">
-                      <div class="media-era-carousel-title">Comics & Books by Era</div>
-                    </div>
+                    <div class="media-era-carousel-wrap" data-carousel-kind="comics">
+                      <div class="media-era-carousel-header">
+                        <div class="media-era-carousel-title">Comics by Era</div>
+                      </div>
 
-                    <div class="media-era-carousel-controls" aria-hidden="false">
-                      <button type="button" class="media-era-prev" aria-label="Scroll left">
-                        ←
-                      </button>
-                      <button type="button" class="media-era-next" aria-label="Scroll right">
-                        →
-                      </button>
-                    </div>
+                      <div class="media-era-carousel-controls" aria-hidden="false">
+                        <button type="button" class="media-era-prev" aria-label="Scroll comics left">
+                          ←
+                        </button>
+                        <button type="button" class="media-era-next" aria-label="Scroll comics right">
+                          →
+                        </button>
+                      </div>
 
-                    <div class="media-era-carousel" role="region" aria-label="Comics and Books carousel">
-                      {sortMediaByEra(mediaComicsBooksItems).map((m) => {
-                        const eraLabel = getMediaEraLabel(m);
-                        const catLabel = MEDIA_CATEGORIES.find((c) => c.id === m.category)?.label ?? m.category;
-                        return (
-                          <div
-                            class="set-card media-card media-era-card"
-                            role="link"
-                            tabindex="0"
-                            data-media-id={m.id}
-                            data-media-href={`/media/${m.id}/`}
-                            aria-label={`${getMediaCardName(m)}, ${eraLabel} ${catLabel}`}
-                          >
-                            <img
-                              src={`/set-photos/${m.id}.jpg`}
-                              data-fallback={m.imageUrl}
-                              alt={m.title}
-                              width="160"
-                              height="160"
-                              loading="lazy"
-                              onerror="this.onerror=null;this.src=this.dataset.fallback"
-                            />
-                            <div class="info">
-                              <div class="name">{getMediaCardName(m)}</div>
-                              <div class="meta">
-                                {eraLabel} · {catLabel}
-                              </div>
-                            </div>
-
-                            <label
-                              class="media-card-checkbox-wrap"
-                              aria-label={`${getMediaCardName(m)} - mark as owned`}
-                              data-edit-only
-                              onClick="event.stopPropagation();"
+                      <div class="media-era-carousel" role="region" aria-label="Comics carousel">
+                        {sortMediaByEra(mediaComicsItems).map((m) => {
+                          const eraLabel = getMediaEraLabel(m);
+                          const catLabel = 'Comics';
+                          return (
+                            <div
+                              class="set-card media-card media-era-card"
+                              role="link"
+                              tabindex="0"
+                              data-media-id={m.id}
+                              data-media-href={`/media/${m.id}/`}
+                              aria-label={`${getMediaCardName(m)}, ${eraLabel} ${catLabel}`}
                             >
-                              <input
-                                type="checkbox"
-                                class="media-card-checkbox"
-                                data-media-id={m.id}
+                              <div class="media-cover-stack" aria-hidden="true">
+                                <img
+                                  class="media-cover-main"
+                                  src={`/set-photos/${m.id}.jpg`}
+                                  data-fallback={m.imageUrl}
+                                  alt={m.title}
+                                  width="160"
+                                  height="160"
+                                  loading="lazy"
+                                  onerror="this.onerror=null;this.src=this.dataset.fallback"
+                                />
+                                {m.imageUrlAlt ? (
+                                  <img
+                                    class="media-cover-alt"
+                                    src={`/set-photos/${m.id}.jpg`}
+                                    data-fallback={m.imageUrlAlt}
+                                    alt=""
+                                    width="160"
+                                    height="160"
+                                    loading="lazy"
+                                    aria-hidden="true"
+                                    onerror="this.onerror=null;this.src=this.dataset.fallback"
+                                  />
+                                ) : null}
+                              </div>
+                              <div class="info">
+                                <div class="name">{getMediaCardName(m)}</div>
+                                <div class="meta">
+                                  {eraLabel} · {catLabel}
+                                </div>
+                              </div>
+
+                              <label
+                                class="media-card-checkbox-wrap"
+                                aria-label={`${getMediaCardName(m)} - mark as owned`}
+                                data-edit-only
                                 onClick="event.stopPropagation();"
+                              >
+                                <input
+                                  type="checkbox"
+                                  class="media-card-checkbox"
+                                  data-media-id={m.id}
+                                  onClick="event.stopPropagation();"
+                                />
+                                <span class="media-card-checkbox-box" aria-hidden="true"></span>
+                              </label>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {mediaBooksItems.length > 0 && (
+                  <div class="media-era-carousel-section">
+                    <div class="media-era-carousel-wrap" data-carousel-kind="books">
+                      <div class="media-era-carousel-header">
+                        <div class="media-era-carousel-title">Books</div>
+                      </div>
+
+                      <div class="media-era-carousel-controls" aria-hidden="false">
+                        <button type="button" class="media-era-prev" aria-label="Scroll books left">
+                          ←
+                        </button>
+                        <button type="button" class="media-era-next" aria-label="Scroll books right">
+                          →
+                        </button>
+                      </div>
+
+                      <div class="media-era-carousel" role="region" aria-label="Books carousel">
+                        {sortMediaByEra(mediaBooksItems).map((m) => {
+                          const eraLabel = getMediaEraLabel(m);
+                          const catLabel = 'Books';
+                          return (
+                            <div
+                              class="set-card media-card media-era-card"
+                              role="link"
+                              tabindex="0"
+                              data-media-id={m.id}
+                              data-media-href={`/media/${m.id}/`}
+                              aria-label={`${getMediaCardName(m)}, ${eraLabel} ${catLabel}`}
+                            >
+                              <img
+                                src={`/set-photos/${m.id}.jpg`}
+                                data-fallback={m.imageUrl}
+                                alt={m.title}
+                                width="160"
+                                height="160"
+                                loading="lazy"
+                                onerror="this.onerror=null;this.src=this.dataset.fallback"
                               />
-                              <span class="media-card-checkbox-box" aria-hidden="true"></span>
-                            </label>
-                          </div>
-                        );
-                      })}
+                              <div class="info">
+                                <div class="name">{getMediaCardName(m)}</div>
+                                <div class="meta">
+                                  {eraLabel} · {catLabel}
+                                </div>
+                              </div>
+
+                              <label
+                                class="media-card-checkbox-wrap"
+                                aria-label={`${getMediaCardName(m)} - mark as owned`}
+                                data-edit-only
+                                onClick="event.stopPropagation();"
+                              >
+                                <input
+                                  type="checkbox"
+                                  class="media-card-checkbox"
+                                  data-media-id={m.id}
+                                  onClick="event.stopPropagation();"
+                                />
+                                <span class="media-card-checkbox-box" aria-hidden="true"></span>
+                              </label>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -762,11 +848,13 @@ const defaultGroupId =
         });
       }
 
-      // Media era carousel: left/right buttons.
-      const mediaCarousel = document.querySelector('.media-era-carousel');
-      if (mediaCarousel instanceof HTMLElement) {
-        const prevBtn = document.querySelector('.media-era-prev');
-        const nextBtn = document.querySelector('.media-era-next');
+      // Media era carousels: left/right buttons (comics + books).
+      document.querySelectorAll('.media-era-carousel-wrap').forEach((wrap) => {
+        const mediaCarousel = wrap.querySelector('.media-era-carousel');
+        if (!(mediaCarousel instanceof HTMLElement)) return;
+
+        const prevBtn = wrap.querySelector('.media-era-prev');
+        const nextBtn = wrap.querySelector('.media-era-next');
         const firstCard = mediaCarousel.querySelector('.media-era-card');
         const cardWidth = firstCard instanceof HTMLElement ? firstCard.getBoundingClientRect().width : 180;
         const scrollAmount = cardWidth + 16;
@@ -781,7 +869,7 @@ const defaultGroupId =
             mediaCarousel.scrollBy({ left: scrollAmount, behavior: 'smooth' });
           });
         }
-      }
+      });
     })();
 
     (function () {

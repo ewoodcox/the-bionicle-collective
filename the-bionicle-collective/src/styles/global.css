@@ -430,6 +430,47 @@ body {
   scroll-snap-align: start;
 }
 
+.media-cover-stack {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+}
+
+.media-cover-stack img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+}
+
+.media-cover-main {
+  opacity: 1;
+  transition: opacity 180ms ease;
+}
+
+.media-cover-alt {
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .media-era-card:hover .media-cover-main {
+    opacity: 0;
+  }
+  .media-era-card:hover .media-cover-alt {
+    opacity: 1;
+  }
+}
+
+@media (hover: none) {
+  .media-cover-alt {
+    display: none;
+  }
+}
+
 @media (max-width: 640px) {
   .media-era-card {
     width: 140px;

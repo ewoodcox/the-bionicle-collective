@@ -24,6 +24,9 @@ export interface MediaRecord {
   year: number;
   imageUrl: string;
 
+  /** Optional alternate cover image URL (e.g. BrickMaster cover). */
+  imageUrlAlt?: string;
+
   /** For comics/books: issue/volume number shown on the card (optional). */
   issueNumber?: string;
 
