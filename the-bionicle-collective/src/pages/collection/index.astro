@@ -5,6 +5,7 @@ import { getSetDisplayLabel, getSetNumber, getSetSortKey, getMissingSetEntries }
 import { YEAR_GROUPS, getYearGroup, getYearsForGroup } from '../../config/constants';
 import { getMasksByYear, getKanohiYears } from '../../data/kanohi';
 import { MEDIA_CATEGORIES, mediaItems, getMediaCardName, type MediaCategoryId } from '../../data/media';
+import { getMediaEraLabel, sortMediaByEra } from '../../data/mediaEras';
 import type { SetRecord } from '../../data/sets';
 
 const byGroup = new Map<string, SetRecord[]>();
@@ -88,6 +89,18 @@ const defaultGroupId =
       ? years.filter((y) => items.some((s) => Number(s.year) === y))
       : [];
     const firstYear = yearsWithData.length > 0 ? yearsWithData[0] : null;
+
+    // Media tab split:
+    // - Comics/Books: single continuous carousel ordered by story eras (no year/category panes).
+    // - Disks/Games/Cards: keep the existing year + category tab UI.
+    const isMedia = group.id === 'media';
+    const mediaComicsBooksItems = isMedia ? items.filter((m) => m.category === 'comics' || m.category === 'books') : [];
+    const mediaOtherItems = isMedia ? items.filter((m) => m.category !== 'comics' && m.category !== 'books') : [];
+    const mediaOtherCategories = isMedia ? MEDIA_CATEGORIES.filter((c) => c.id !== 'comics' && c.id !== 'books') : [];
+    const otherYearsWithData = isMedia ? years.filter((y) => mediaOtherItems.some((s) => Number(s.year) === y)) : [];
+    const otherFirstYear = otherYearsWithData.length > 0 ? otherYearsWithData[0] : null;
+    const otherFirstCategoryId = mediaOtherCategories[0]?.id ?? '';
+
     const hasCombiner = group.id === 'other' && items.some((s) => (s.theme ?? '') === 'Combiner Models');
     const hasAlternate = group.id === 'other' && items.some((s) => (s.theme ?? '') === 'Alternate Models');
     const firstOtherTab =
@@ -275,175 +288,279 @@ const defaultGroupId =
           </>
         ) : hasCarousel && yearsWithData.length > 0 ? (
           <>
-            <div
-              class="year-carousel"
-              role="tablist"
-              aria-label={`Select year for ${group.label}`}
-              data-group-id={group.id}
-            >
-              {yearsWithData.map((y) => (
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={y === firstYear}
-                  aria-controls={`${group.id}-year-${y}`}
-                  id={`${group.id}-tab-${y}`}
-                  data-year={String(y)}
-                  data-group-id={group.id}
-                >
-                  {y}
-                </button>
-              ))}
-            </div>
-            {group.id === 'media'
-              ? yearsWithData.map((y) => {
-                  const yearKey = String(y);
-                  const yearItems = items.filter((m) => Number(m.year) === y);
-                  const firstCategoryId = MEDIA_CATEGORIES[0]?.id ?? 'comics';
-                  return (
-                    <div
-                      class="year-pane"
-                      id={`${group.id}-year-${yearKey}`}
-                      role="tabpanel"
-                      aria-labelledby={`${group.id}-tab-${y}`}
-                      data-year={yearKey}
-                      data-group-id={group.id}
-                      data-active={y === firstYear}
-                    >
-                      <div class="media-category-tabs" role="tablist" aria-label={`Select media category for ${y}`}>
-                        {MEDIA_CATEGORIES.map((cat) => (
-                          <button
-                            type="button"
-                            class="media-category-tab"
-                            role="tab"
-                            aria-selected={cat.id === firstCategoryId}
-                            aria-controls={`media-${yearKey}-${cat.id}`}
-                            id={`media-${yearKey}-tab-${cat.id}`}
-                            data-category={cat.id}
-                          >
-                            {cat.label}
-                          </button>
-                        ))}
-                      </div>
+            {group.id !== 'media' && (
+              <div
+                class="year-carousel"
+                role="tablist"
+                aria-label={`Select year for ${group.label}`}
+                data-group-id={group.id}
+              >
+                {yearsWithData.map((y) => (
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={y === firstYear}
+                    aria-controls={`${group.id}-year-${y}`}
+                    id={`${group.id}-tab-${y}`}
+                    data-year={String(y)}
+                    data-group-id={group.id}
+                  >
+                    {y}
+                  </button>
+                ))}
+              </div>
+            )}
 
-                      {MEDIA_CATEGORIES.map((cat) => {
-                        const catItems = yearItems.filter((m) => m.category === cat.id);
+            {group.id === 'media' ? (
+              <>
+                {mediaComicsBooksItems.length > 0 && (
+                  <div class="media-era-carousel-section">
+                    <div class="media-era-carousel-header">
+                      <div class="media-era-carousel-title">Comics & Books by Era</div>
+                    </div>
+
+                    <div class="media-era-carousel-controls" aria-hidden="false">
+                      <button type="button" class="media-era-prev" aria-label="Scroll left">
+                        ←
+                      </button>
+                      <button type="button" class="media-era-next" aria-label="Scroll right">
+                        →
+                      </button>
+                    </div>
+
+                    <div class="media-era-carousel" role="region" aria-label="Comics and Books carousel">
+                      {sortMediaByEra(mediaComicsBooksItems).map((m) => {
+                        const eraLabel = getMediaEraLabel(m);
+                        const catLabel = MEDIA_CATEGORIES.find((c) => c.id === m.category)?.label ?? m.category;
                         return (
                           <div
-                            class="media-category-pane"
-                            data-category={cat.id}
-                            data-active={cat.id === firstCategoryId}
-                            role="tabpanel"
-                            aria-labelledby={`media-${yearKey}-tab-${cat.id}`}
-                            id={`media-${yearKey}-${cat.id}`}
+                            class="set-card media-card media-era-card"
+                            role="link"
+                            tabindex="0"
+                            data-media-id={m.id}
+                            data-media-href={`/media/${m.id}/`}
+                            aria-label={`${getMediaCardName(m)}, ${eraLabel} ${catLabel}`}
                           >
-                            {catItems.length === 0 ? (
-                              <p class="collection-empty">No {cat.label} entries for {y}.</p>
-                            ) : (
-                              <div class="set-grid">
-                                {catItems.map((m) => (
-                                  <div
-                                    class="set-card media-card"
-                                    role="link"
-                                    tabindex="0"
-                                    data-media-id={m.id}
-                                    data-media-href={`/media/${m.id}/?gen=${group.id}&year=${y}&category=${cat.id}`}
-                                    aria-label={`${getMediaCardName(m)}, ${m.year} ${cat.label}`}
-                                  >
-                                    <img
-                                      src={`/set-photos/${m.id}.jpg`}
-                                      data-fallback={m.imageUrl}
-                                      alt={m.title}
-                                      width="160"
-                                      height="160"
-                                      loading="lazy"
-                                      onerror="this.onerror=null;this.src=this.dataset.fallback"
-                                    />
-                                    <div class="info">
-                                      <div class="name">{getMediaCardName(m)}</div>
-                                      <div class="meta">
-                                        {m.year} · {cat.label}
-                                      </div>
-                                    </div>
-
-                                    <label
-                                      class="media-card-checkbox-wrap"
-                                      aria-label={`${getMediaCardName(m)} - mark as owned`}
-                                      data-edit-only
-                                      onClick="event.stopPropagation();"
-                                    >
-                                      <input
-                                        type="checkbox"
-                                        class="media-card-checkbox"
-                                        data-media-id={m.id}
-                                        onClick="event.stopPropagation();"
-                                      />
-                                      <span class="media-card-checkbox-box" aria-hidden="true"></span>
-                                    </label>
-                                  </div>
-                                ))}
+                            <img
+                              src={`/set-photos/${m.id}.jpg`}
+                              data-fallback={m.imageUrl}
+                              alt={m.title}
+                              width="160"
+                              height="160"
+                              loading="lazy"
+                              onerror="this.onerror=null;this.src=this.dataset.fallback"
+                            />
+                            <div class="info">
+                              <div class="name">{getMediaCardName(m)}</div>
+                              <div class="meta">
+                                {eraLabel} · {catLabel}
                               </div>
-                            )}
+                            </div>
+
+                            <label
+                              class="media-card-checkbox-wrap"
+                              aria-label={`${getMediaCardName(m)} - mark as owned`}
+                              data-edit-only
+                              onClick="event.stopPropagation();"
+                            >
+                              <input
+                                type="checkbox"
+                                class="media-card-checkbox"
+                                data-media-id={m.id}
+                                onClick="event.stopPropagation();"
+                              />
+                              <span class="media-card-checkbox-box" aria-hidden="true"></span>
+                            </label>
                           </div>
                         );
                       })}
-                      <div class="media-save-row" data-edit-only>
-                        <button type="button" class="media-save-btn">Save Media ownership</button>
-                      </div>
                     </div>
-                  );
-                })
-              : yearsWithData.map((y) => {
-                  const yearKey = String(y);
-                  const yearItems = items.filter((s) => Number(s.year) === y);
-                  const ownedSetNumbers = new Set(yearItems.map((s) => getSetNumber(s)));
-                  const missingEntries = getMissingSetEntries(y, ownedSetNumbers);
-                  return (
+                  </div>
+                )}
+
+                {mediaOtherItems.length > 0 && otherYearsWithData.length > 0 && (
+                  <>
                     <div
-                      class="year-pane"
-                      id={`${group.id}-year-${yearKey}`}
-                      role="tabpanel"
-                      aria-labelledby={`${group.id}-tab-${y}`}
-                      data-year={yearKey}
+                      class="year-carousel"
+                      role="tablist"
+                      aria-label={`Select year for ${group.label}`}
                       data-group-id={group.id}
-                      data-active={y === firstYear}
                     >
-                      <div class="set-grid">
-                        {yearItems.map((set) => (
-                          <a href={`/collection/${set.id}/?gen=${group.id}&year=${y}`} class="set-card">
-                            <img src={`/set-photos/${set.id}.jpg`} data-fallback={set.imageUrl} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" onerror="this.onerror=null;this.src=this.dataset.fallback" />
-                            <div class="info">
-                              <div class="name">{getSetDisplayLabel(set)}</div>
-                              <div class="meta">{set.year}</div>
-                            </div>
-                          </a>
-                        ))}
-                      </div>
-                      {missingEntries.length > 0 && (
-                        <div class="missing-section">
-                          <h3 class="missing-heading">Missing</h3>
-                          <div class="set-grid">
-                            {missingEntries.map((entry) => (
-                              <div class="set-card set-card--missing">
-                                <img
-                                  src={`https://placehold.co/160x160?text=${encodeURIComponent(entry.setNumber)}`}
-                                  alt={`${entry.setNumber} - ${entry.name}`}
-                                  width="160"
-                                  height="160"
-                                  loading="lazy"
-                                />
-                                <div class="info">
-                                  <div class="name">{entry.setNumber} - {entry.name}</div>
-                                  <div class="meta">{y}</div>
-                                </div>
-                              </div>
+                      {otherYearsWithData.map((y) => (
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={y === otherFirstYear}
+                          aria-controls={`${group.id}-year-${y}`}
+                          id={`${group.id}-tab-${y}`}
+                          data-year={String(y)}
+                          data-group-id={group.id}
+                        >
+                          {y}
+                        </button>
+                      ))}
+                    </div>
+
+                    {otherYearsWithData.map((y) => {
+                      const yearKey = String(y);
+                      const yearItems = mediaOtherItems.filter((m) => Number(m.year) === y);
+
+                      return (
+                        <div
+                          class="year-pane"
+                          id={`${group.id}-year-${yearKey}`}
+                          role="tabpanel"
+                          aria-labelledby={`${group.id}-tab-${y}`}
+                          data-year={yearKey}
+                          data-group-id={group.id}
+                          data-active={y === otherFirstYear}
+                        >
+                          <div
+                            class="media-category-tabs"
+                            role="tablist"
+                            aria-label={`Select media category for ${y}`}
+                          >
+                            {mediaOtherCategories.map((cat) => (
+                              <button
+                                type="button"
+                                class="media-category-tab"
+                                role="tab"
+                                aria-selected={cat.id === otherFirstCategoryId}
+                                aria-controls={`media-${yearKey}-${cat.id}`}
+                                id={`media-${yearKey}-tab-${cat.id}`}
+                                data-category={cat.id}
+                              >
+                                {cat.label}
+                              </button>
                             ))}
                           </div>
+
+                          {mediaOtherCategories.map((cat) => {
+                            const catItems = yearItems.filter((m) => m.category === cat.id);
+                            return (
+                              <div
+                                class="media-category-pane"
+                                data-category={cat.id}
+                                data-active={cat.id === otherFirstCategoryId}
+                                role="tabpanel"
+                                aria-labelledby={`media-${yearKey}-tab-${cat.id}`}
+                                id={`media-${yearKey}-${cat.id}`}
+                              >
+                                {catItems.length === 0 ? (
+                                  <p class="collection-empty">No {cat.label} entries for {y}.</p>
+                                ) : (
+                                  <div class="set-grid">
+                                    {catItems.map((m) => {
+                                      return (
+                                        <div
+                                          class="set-card media-card"
+                                          role="link"
+                                          tabindex="0"
+                                          data-media-id={m.id}
+                                          data-media-href={`/media/${m.id}/`}
+                                          aria-label={`${getMediaCardName(m)}, ${m.year} ${cat.label}`}
+                                        >
+                                          <img
+                                            src={`/set-photos/${m.id}.jpg`}
+                                            data-fallback={m.imageUrl}
+                                            alt={m.title}
+                                            width="160"
+                                            height="160"
+                                            loading="lazy"
+                                            onerror="this.onerror=null;this.src=this.dataset.fallback"
+                                          />
+                                          <div class="info">
+                                            <div class="name">{getMediaCardName(m)}</div>
+                                            <div class="meta">
+                                              {m.year} · {cat.label}
+                                            </div>
+                                          </div>
+
+                                          <label
+                                            class="media-card-checkbox-wrap"
+                                            aria-label={`${getMediaCardName(m)} - mark as owned`}
+                                            data-edit-only
+                                            onClick="event.stopPropagation();"
+                                          >
+                                            <input
+                                              type="checkbox"
+                                              class="media-card-checkbox"
+                                              data-media-id={m.id}
+                                              onClick="event.stopPropagation();"
+                                            />
+                                            <span class="media-card-checkbox-box" aria-hidden="true"></span>
+                                          </label>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
-                      )}
+                      );
+                    })}
+                  </>
+                )}
+
+                <div class="media-save-row" data-edit-only>
+                  <button type="button" class="media-save-btn">Save Media ownership</button>
+                </div>
+              </>
+            ) : (
+              yearsWithData.map((y) => {
+                const yearKey = String(y);
+                const yearItems = items.filter((s) => Number(s.year) === y);
+                const ownedSetNumbers = new Set(yearItems.map((s) => getSetNumber(s)));
+                const missingEntries = getMissingSetEntries(y, ownedSetNumbers);
+                return (
+                  <div
+                    class="year-pane"
+                    id={`${group.id}-year-${yearKey}`}
+                    role="tabpanel"
+                    aria-labelledby={`${group.id}-tab-${y}`}
+                    data-year={yearKey}
+                    data-group-id={group.id}
+                    data-active={y === firstYear}
+                  >
+                    <div class="set-grid">
+                      {yearItems.map((set) => (
+                        <a href={`/collection/${set.id}/?gen=${group.id}&year=${y}`} class="set-card">
+                          <img src={`/set-photos/${set.id}.jpg`} data-fallback={set.imageUrl} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" onerror="this.onerror=null;this.src=this.dataset.fallback" />
+                          <div class="info">
+                            <div class="name">{getSetDisplayLabel(set)}</div>
+                            <div class="meta">{set.year}</div>
+                          </div>
+                        </a>
+                      ))}
                     </div>
-                  );
-                })}
+                    {missingEntries.length > 0 && (
+                      <div class="missing-section">
+                        <h3 class="missing-heading">Missing</h3>
+                        <div class="set-grid">
+                          {missingEntries.map((entry) => (
+                            <div class="set-card set-card--missing">
+                              <img
+                                src={`https://placehold.co/160x160?text=${encodeURIComponent(entry.setNumber)}`}
+                                alt={`${entry.setNumber} - ${entry.name}`}
+                                width="160"
+                                height="160"
+                                loading="lazy"
+                              />
+                              <div class="info">
+                                <div class="name">{entry.setNumber} - {entry.name}</div>
+                                <div class="meta">{y}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
           </>
         ) : (
           <div class="set-grid">
@@ -542,6 +659,8 @@ const defaultGroupId =
       }
 
       const savedYear = params.get('year');
+      const savedCategory = params.get('category');
+      const focusId = params.get('focus');
 
       // Media tab: category selection inside each active year pane.
       document.querySelectorAll('.media-category-tab[data-category]').forEach((btn) => {
@@ -582,23 +701,35 @@ const defaultGroupId =
             pane.setAttribute('data-active', pane.getAttribute('data-year') === year ? 'true' : 'false');
           });
 
-          // Media tab has a second category layer. Reset it whenever the year changes.
+          // Media tab (for non-comics/books categories) has a second category layer.
+          // On initial load, allow restoring `?category=...`. On user year changes, fall back to default.
           if (groupId === 'media') {
             const activePane = Array.from(panes).find((pane) => pane.getAttribute('data-year') === year);
-            const defaultBtn = activePane?.querySelector('.media-category-tab[data-category]');
+            if (!activePane) return;
+
+            const catButtons = activePane.querySelectorAll('.media-category-tab[data-category]');
+            if (!catButtons || catButtons.length === 0) return;
+
+            const defaultBtn = activePane.querySelector('.media-category-tab[data-category]');
             const defaultCategory = defaultBtn?.getAttribute('data-category');
-            if (activePane && defaultCategory) {
-              const catButtons = activePane.querySelectorAll('.media-category-tab[data-category]');
-              catButtons.forEach((btn) => {
-                const active = btn.getAttribute('data-category') === defaultCategory;
-                btn.setAttribute('aria-selected', active ? 'true' : 'false');
-                btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-              });
-              const catPanes = activePane.querySelectorAll('.media-category-pane[data-category]');
-              catPanes.forEach((pane) => {
-                pane.setAttribute('data-active', pane.getAttribute('data-category') === defaultCategory ? 'true' : 'false');
-              });
+            if (!defaultCategory) return;
+
+            let targetCategory = defaultCategory;
+            if (!updateUrl && savedCategory) {
+              const hasSavedCategory = Array.from(catButtons).some((btn) => btn.getAttribute('data-category') === savedCategory);
+              if (hasSavedCategory) targetCategory = savedCategory;
             }
+
+            catButtons.forEach((btn) => {
+              const active = btn.getAttribute('data-category') === targetCategory;
+              btn.setAttribute('aria-selected', active ? 'true' : 'false');
+              btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+            });
+
+            const catPanes = activePane.querySelectorAll('.media-category-pane[data-category]');
+            catPanes.forEach((pane) => {
+              pane.setAttribute('data-active', pane.getAttribute('data-category') === targetCategory ? 'true' : 'false');
+            });
           }
           if (updateUrl && yearValues.includes(year)) {
             const url = new URL(window.location.href);
@@ -619,6 +750,38 @@ const defaultGroupId =
           if (btn.getAttribute('aria-selected') === 'true') btn.setAttribute('aria-pressed', 'true');
         });
       });
+
+      // If returning from a media detail page, focus the requested thumbnail.
+      if (focusId) {
+        requestAnimationFrame(() => {
+          const safeId = typeof CSS !== 'undefined' && typeof CSS.escape === 'function' ? CSS.escape(focusId) : focusId;
+          const card = document.querySelector(`.media-card[data-media-id="${safeId}"]`);
+          if (card && typeof card.scrollIntoView === 'function') {
+            card.scrollIntoView({ behavior: 'auto', inline: 'start', block: 'nearest' });
+          }
+        });
+      }
+
+      // Media era carousel: left/right buttons.
+      const mediaCarousel = document.querySelector('.media-era-carousel');
+      if (mediaCarousel instanceof HTMLElement) {
+        const prevBtn = document.querySelector('.media-era-prev');
+        const nextBtn = document.querySelector('.media-era-next');
+        const firstCard = mediaCarousel.querySelector('.media-era-card');
+        const cardWidth = firstCard instanceof HTMLElement ? firstCard.getBoundingClientRect().width : 180;
+        const scrollAmount = cardWidth + 16;
+
+        if (prevBtn instanceof HTMLButtonElement) {
+          prevBtn.addEventListener('click', () => {
+            mediaCarousel.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+          });
+        }
+        if (nextBtn instanceof HTMLButtonElement) {
+          nextBtn.addEventListener('click', () => {
+            mediaCarousel.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+          });
+        }
+      }
     })();
 
     (function () {

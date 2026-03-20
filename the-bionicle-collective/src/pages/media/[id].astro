@@ -1,6 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { mediaItems, getMediaById, MEDIA_CATEGORIES, getMediaCardName } from '../../data/media';
+import { getMediaEraLabel } from '../../data/mediaEras';
 
 export function getStaticPaths() {
   return mediaItems.map((m) => ({ params: { id: m.id } }));
@@ -14,9 +15,10 @@ if (!media) {
 }
 
 const categoryLabel = MEDIA_CATEGORIES.find((c) => c.id === media.category)?.label ?? media.category;
+const eraLabel = getMediaEraLabel(media);
 
 // Preserve year context when going back to the collection page.
-const backHref = `/collection/?gen=media&year=${media.year}`;
+const backHref = `/collection/?gen=media&year=${media.year}&category=${media.category}&focus=${media.id}`;
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 function formatAcquiredDate(acquiredDate: string | undefined): string {
@@ -50,6 +52,10 @@ function formatAcquiredDate(acquiredDate: string | undefined): string {
           <li>
             <span>Year</span>
             <span>{media.year}</span>
+          </li>
+          <li>
+            <span>Era</span>
+            <span>{eraLabel}</span>
           </li>
         </ul>
 
