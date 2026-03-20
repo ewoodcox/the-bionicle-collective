@@ -1,21 +1,403 @@
 [
   {
-    "id": "comics-2001-issue-1",
-    "title": "BIONICLE Comics",
+    "id": "bionicle_1-the-coming-of-the-toa",
+    "title": "The Coming of the Toa",
     "issueNumber": "Issue 1",
     "category": "comics",
     "year": 2001,
-    "imageUrl": "https://placehold.co/280x280?text=Comics%201001",
-    "sourceUrl": "https://biosector01.com/wiki/"
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
   },
   {
-    "id": "comics-2001-issue-2",
-    "title": "BIONICLE Comics",
+    "id": "bionicle_2-deep-into-darkness",
+    "title": "Deep into Darkness",
     "issueNumber": "Issue 2",
     "category": "comics",
     "year": 2001,
-    "imageUrl": "https://placehold.co/280x280?text=Comics%201002",
-    "sourceUrl": "https://biosector01.com/wiki/"
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_3-triumph-of-the-toa",
+    "title": "Triumph of the Toa",
+    "issueNumber": "Issue 3",
+    "category": "comics",
+    "year": 2001,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_4-the-bohrok-awake",
+    "title": "The Bohrok Awake",
+    "issueNumber": "Issue 4",
+    "category": "comics",
+    "year": 2002,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_5-to-trap-a-tahnok",
+    "title": "To Trap a Tahnok",
+    "issueNumber": "Issue 5",
+    "category": "comics",
+    "year": 2002,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_6-into-the-nest",
+    "title": "Into The Nest",
+    "issueNumber": "Issue 6",
+    "category": "comics",
+    "year": 2002,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_7-what-lurks-below",
+    "title": "What Lurks Below",
+    "issueNumber": "Issue 7",
+    "category": "comics",
+    "year": 2002,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_8-the-end-of-the-toa",
+    "title": "The End of the Toa?",
+    "issueNumber": "Issue 8",
+    "category": "comics",
+    "year": 2002,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_9-divided-we-fall",
+    "title": "Divided We Fall",
+    "issueNumber": "Issue 9",
+    "category": "comics",
+    "year": 2002,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_10-powerless",
+    "title": "Powerless!",
+    "issueNumber": "Issue 10",
+    "category": "comics",
+    "year": 2003,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_11-a-matter-of-time",
+    "title": "A Matter of Time...",
+    "issueNumber": "Issue 11",
+    "category": "comics",
+    "year": 2003,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_12-absolute-power",
+    "title": "Absolute Power",
+    "issueNumber": "Issue 12",
+    "category": "comics",
+    "year": 2003,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_13-rise-of-the-rahkshi",
+    "title": "Rise of the Rahkshi!",
+    "issueNumber": "Issue 13",
+    "category": "comics",
+    "year": 2003,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_14-at-last-takanuva",
+    "title": "At Last -- Takanuva!",
+    "issueNumber": "Issue 14",
+    "category": "comics",
+    "year": 2003,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_15-secrets-and-shadows",
+    "title": "Secrets and Shadows",
+    "issueNumber": "Issue 15",
+    "category": "comics",
+    "year": 2003,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_16-toa-metru",
+    "title": "Toa Metru!",
+    "issueNumber": "Issue 16",
+    "category": "comics",
+    "year": 2004,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_17-disks-of-danger",
+    "title": "Disks of Danger",
+    "issueNumber": "Issue 17",
+    "category": "comics",
+    "year": 2004,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_18-seeds-of-doom",
+    "title": "Seeds of Doom",
+    "issueNumber": "Issue 18",
+    "category": "comics",
+    "year": 2004,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_19-enemies-of-metru-nui",
+    "title": "Enemies of Metru Nui",
+    "issueNumber": "Issue 19",
+    "category": "comics",
+    "year": 2004,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_20-struggle-in-the-sky",
+    "title": "Struggle in the Sky",
+    "issueNumber": "Issue 20",
+    "category": "comics",
+    "year": 2004,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_21-dreams-of-darkness",
+    "title": "Dreams of Darkness",
+    "issueNumber": "Issue 21",
+    "category": "comics",
+    "year": 2004,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_22-monsters-in-the-dark",
+    "title": "Monsters in the Dark",
+    "issueNumber": "Issue 22",
+    "category": "comics",
+    "year": 2005,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_23-vengeance-of-the-visorak",
+    "title": "Vengeance of the Visorak",
+    "issueNumber": "Issue 23",
+    "category": "comics",
+    "year": 2005,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_24-shadow-play",
+    "title": "Shadow Play",
+    "issueNumber": "Issue 24",
+    "category": "comics",
+    "year": 2005,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_25-birth-of-the-rahaga",
+    "title": "Birth of the Rahaga",
+    "issueNumber": "Issue 25",
+    "category": "comics",
+    "year": 2005,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_26-hanging-by-a-thread",
+    "title": "Hanging by a Thread",
+    "issueNumber": "Issue 26",
+    "category": "comics",
+    "year": 2005,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_27-fractures",
+    "title": "Fractures",
+    "issueNumber": "Issue 27",
+    "category": "comics",
+    "year": 2005,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_ignition_0-ignition-0",
+    "title": "Ignition 0",
+    "issueNumber": "Ignition 0",
+    "category": "comics",
+    "year": 2006,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_ignition_1-if-a-universe-ends",
+    "title": "If a Universe Ends ...",
+    "issueNumber": "Ignition 1",
+    "category": "comics",
+    "year": 2006,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_ignition_2-vengeance-of-axonn",
+    "title": "Vengeance of Axonn",
+    "issueNumber": "Ignition 2",
+    "category": "comics",
+    "year": 2006,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_ignition_3-showdown",
+    "title": "Showdown",
+    "issueNumber": "Ignition 3",
+    "category": "comics",
+    "year": 2006,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_ignition_4-a-cold-light-dawns",
+    "title": "A Cold Light Dawns",
+    "issueNumber": "Ignition 4",
+    "category": "comics",
+    "year": 2006,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_ignition_5-in-final-battle",
+    "title": "In Final Battle",
+    "issueNumber": "Ignition 5",
+    "category": "comics",
+    "year": 2006,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_ignition_6-ignition-6",
+    "title": "Ignition 6",
+    "issueNumber": "Ignition 6",
+    "category": "comics",
+    "year": 2007,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_ignition_7-mask-of-life-mask-of-doom",
+    "title": "Mask of Life, Mask of Doom",
+    "issueNumber": "Ignition 7",
+    "category": "comics",
+    "year": 2007,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_ignition_8-sea-of-darkness",
+    "title": "Sea of Darkness",
+    "issueNumber": "Ignition 8",
+    "category": "comics",
+    "year": 2007,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_ignition_9-battle-in-the-deep",
+    "title": "Battle in the Deep!",
+    "issueNumber": "Ignition 9",
+    "category": "comics",
+    "year": 2007,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_ignition_10-the-death-of-mata-nui",
+    "title": "The Death of Mata Nui",
+    "issueNumber": "Ignition 10",
+    "category": "comics",
+    "year": 2007,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_ignition_11-death-of-a-hero",
+    "title": "Death of a Hero",
+    "issueNumber": "Ignition 11",
+    "category": "comics",
+    "year": 2007,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_ignition_12-realm-of-fear",
+    "title": "Realm of Fear",
+    "issueNumber": "Ignition 12",
+    "category": "comics",
+    "year": 2008,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_ignition_13-swamp-of-shadows",
+    "title": "Swamp of Shadows",
+    "issueNumber": "Ignition 13",
+    "category": "comics",
+    "year": 2008,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_ignition_14-endgame",
+    "title": "Endgame",
+    "issueNumber": "Ignition 14",
+    "category": "comics",
+    "year": 2008,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_ignition_15-mata-nui-rising",
+    "title": "Mata Nui Rising",
+    "issueNumber": "Ignition 15",
+    "category": "comics",
+    "year": 2008,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_glatorian_1-sands-of-bara-magna",
+    "title": "Sands of Bara Magna",
+    "issueNumber": "Glatorian 1",
+    "category": "comics",
+    "year": 2009,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_glatorian_2-the-fall-of-atero",
+    "title": "The Fall of Atero",
+    "issueNumber": "Glatorian 2",
+    "category": "comics",
+    "year": 2009,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_glatorian_3-a-hero-reborn",
+    "title": "A Hero Reborn",
+    "issueNumber": "Glatorian 3",
+    "category": "comics",
+    "year": 2009,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_glatorian_4-before-the-storm",
+    "title": "Before the Storm",
+    "issueNumber": "Glatorian 4",
+    "category": "comics",
+    "year": 2009,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_glatorian_5-valley-of-fear",
+    "title": "Valley of Fear",
+    "issueNumber": "Glatorian 5",
+    "category": "comics",
+    "year": 2009,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_glatorian_6-all-that-glitters",
+    "title": "All That Glitters",
+    "issueNumber": "Glatorian 6",
+    "category": "comics",
+    "year": 2010,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
+  },
+  {
+    "id": "bionicle_glatorian_7-rebirth",
+    "title": "Rebirth",
+    "issueNumber": "Glatorian 7",
+    "category": "comics",
+    "year": 2010,
+    "imageUrl": "https://placehold.co/280x280?text=Comics"
   },
   {
     "id": "disks-2001-1",
@@ -58,25 +440,6 @@
     "category": "books",
     "year": 2001,
     "imageUrl": "https://placehold.co/280x280?text=Books%201202",
-    "sourceUrl": "https://biosector01.com/wiki/"
-  },
-
-  {
-    "id": "comics-2015-issue-1",
-    "title": "BIONICLE Comics",
-    "issueNumber": "Issue 1",
-    "category": "comics",
-    "year": 2015,
-    "imageUrl": "https://placehold.co/280x280?text=Comics%2015101",
-    "sourceUrl": "https://biosector01.com/wiki/"
-  },
-  {
-    "id": "comics-2015-issue-2",
-    "title": "BIONICLE Comics",
-    "issueNumber": "Issue 2",
-    "category": "comics",
-    "year": 2015,
-    "imageUrl": "https://placehold.co/280x280?text=Comics%2015102",
     "sourceUrl": "https://biosector01.com/wiki/"
   },
   {
