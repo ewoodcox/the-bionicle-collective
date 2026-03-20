@@ -1,22 +1,26 @@
-/// <reference types="@cloudflare/workers-types" />
-import type { APIRoute } from 'astro';
 import { checkRateLimitContact } from '../../utils/rateLimitR2';
-import { sendEmailViaMailChannels } from '../../utils/mailchannels';
+import { sendContactEmailViaCloudflare } from '../../utils/cloudflareEmail';
 
 export const prerender = false;
 
 const CONTACT_EMAIL = 'contact@bioniclecollective.com';
 const FROM_EMAIL = 'noreply@bioniclecollective.com';
 
-type Env = { OWNER_EMAIL?: string; BIONICLE_COLLECTION?: R2Bucket };
+type Env = {
+  OWNER_EMAIL?: string;
+  /** Cloudflare send_email binding — set in wrangler + Pages → Settings → Functions */
+  SEND_EMAIL?: { send: (message: unknown) => Promise<void> };
+  BIONICLE_COLLECTION?: any;
+};
 
-function getEnv(locals: App.Locals): Env {
+function getEnv(locals: any): Env {
   return (locals as { runtime?: { env?: Env } }).runtime?.env ?? {};
 }
 
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST = async ({ request, locals }: any) => {
   const env = getEnv(locals);
   const ownerEmail = env.OWNER_EMAIL ?? CONTACT_EMAIL;
+  const sendEmailBinding = env.SEND_EMAIL;
 
   const ip = request.headers.get('CF-Connecting-IP') ?? request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() ?? 'unknown';
   const bucket = env.BIONICLE_COLLECTION;
@@ -61,7 +65,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const fromName = name || 'Anonymous';
   const emailBody = `You received a message from the Community page:\n\nFrom: ${fromName} <${email}>\nSubject: ${subject}\n\n---\n\n${message}`;
 
-  const { ok, error } = await sendEmailViaMailChannels({
+  const { ok, error } = await sendContactEmailViaCloudflare({
+    binding: sendEmailBinding,
     to: ownerEmail,
     from: FROM_EMAIL,
     fromName: 'The Bionicle Collective',
@@ -71,7 +76,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   });
 
   if (!ok) {
-    console.error('MailChannels send failed:', error);
+    console.error('Contact email send failed:', error);
     return new Response(
       JSON.stringify({ error: 'Failed to send message. Please try again later.' }),
       { status: 502, headers: { 'Content-Type': 'application/json' } }

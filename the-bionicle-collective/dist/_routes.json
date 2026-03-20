@@ -9,7 +9,9 @@
     "/.gitkeep",
     "/Matoran_FoldArms_v1.png",
     "/TBC logo for site.png",
-    "/fonts/Trajan Pro Regular.ttf",
-    "/set-photos/.gitkeep"
+    "/favicon-16x16.png",
+    "/site.webmanifest",
+    "/fonts/*",
+    "/set-photos/*"
   ]
 }

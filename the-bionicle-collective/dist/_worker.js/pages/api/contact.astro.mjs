@@ -1,31 +1,45 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as checkRateLimitContact } from '../../chunks/rateLimitR2_B0zxt9YQ.mjs';
+import { EmailMessage } from 'cloudflare:email';
 export { renderers } from '../../renderers.mjs';
 
-const MAILCHANNELS_API = "https://api.mailchannels.net/tx/v1/send";
-async function sendEmailViaMailChannels(options) {
-  const { to, from, fromName, replyTo, subject, text } = options;
-  const res = await fetch(MAILCHANNELS_API, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      personalizations: [
-        {
-          to: [{ email: to }],
-          headers: { "Reply-To": replyTo }
-        }
-      ],
-      from: { email: from, name: fromName },
-      subject,
-      content: [{ type: "text/plain", value: text }]
-    })
-  });
-  if (res.ok) {
-    return { ok: true };
+function headerSafe(value) {
+  return value.replace(/[\r\n]/g, " ").trim();
+}
+function buildPlainTextMime(options) {
+  const fromName = headerSafe(options.fromName) || "The Bionicle Collective";
+  const from = headerSafe(options.from);
+  const to = headerSafe(options.to);
+  const replyTo = headerSafe(options.replyTo);
+  const subject = headerSafe(options.subject);
+  const fromHeader = `"${fromName.replace(/"/g, "")}" <${from}>`;
+  const lines = [
+    `From: ${fromHeader}`,
+    `To: ${to}`,
+    `Reply-To: ${replyTo}`,
+    `Subject: ${subject}`,
+    "MIME-Version: 1.0",
+    "Content-Type: text/plain; charset=UTF-8",
+    "",
+    options.text
+  ];
+  return lines.join("\r\n");
+}
+async function sendContactEmailViaCloudflare(options) {
+  const { binding, from, to } = options;
+  if (!binding) {
+    return { ok: false, error: "Email binding (SEND_EMAIL) is not configured" };
   }
-  const errText = await res.text();
-  console.error("MailChannels API error:", res.status, errText);
-  return { ok: false, error: errText };
+  const raw = buildPlainTextMime(options);
+  try {
+    const message = new EmailMessage(from, to, raw);
+    await binding.send(message);
+    return { ok: true };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("Cloudflare Email send failed:", msg);
+    return { ok: false, error: msg };
+  }
 }
 
 const prerender = false;
@@ -37,6 +51,7 @@ function getEnv(locals) {
 const POST = async ({ request, locals }) => {
   const env = getEnv(locals);
   const ownerEmail = env.OWNER_EMAIL ?? CONTACT_EMAIL;
+  const sendEmailBinding = env.SEND_EMAIL;
   const ip = request.headers.get("CF-Connecting-IP") ?? request.headers.get("X-Forwarded-For")?.split(",")[0]?.trim() ?? "unknown";
   const bucket = env.BIONICLE_COLLECTION;
   const rateOk = await checkRateLimitContact(bucket, ip);
@@ -80,7 +95,8 @@ Subject: ${subject}
 ---
 
 ${message}`;
-  const { ok, error } = await sendEmailViaMailChannels({
+  const { ok, error } = await sendContactEmailViaCloudflare({
+    binding: sendEmailBinding,
     to: ownerEmail,
     from: FROM_EMAIL,
     fromName: "The Bionicle Collective",
@@ -89,7 +105,7 @@ ${message}`;
     text: emailBody
   });
   if (!ok) {
-    console.error("MailChannels send failed:", error);
+    console.error("Contact email send failed:", error);
     return new Response(
       JSON.stringify({ error: "Failed to send message. Please try again later." }),
       { status: 502, headers: { "Content-Type": "application/json" } }

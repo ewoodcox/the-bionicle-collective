@@ -1,43 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { readFile, writeFile } from 'fs/promises';
-import { existsSync } from 'fs';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
 import { a as isAuthConfigured, i as isAuthenticated } from '../../../chunks/adminAuth_CE1MGqB7.mjs';
 export { renderers } from '../../../renderers.mjs';
-
-const __dirname$1 = dirname(fileURLToPath(import.meta.url));
-const STORE_PATH = join(__dirname$1, "..", "data", "collection-store.json");
-async function readStore() {
-  if (!existsSync(STORE_PATH)) return {};
-  try {
-    const raw = await readFile(STORE_PATH, "utf8");
-    const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === "object") return parsed;
-  } catch {
-  }
-  return {};
-}
-async function writeStore(store) {
-  await writeFile(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
-}
-async function getCollectionEntry$1(setId) {
-  const store = await readStore();
-  return store[setId] ?? null;
-}
-async function upsertCollectionEntry$1(setId, data) {
-  const store = await readStore();
-  const existing = store[setId] ?? {};
-  const merged = {
-    acquiredDate: data.acquiredDate ?? existing.acquiredDate ?? "",
-    acquiredFrom: data.acquiredFrom ?? existing.acquiredFrom ?? "",
-    status: data.status ?? existing.status ?? "",
-    notes: data.notes ?? existing.notes ?? ""
-  };
-  store[setId] = merged;
-  await writeStore(store);
-  return merged;
-}
 
 const R2_KEY = "collection-store.json";
 const LEGACY_KEY = "collection.json";
@@ -51,13 +14,46 @@ function parseStore(raw) {
   return {};
 }
 async function getStoreRaw(bucket) {
-  let object = await bucket.get(R2_KEY);
-  let raw = object ? await object.text() : null;
+  let object = null;
+  try {
+    object = await bucket.get(R2_KEY);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`R2 get failed for key "${R2_KEY}": ${message}`);
+  }
+  let raw = null;
+  if (object) {
+    try {
+      raw = await object.text();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      throw new Error(`R2 read failed for key "${R2_KEY}": ${message}`);
+    }
+  }
   if (!raw) {
-    object = await bucket.get(LEGACY_KEY);
-    raw = object ? await object.text() : null;
+    try {
+      object = await bucket.get(LEGACY_KEY);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      throw new Error(`R2 get failed for legacy key "${LEGACY_KEY}": ${message}`);
+    }
+    if (object) {
+      try {
+        raw = await object.text();
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        throw new Error(`R2 read failed for legacy key "${LEGACY_KEY}": ${message}`);
+      }
+    } else {
+      raw = null;
+    }
     if (raw) {
-      await bucket.put(R2_KEY, raw, { httpMetadata: { contentType: "application/json" } });
+      try {
+        await bucket.put(R2_KEY, raw, { httpMetadata: { contentType: "application/json" } });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        throw new Error(`R2 put failed for key "${R2_KEY}" (migration from legacy): ${message}`);
+      }
     }
   }
   return raw;
@@ -78,15 +74,20 @@ async function upsertCollectionEntry(bucket, setId, data) {
     notes: data.notes ?? existing.notes ?? ""
   };
   store[setId] = merged;
-  await bucket.put(R2_KEY, JSON.stringify(store), {
-    httpMetadata: { contentType: "application/json" }
-  });
+  try {
+    await bucket.put(R2_KEY, JSON.stringify(store), {
+      httpMetadata: { contentType: "application/json" }
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`R2 put failed for key "${R2_KEY}": ${message}`);
+  }
   return merged;
 }
 
 const __vite_import_meta_env__ = {"ASSETS_PREFIX": undefined, "BASE_URL": "/", "DEV": false, "MODE": "production", "PROD": true, "SITE": "https://bioniclecollective.com", "SSR": true};
 const prerender = false;
-function getStore(locals) {
+async function getStore(locals) {
   const env = locals.runtime?.env;
   const bucket = env?.BIONICLE_COLLECTION;
   if (bucket) {
@@ -95,45 +96,64 @@ function getStore(locals) {
       put: (id, data) => upsertCollectionEntry(bucket, id, data)
     };
   }
-  return {
-    get: (id) => getCollectionEntry$1(id),
-    put: (id, data) => upsertCollectionEntry$1(id, data)
-  };
+  if (Object.assign(__vite_import_meta_env__, { _: process.env._ })?.DEV) {
+    const storeFs = await import('../../../chunks/collectionStore_DxgiKpp1.mjs');
+    return {
+      get: (id) => storeFs.getCollectionEntry(id),
+      put: (id, data) => storeFs.upsertCollectionEntry(id, data)
+    };
+  }
+  return null;
 }
 const GET = async ({ params, locals }) => {
   const id = params.id;
   if (!id) {
     return new Response(JSON.stringify({ error: "Missing id" }), { status: 400 });
   }
-  const store = getStore(locals);
-  const entry = await store.get(id);
-  const payload = {
-    acquiredDate: entry?.acquiredDate ?? "",
-    acquiredFrom: entry?.acquiredFrom ?? "",
-    status: entry?.status ?? "",
-    notes: entry?.notes ?? ""
-  };
-  return new Response(JSON.stringify(payload), {
-    status: 200,
-    headers: { "Content-Type": "application/json" }
-  });
+  const store = await getStore(locals);
+  if (!store) {
+    return new Response(
+      JSON.stringify({
+        error: "Collection storage (R2) is not configured. In Cloudflare Pages → your project → Settings → Functions, add an R2 bucket binding with variable name `BIONICLE_COLLECTION` linked to your R2 bucket."
+      }),
+      { status: 503, headers: { "Content-Type": "application/json" } }
+    );
+  }
+  try {
+    const entry = await store.get(id);
+    const payload = {
+      acquiredDate: entry?.acquiredDate ?? "",
+      acquiredFrom: entry?.acquiredFrom ?? "",
+      status: entry?.status ?? "",
+      notes: entry?.notes ?? ""
+    };
+    return new Response(JSON.stringify(payload), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return new Response(JSON.stringify({ error: "Failed to load collection entry", details: message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
 };
 const PUT = async ({ params, request, locals }) => {
   const id = params.id;
   if (!id) {
     return new Response(JSON.stringify({ error: "Missing id" }), { status: 400 });
   }
-  const env = locals.runtime?.env;
-  const bucket = env?.BIONICLE_COLLECTION;
-  const isProduction = !Object.assign(__vite_import_meta_env__, {})?.DEV;
-  if (isProduction && !bucket) {
+  const store = await getStore(locals);
+  if (!store) {
     return new Response(
       JSON.stringify({
-        error: "Collection storage (R2) is not configured. In Cloudflare Pages → your project → Settings → Functions, add an R2 bucket binding with variable name BIONICLE_COLLECTION linked to your R2 bucket."
+        error: "Collection storage (R2) is not configured. In Cloudflare Pages → your project → Settings → Functions, add an R2 bucket binding with variable name `BIONICLE_COLLECTION` linked to your R2 bucket."
       }),
       { status: 503, headers: { "Content-Type": "application/json" } }
     );
   }
+  const env = locals.runtime?.env;
   if (isAuthConfigured(env)) {
     const ok = await isAuthenticated(request, env);
     if (!ok) {
@@ -149,7 +169,6 @@ const PUT = async ({ params, request, locals }) => {
   } catch {
     return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400 });
   }
-  const store = getStore(locals);
   let saved;
   try {
     saved = await store.put(id, {

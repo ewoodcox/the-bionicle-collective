@@ -1,0 +1,13 @@
+{
+  "name": "The Bionicle Collective",
+  "short_name": "TBC",
+  "start_url": "/",
+  "display": "standalone",
+  "icons": [
+    {
+      "src": "/favicon-16x16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    }
+  ]
+}

@@ -19,5 +19,9 @@
       "bucket_name": "bionicle-collection",
       "remote": true
     }
-  ]
+  ],
+  // Email Routing → send from Workers. Match name in Pages → Settings → Functions → Email.
+  // Recipients must be allowed by Email Routing (verified destinations / your domain rules).
+  // https://developers.cloudflare.com/email-routing/email-workers/send-email-workers/
+  "send_email": [{ "name": "SEND_EMAIL" }]
 }
