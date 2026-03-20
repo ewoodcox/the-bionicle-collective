@@ -1,3 +1,4 @@
+/// <reference types="@cloudflare/workers-types" />
 /**
  * Send mail via Cloudflare Email Routing (Workers send_email binding).
  * Docs: https://developers.cloudflare.com/email-routing/email-workers/send-email-workers/
