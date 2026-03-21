@@ -5,7 +5,7 @@ const MEDIA_ERAS = [
   { id: "ignition_trilogy", label: "Ignition Trilogy", sortPosition: 30 },
   { id: "bara_magna_saga", label: "Bara Magna Saga", sortPosition: 40 },
   // Books (and other non-comics items) don't currently have arc metadata, so keep them together until mapped.
-  { id: "books_tbd", label: "Books (TBD)", sortPosition: 9990 },
+  { id: "books_tbd", label: "Books", sortPosition: 9990 },
   { id: "unknown", label: "Unknown", sortPosition: 9999 }
 ];
 function getMainIssueNumber(m) {
@@ -36,6 +36,21 @@ function getVolumeNumber(m) {
   const n = Number(match[1]);
   return Number.isFinite(n) ? n : null;
 }
+function getBookSeriesSortKey(m) {
+  const s = (m.issueNumber ?? "").trim();
+  let match = s.match(/^Chronicles\s+(\d+)$/i);
+  if (match) return 100 + Number(match[1]);
+  if (/^movie$/i.test(s)) return 150;
+  match = s.match(/^Adventures\s+(\d+)$/i);
+  if (match) return 200 + Number(match[1]);
+  match = s.match(/^Legends\s+(\d+)$/i);
+  if (match) return 400 + Number(match[1]);
+  match = s.match(/^Bara Magna\s+(\d+)$/i);
+  if (match) return 500 + Number(match[1]);
+  match = s.match(/^G2\s+(\d+)$/i);
+  if (match) return 600 + Number(match[1]);
+  return null;
+}
 function getMediaEraId(m) {
   if (m.category === "comics") {
     if (m.year >= 2001 && m.year <= 2003) return "mata_nui_saga";
@@ -59,6 +74,8 @@ function getWithinEraSortNumber(m) {
     if (glatorian !== null) return glatorian;
   }
   if (m.category === "books") {
+    const series = getBookSeriesSortKey(m);
+    if (series !== null) return series;
     const vol = getVolumeNumber(m);
     if (vol !== null) return vol;
     return m.year;

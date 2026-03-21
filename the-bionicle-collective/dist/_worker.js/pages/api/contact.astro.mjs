@@ -158,7 +158,7 @@ ${message}`;
   if (!sendEmailBinding && !mailchannelsKey) {
     return new Response(
       JSON.stringify({
-        error: "Email is not configured: add send_email named SEND_EMAIL in wrangler.jsonc (see docs/DEPLOY-CLOUDFLARE-GIT.md), or set MAILCHANNELS_API_KEY.",
+        error: "Email is not configured: add send_email named SEND_EMAIL in wrangler.jsonc (see docs/DEPLOY-CLOUDFLARE-GIT.md), or set MAILCHANNELS_API_KEY as optional fallback.",
         code: "EMAIL_NOT_CONFIGURED"
       }),
       { status: 503, headers: { "Content-Type": "application/json" } }
@@ -168,7 +168,7 @@ ${message}`;
     JSON.stringify({
       error: "Failed to send message. Please try again later.",
       code: "EMAIL_SEND_FAILED",
-      hint: "Check Workers logs. Email Routing send_email is set in wrangler (not the dashboard bindings list). Set OWNER_EMAIL to a verified destination if needed."
+      hint: "Check Workers logs and wrangler.jsonc send_email. Set OWNER_EMAIL to a verified Email Routing destination if sends are rejected."
     }),
     { status: 502, headers: { "Content-Type": "application/json" } }
   );

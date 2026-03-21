@@ -1,5 +1,5 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { g as getMediaById } from '../../../../chunks/media_DceDyRGo.mjs';
+import { g as getMediaById } from '../../../../chunks/media_BXms_Pdn.mjs';
 export { renderers } from '../../../../renderers.mjs';
 
 const prerender = false;
