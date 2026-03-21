@@ -1,6 +1,10 @@
 # Deploy with Wrangler (`wrangler.jsonc`)
 
-The site uses the repo root **`wrangler.jsonc`** for **Pages**: **KV**, **R2**, and **`send_email`** → **`SEND_EMAIL`** (contact form). See **`docs/EMAIL-CLOUDFLARE-ROUTING.md`**.
+The site’s **`wrangler.jsonc`** configures **Pages**: **KV** and **R2** only.
+
+**Do not** add **`send_email`** to this file — **Git-connected Pages** fails with *Configuration file for Pages projects does not support "send_email"*.
+
+Outbound mail uses a **separate Worker** (e.g. **`the-bionicle-email-worker`**) that **does** declare **`send_email`** in **its** Wrangler file. The Pages project calls it via **`EMAIL_WORKER_URL`**. See **`docs/EMAIL-CLOUDFLARE-ROUTING.md`**.
 
 ---
 
@@ -8,20 +12,30 @@ The site uses the repo root **`wrangler.jsonc`** for **Pages**: **KV**, **R2**, 
 
 ### A. Domain (zone)
 
-1. **Email** → **Email Routing** — enable, verify **destination addresses**, add **routing rules** for addresses you use (e.g. `contact@…`).
+1. **Email** → **Email Routing** — enable, verify **destination addresses**, **routing rules** (e.g. `contact@…`).
 2. DNS (MX, etc.) as prompted.
 
-### B. Repo: `wrangler.jsonc`
+### B. Email Worker (separate deploy)
 
-Includes **`send_email`** with **`SEND_EMAIL`**. Do not rename the binding without updating **`src/pages/api/contact.ts`**.
+Deploy **`the-bionicle-email-worker`** (or your Worker) with **`send_email`** → **`SEND_EMAIL`** in **that** Worker’s Wrangler config. Copy its public URL (e.g. `https://the-bionicle-email-worker.<account>.workers.dev`).
 
-### C. Pages project settings
+### C. Pages project — environment variables
+
+**Workers & Pages** → your **Pages** project → **Settings** → **Environment variables** (Production):
+
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| **`EMAIL_WORKER_URL`** | **Yes** (for contact form) | Full URL of the email Worker (no trailing slash required). |
+| **`EMAIL_WORKER_SECRET`** | Optional | Must match the Worker’s secret if you use `wrangler secret put EMAIL_WORKER_SECRET` on the email Worker. |
+| **`OWNER_EMAIL`** | Optional | Recipient override (default in code: `contact@…`). |
+| **`NODE_VERSION`** | If builds fail | e.g. `20` or `22`. |
+
+### D. Pages project — build & Wrangler file
 
 1. **Build:** `npm run build`, output **`dist`**, correct **root directory** if monorepo.
-2. **Use Wrangler configuration file** from the repo → **`wrangler.jsonc`**.
-3. **Environment variables (optional):** **`OWNER_EMAIL`**, **`NODE_VERSION`** (e.g. `20`).
+2. **Use Wrangler configuration file** from the repo → **`wrangler.jsonc`** (KV + R2 only).
 
-### D. Deploy
+### E. Deploy
 
 ```bash
 npm install
@@ -31,29 +45,23 @@ npm run deploy
 
 (`deploy` = `astro build && wrangler pages deploy`.)
 
-If you removed the **`email-worker`** npm workspace, run **`npm install`** again at the repo root so **`package-lock.json`** matches **`package.json`** (regenerate the lockfile if it was deleted).
-
-### E. Git push / Cloudflare “Connect to Git”
-
-If the build fails with **does not support "send_email"**, the **Git-connected** builder is rejecting **`send_email`** in the checked-in file. That is documented on Cloudflare’s side for some Pages setups. Your project is still configured for **Wrangler**; resolve by using a **Wrangler-based deploy** (above), adjusting the Pages project’s build settings when Cloudflare allows it, or following Cloudflare’s current guidance for Email Routing on Pages.
-
 ---
 
 ## Other resources
 
 | Resource | Where |
 |----------|--------|
-| **KV** (`SESSION`) | Create namespace → ID in **`wrangler.jsonc`**. |
-| **R2** | Bucket name matches **`wrangler.jsonc`**. |
+| **KV** (`SESSION`) | ID in **`wrangler.jsonc`**. |
+| **R2** | Bucket name in **`wrangler.jsonc`**. |
 
 ---
 
 ## Checklist
 
-- [ ] **`send_email`** / **`SEND_EMAIL`** in **`wrangler.jsonc`**
+- [ ] Email Worker deployed with **`send_email`**; **`EMAIL_WORKER_URL`** set on Pages
 - [ ] Email Routing + verified destinations on the zone
 - [ ] Build **`npm run build`**, output **`dist`**
-- [ ] **`npm run deploy`** or your Wrangler CI flow
+- [ ] Git push succeeds (**no** `send_email` in site **`wrangler.jsonc`**)
 - [ ] Contact form tested on **Community**
 
 ---

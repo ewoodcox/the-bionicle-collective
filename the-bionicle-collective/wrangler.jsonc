@@ -16,8 +16,8 @@
       "binding": "BIONICLE_COLLECTION",
       "bucket_name": "bionicle-collection"
     }
-  ],
-  // Email Routing — binding name must match env.SEND_EMAIL in src/pages/api/contact.ts
-  // https://developers.cloudflare.com/email-routing/email-workers/send-email-workers/
-  "send_email": [{ "name": "SEND_EMAIL" }]
+  ]
+  // Do not add "send_email" here: Cloudflare Pages (Git builds) rejects it with
+  // "Configuration file for Pages projects does not support send_email".
+  // Use a separate Worker (e.g. the-bionicle-email-worker) + EMAIL_WORKER_URL on Pages.
 }

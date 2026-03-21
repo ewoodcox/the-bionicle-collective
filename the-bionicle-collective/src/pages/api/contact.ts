@@ -1,5 +1,8 @@
 import { checkRateLimitContact } from '../../utils/rateLimitR2';
-import { sendContactEmailViaCloudflare } from '../../utils/cloudflareEmail';
+import {
+  sendContactEmailViaCloudflare,
+  sendContactEmailViaWorkerHttp,
+} from '../../utils/cloudflareEmail';
 
 export const prerender = false;
 
@@ -8,8 +11,12 @@ const FROM_EMAIL = 'noreply@bioniclecollective.com';
 
 type Env = {
   OWNER_EMAIL?: string;
-  /** Cloudflare Email Routing — from wrangler.jsonc `send_email` (Wrangler / runtime binding) */
+  /** Present only if `send_email` is bound (not available in Pages Git + wrangler.jsonc) */
   SEND_EMAIL?: { send: (message: unknown) => Promise<void> };
+  /** Separate Worker URL (e.g. https://the-bionicle-email-worker.<subdomain>.workers.dev) */
+  EMAIL_WORKER_URL?: string;
+  /** Optional; must match the email Worker’s `EMAIL_WORKER_SECRET` */
+  EMAIL_WORKER_SECRET?: string;
   BIONICLE_COLLECTION?: any;
 };
 
@@ -21,6 +28,7 @@ export const POST = async ({ request, locals }: any) => {
   const env = getEnv(locals);
   const ownerEmail = env.OWNER_EMAIL ?? CONTACT_EMAIL;
   const sendEmailBinding = env.SEND_EMAIL;
+  const emailWorkerUrl = env.EMAIL_WORKER_URL?.trim();
 
   const ip = request.headers.get('CF-Connecting-IP') ?? request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() ?? 'unknown';
   const bucket = env.BIONICLE_COLLECTION;
@@ -74,33 +82,54 @@ export const POST = async ({ request, locals }: any) => {
     text: emailBody,
   };
 
-  if (!sendEmailBinding) {
+  if (sendEmailBinding) {
+    const cf = await sendContactEmailViaCloudflare({ binding: sendEmailBinding, ...payload });
+    if (cf.ok) {
+      return new Response(
+        JSON.stringify({ ok: true, message: 'Message sent successfully' }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    console.error('Cloudflare email send failed:', cf.error);
     return new Response(
       JSON.stringify({
-        error:
-          'Email is not configured: deploy with Wrangler so `send_email` / SEND_EMAIL is applied (see docs/DEPLOY-CLOUDFLARE-GIT.md).',
-        code: 'EMAIL_NOT_CONFIGURED',
+        error: 'Failed to send message. Please try again later.',
+        code: 'EMAIL_SEND_FAILED',
+        hint: cf.error,
       }),
-      { status: 503, headers: { 'Content-Type': 'application/json' } }
+      { status: 502, headers: { 'Content-Type': 'application/json' } }
     );
   }
 
-  const cf = await sendContactEmailViaCloudflare({ binding: sendEmailBinding, ...payload });
-  if (cf.ok) {
+  if (emailWorkerUrl) {
+    const via = await sendContactEmailViaWorkerHttp({
+      workerUrl: emailWorkerUrl,
+      secret: env.EMAIL_WORKER_SECRET,
+      ...payload,
+    });
+    if (via.ok) {
+      return new Response(
+        JSON.stringify({ ok: true, message: 'Message sent successfully' }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    console.error('Email worker HTTP send failed:', via.error);
     return new Response(
-      JSON.stringify({ ok: true, message: 'Message sent successfully' }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      JSON.stringify({
+        error: 'Failed to send message. Please try again later.',
+        code: 'EMAIL_SEND_FAILED',
+        hint: via.error,
+      }),
+      { status: 502, headers: { 'Content-Type': 'application/json' } }
     );
   }
 
-  console.error('Cloudflare email send failed:', cf.error);
   return new Response(
     JSON.stringify({
-      error: 'Failed to send message. Please try again later.',
-      code: 'EMAIL_SEND_FAILED',
-      hint:
-        'Check Workers logs and wrangler.jsonc send_email. Set OWNER_EMAIL to a verified Email Routing destination if sends are rejected.',
+      error:
+        'Email is not configured: set EMAIL_WORKER_URL (and optional EMAIL_WORKER_SECRET) to your the-bionicle-email-worker URL in Pages → Settings → Environment variables. Pages cannot use send_email in wrangler.jsonc — see docs/DEPLOY-CLOUDFLARE-GIT.md.',
+      code: 'EMAIL_NOT_CONFIGURED',
     }),
-    { status: 502, headers: { 'Content-Type': 'application/json' } }
+    { status: 503, headers: { 'Content-Type': 'application/json' } }
   );
 };
