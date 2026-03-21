@@ -53,7 +53,7 @@ Email and API configuration should be established **through Cloudflare** (dashbo
 - **Inbound email**: Use **Cloudflare Email Routing** (Dashboard → Email → Email Routing).
   - Create catch-all or specific addresses (e.g. `contact@bioniclecollective.com`).
   - Forward to your real inbox; no code required.
-- **Contact form (outbound)**: **`SEND_EMAIL`** via **`send_email`** in **`wrangler.jsonc`** (Cloudflare Email Routing). See `docs/EMAIL-CLOUDFLARE-ROUTING.md` and `docs/DEPLOY-CLOUDFLARE-GIT.md`. Optional **`MAILCHANNELS_API_KEY`** only as a code fallback.
+- **Contact form (outbound)**: **`SEND_EMAIL`** via **`send_email`** in **`wrangler.jsonc`** (Wrangler deploy). See `docs/EMAIL-CLOUDFLARE-ROUTING.md`.
   - Optional: `OWNER_EMAIL` env var to override recipient (default: `contact@bioniclecollective.com`).
 
 ---

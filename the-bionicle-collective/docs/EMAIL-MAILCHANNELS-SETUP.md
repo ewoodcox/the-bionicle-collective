@@ -1,5 +1,5 @@
-# Deprecated: MailChannels
+# MailChannels — removed
 
-Contact email no longer uses MailChannels. See **[EMAIL-CLOUDFLARE-ROUTING.md](./EMAIL-CLOUDFLARE-ROUTING.md)** for the current setup (Cloudflare Email Routing + `SEND_EMAIL` binding).
+This project no longer uses MailChannels. Contact email is **Cloudflare Email Routing** only, via **`send_email`** / **`SEND_EMAIL`** in **`wrangler.jsonc`**. See **`EMAIL-CLOUDFLARE-ROUTING.md`**.
 
-You can remove the `_mailchannels` DNS TXT record if you are no longer using MailChannels elsewhere.
+You can remove any **`_mailchannels`** DNS TXT records if they are unused.

@@ -17,7 +17,7 @@
       "bucket_name": "bionicle-collection"
     }
   ],
-  // Email Routing — https://developers.cloudflare.com/email-routing/email-workers/send-email-workers/
-  // Binding name must match env.SEND_EMAIL in src/pages/api/contact.ts
+  // Email Routing — binding name must match env.SEND_EMAIL in src/pages/api/contact.ts
+  // https://developers.cloudflare.com/email-routing/email-workers/send-email-workers/
   "send_email": [{ "name": "SEND_EMAIL" }]
 }

@@ -1,62 +1,47 @@
-# Contact form email (Cloudflare Email Routing only)
+# Contact form email (Wrangler + Cloudflare Email Routing)
 
-The Community page sends mail with **`cloudflare:email`** and the **`SEND_EMAIL`** binding declared in **`wrangler.jsonc`**. You do **not** need MailChannels for this path.
+The Community page sends mail only through **`cloudflare:email`** and the **`SEND_EMAIL`** binding. Configure it in **`wrangler.jsonc`** with **`send_email`** — see [Send emails from Workers](https://developers.cloudflare.com/email-routing/email-workers/send-email-workers/).
 
 ## Flow in code
 
-1. **`src/pages/api/contact.ts`** uses **`env.SEND_EMAIL`** (from `send_email` in `wrangler.jsonc` or an equivalent dashboard binding).
-2. **`src/utils/cloudflareEmail.ts`** builds a MIME message and calls the binding’s **`send()`** method.
+1. **`src/pages/api/contact.ts`** uses **`env.SEND_EMAIL`** (from Wrangler’s `send_email` binding at deploy time).
+2. **`src/utils/cloudflareEmail.ts`** builds the MIME message and calls **`binding.send()`**.
 
-Optional **`MAILCHANNELS_API_KEY`** in the environment is only a **fallback** if Cloudflare send fails or the binding is missing—you can leave it unset.
+## Wrangler: `send_email`
 
-## 1. Wrangler: `send_email`
-
-In **`wrangler.jsonc`** (this repo):
+This repo declares:
 
 ```jsonc
 "send_email": [{ "name": "SEND_EMAIL" }]
 ```
 
-Per [Send emails from Workers](https://developers.cloudflare.com/email-routing/email-workers/send-email-workers/), you can add **`destination_address`** or **`allowed_destination_addresses`** if you want stricter limits.
+Optional fields (same docs): `destination_address`, `allowed_destination_addresses`, etc.
 
-## 2. Cloudflare dashboard — Email Routing (zone)
+## Zone: Email Routing
 
-1. Select zone **`bioniclecollective.com`** (your domain).
-2. **Email** → **Email Routing** → enable if needed.
-3. **Destination addresses** → add your real inbox → **verify** the confirmation email.
-4. **Routing rules** → create **`contact@bioniclecollective.com`** (or your chosen address) → forward to that verified destination.
-5. Fix **DNS** (MX, etc.) as Email Routing prompts.
+1. **Email** → **Email Routing** on your domain — enable it.
+2. **Destination addresses** — verify your inbox.
+3. **Routing rules** — e.g. `contact@…` → your inbox.
+4. **DNS** — MX / records as Email Routing requires.
 
-The **From** address in code is **`noreply@bioniclecollective.com`** (must be on a domain where Email Routing is active). **To** defaults to **`contact@bioniclecollective.com`**; override with **`OWNER_EMAIL`** if you need a different **verified** destination.
+**From** in code: `noreply@…` on that zone. **To**: `OWNER_EMAIL` or `contact@bioniclecollective.com` (verified destinations).
 
-## 3. Pages project settings
+## “Service binding” is not email
 
-1. **Workers & Pages** → your **Pages** project.
-2. **Settings** → enable **Wrangler configuration** from the repo → **`wrangler.jsonc`** (path = app root in the repo).
-3. **Environment variables** (optional):
-   - **`OWNER_EMAIL`** — recipient; must be allowed by Email Routing (often a **verified** destination).
+**Service binding** calls another **Worker**. It does not send mail via Email Routing.
 
-## 4. Local development
+## Git-based Pages vs Wrangler
 
-- **`npx wrangler login`**
-- Build and run against Workers/Pages dev as you usually do; bindings come from **`wrangler.jsonc`** and **`.dev.vars`** (secrets), not from MailChannels.
+Some **Cloudflare Pages** pipelines validate **`wrangler.jsonc`** and error with:
 
-## 5. Deploy
+`Configuration file for Pages projects does not support "send_email"`
 
-- **Git push** (Cloudflare build applies `wrangler.jsonc`), or  
-- **`npm run deploy`** (`astro build && wrangler pages deploy`) from the project folder.
+That is a **Pages + Git** limitation on their side. Options that stay on **Wrangler**:
 
-### If the Pages build rejects `send_email` in the file
+- Deploy with **`npm run deploy`** (`astro build && wrangler pages deploy`) so your local Wrangler uploads the project with the same **`wrangler.jsonc`** (behavior depends on current Wrangler/Cloudflare).
+- Or run **`wrangler pages deploy`** from CI with your API token, still using this repo’s **`wrangler.jsonc`**.
 
-See **`docs/DEPLOY-CLOUDFLARE-GIT.md`** section **“If Git build fails on send_email”** (dashboard-only binding or CLI deploy).
-
-## Troubleshooting
-
-| Issue | What to try |
-|-------|-------------|
-| 503 `EMAIL_NOT_CONFIGURED` | Binding missing — check **`wrangler.jsonc`**, redeploy, or add **Send email** → **`SEND_EMAIL`** in **Settings → Bindings** if the UI offers it. |
-| Send rejected / invalid recipient | Set **`OWNER_EMAIL`** to a **verified** destination from Email Routing. |
-| Inbound works, outbound fails | Confirm **Email Routing** “send from Workers” is available for your zone; re-check [Send emails from Workers](https://developers.cloudflare.com/email-routing/email-workers/send-email-workers/). |
+If the hosted Git integration keeps rejecting the file, open a ticket with Cloudflare or use a deploy path that applies **`send_email`** without that validator.
 
 ## References
 
