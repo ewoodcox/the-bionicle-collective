@@ -1,6 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { mediaItems, getMediaById, MEDIA_CATEGORIES, getMediaCardName } from '../../data/media';
+import { mediaItems, getMediaById, getMediaCoverSrc, getMediaCoverApiUrl, MEDIA_CATEGORIES, getMediaCardName } from '../../data/media';
 import { getMediaEraLabel } from '../../data/mediaEras';
 
 export function getStaticPaths() {
@@ -40,7 +40,15 @@ function formatAcquiredDate(acquiredDate: string | undefined): string {
   <div class="set-detail-layout">
     <article class="set-detail">
       <div class="image-wrap">
-        <img src={`/set-photos/${media.id}.jpg`} data-fallback={media.imageUrl} alt={media.title} width="280" height="280" onerror="this.onerror=null;this.src=this.dataset.fallback" />
+        <img
+          src={getMediaCoverSrc(media, 'main')}
+          data-fallback={getMediaCoverApiUrl(media.id, 'main')}
+          alt={media.title}
+          width="280"
+          height="280"
+          loading="eager"
+          onerror="if(this.dataset.fallback){this.src=this.dataset.fallback;this.onerror=null}"
+        />
       </div>
       <div>
         <h1>{getMediaCardName(media)}</h1>

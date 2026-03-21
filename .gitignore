@@ -1,4 +1,7 @@
 .cursor/
 
+# Dependencies (never commit — wrangler’s workerd binary exceeds GitHub’s 100 MB limit)
+node_modules/
+
 # Spreadsheet no longer used as source; collection.json is edited directly
 the-bionicle-collective/data/*.xlsx

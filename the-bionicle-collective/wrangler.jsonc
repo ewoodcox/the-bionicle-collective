@@ -1,27 +1,22 @@
 {
+  // Pages + Git: Cloudflare applies this file on deploy — no local Wrangler required.
+  // https://developers.cloudflare.com/pages/functions/wrangler-configuration/
   "name": "the-bionicle-collective",
-  "main": "./dist/_worker.js/index.js",
+  "pages_build_output_dir": "./dist",
   "compatibility_date": "2025-02-23",
   "compatibility_flags": ["nodejs_compat"],
-  "assets": {
-    "binding": "ASSETS",
-    "directory": "./dist"
-  },
   "kv_namespaces": [
     {
       "binding": "SESSION",
-      "id": "REPLACE_WITH_SESSION_KV_ID"
+      "id": "81b115f8166d4cdcac26a278df7700b2"
     }
   ],
   "r2_buckets": [
     {
       "binding": "BIONICLE_COLLECTION",
-      "bucket_name": "bionicle-collection",
-      "remote": true
+      "bucket_name": "bionicle-collection"
     }
   ],
-  // Email Routing → send from Workers. Match name in Pages → Settings → Functions → Email.
-  // Recipients must be allowed by Email Routing (verified destinations / your domain rules).
-  // https://developers.cloudflare.com/email-routing/email-workers/send-email-workers/
+  // Email Routing — https://developers.cloudflare.com/email-routing/email-workers/send-email-workers/
   "send_email": [{ "name": "SEND_EMAIL" }]
 }

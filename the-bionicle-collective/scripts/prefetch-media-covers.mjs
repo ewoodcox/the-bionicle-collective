@@ -20,7 +20,7 @@
  *   node scripts/prefetch-media-covers.mjs
  */
 
-import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync, copyFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
@@ -55,6 +55,7 @@ if (!R2_BUCKET || !R2_ENDPOINT) {
 }
 
 const R2_PREFIX = 'media-covers';
+const PUBLIC_COVERS_DIR = join(projectRoot, 'public', 'media-covers');
 
 const TEMP_DIR = join(projectRoot, '.tmp-prefetch-media-covers');
 if (!existsSync(TEMP_DIR)) mkdirSync(TEMP_DIR, { recursive: true });
@@ -227,6 +228,11 @@ async function main() {
       const mainR2KeyWithExt = `${mainKey}.${finalMainExt}`;
       uploadTempToR2({ key: mainR2KeyWithExt, tempPath: mainFinalTemp });
 
+      // Copy to public for local-first static serving
+      const publicMainDir = join(PUBLIC_COVERS_DIR, m.id);
+      if (!existsSync(publicMainDir)) mkdirSync(publicMainDir, { recursive: true });
+      copyFileSync(mainFinalTemp, join(publicMainDir, `main.${finalMainExt}`));
+
       const mainDirectUrl = `${R2_ENDPOINT}/${mainR2KeyWithExt}`;
       m.imageUrl = mainDirectUrl;
       unlinkSync(mainFinalTemp);
@@ -243,6 +249,11 @@ async function main() {
 
         const altR2KeyWithExt = `${altKey}.${altExt1}`;
         uploadTempToR2({ key: altR2KeyWithExt, tempPath: altFinalTemp });
+
+        // Copy to public for local-first static serving
+        const publicAltDir = join(PUBLIC_COVERS_DIR, m.id);
+        if (!existsSync(publicAltDir)) mkdirSync(publicAltDir, { recursive: true });
+        copyFileSync(altFinalTemp, join(publicAltDir, `alt.${altExt1}`));
 
         m.imageUrlAlt = `${R2_ENDPOINT}/${altR2KeyWithExt}`;
         unlinkSync(altFinalTemp);

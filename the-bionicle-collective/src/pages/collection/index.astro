@@ -4,7 +4,7 @@ import { sets } from '../../data/sets';
 import { getSetDisplayLabel, getSetNumber, getSetSortKey, getMissingSetEntries } from '../../data/setNamesByYear';
 import { YEAR_GROUPS, getYearGroup, getYearsForGroup } from '../../config/constants';
 import { getMasksByYear, getKanohiYears } from '../../data/kanohi';
-import { MEDIA_CATEGORIES, mediaItems, getMediaCardName, type MediaCategoryId } from '../../data/media';
+import { MEDIA_CATEGORIES, mediaItems, getMediaCardName, getMediaCoverSrc, getMediaCoverApiUrl, type MediaCategoryId } from '../../data/media';
 import { getMediaEraLabel, sortMediaByEra } from '../../data/mediaEras';
 import type { SetRecord } from '../../data/sets';
 
@@ -346,25 +346,25 @@ const defaultGroupId =
                               <div class="media-cover-stack" aria-hidden="true">
                                 <img
                                   class="media-cover-main"
-                                  src={`/set-photos/${m.id}.jpg`}
-                                  data-fallback={m.imageUrl}
+                                  src={getMediaCoverSrc(m, 'main')}
+                                  data-fallback={getMediaCoverApiUrl(m.id, 'main')}
                                   alt={m.title}
                                   width="160"
                                   height="160"
                                   loading="lazy"
-                                  onerror="this.onerror=null;this.src=this.dataset.fallback"
+                                  onerror="if(this.dataset.fallback){this.src=this.dataset.fallback;this.onerror=null}"
                                 />
                                 {m.imageUrlAlt ? (
                                   <img
                                     class="media-cover-alt"
-                                    src={`/set-photos/${m.id}.jpg`}
-                                    data-fallback={m.imageUrlAlt}
+                                    src={getMediaCoverSrc(m, 'alt')}
+                                    data-fallback={getMediaCoverApiUrl(m.id, 'alt')}
                                     alt=""
                                     width="160"
                                     height="160"
                                     loading="lazy"
                                     aria-hidden="true"
-                                    onerror="this.onerror=null;this.src=this.dataset.fallback"
+                                    onerror="if(this.dataset.fallback){this.src=this.dataset.fallback;this.onerror=null}"
                                   />
                                 ) : null}
                               </div>
@@ -427,13 +427,13 @@ const defaultGroupId =
                               aria-label={`${getMediaCardName(m)}, ${eraLabel} ${catLabel}`}
                             >
                               <img
-                                src={`/set-photos/${m.id}.jpg`}
-                                data-fallback={m.imageUrl}
+                                src={getMediaCoverSrc(m, 'main')}
+                                data-fallback={getMediaCoverApiUrl(m.id, 'main')}
                                 alt={m.title}
                                 width="160"
                                 height="160"
                                 loading="lazy"
-                                onerror="this.onerror=null;this.src=this.dataset.fallback"
+                                onerror="if(this.dataset.fallback){this.src=this.dataset.fallback;this.onerror=null}"
                               />
                               <div class="info">
                                 <div class="name">{getMediaCardName(m)}</div>
@@ -547,13 +547,13 @@ const defaultGroupId =
                                           aria-label={`${getMediaCardName(m)}, ${m.year} ${cat.label}`}
                                         >
                                           <img
-                                            src={`/set-photos/${m.id}.jpg`}
-                                            data-fallback={m.imageUrl}
+                                            src={getMediaCoverSrc(m, 'main')}
+                                            data-fallback={getMediaCoverApiUrl(m.id, 'main')}
                                             alt={m.title}
                                             width="160"
                                             height="160"
                                             loading="lazy"
-                                            onerror="this.onerror=null;this.src=this.dataset.fallback"
+                                            onerror="if(this.dataset.fallback){this.src=this.dataset.fallback;this.onerror=null}"
                                           />
                                           <div class="info">
                                             <div class="name">{getMediaCardName(m)}</div>

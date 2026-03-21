@@ -1,2 +1,5 @@
+# Dependencies (install with npm ci / npm install)
+node_modules/
+
 # Spreadsheet no longer used; collection.json is the source of truth
 data/*.xlsx

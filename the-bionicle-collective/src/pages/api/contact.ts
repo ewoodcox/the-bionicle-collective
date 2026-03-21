@@ -1,5 +1,6 @@
 import { checkRateLimitContact } from '../../utils/rateLimitR2';
 import { sendContactEmailViaCloudflare } from '../../utils/cloudflareEmail';
+import { sendEmailViaMailChannels } from '../../utils/mailchannels';
 
 export const prerender = false;
 
@@ -8,8 +9,10 @@ const FROM_EMAIL = 'noreply@bioniclecollective.com';
 
 type Env = {
   OWNER_EMAIL?: string;
-  /** Cloudflare send_email binding — set in wrangler + Pages → Settings → Functions */
+  /** Cloudflare send_email binding — Pages/Workers dashboard or wrangler.jsonc */
   SEND_EMAIL?: { send: (message: unknown) => Promise<void> };
+  /** Optional fallback if SEND_EMAIL is missing or rejects the message */
+  MAILCHANNELS_API_KEY?: string;
   BIONICLE_COLLECTION?: any;
 };
 
@@ -21,6 +24,7 @@ export const POST = async ({ request, locals }: any) => {
   const env = getEnv(locals);
   const ownerEmail = env.OWNER_EMAIL ?? CONTACT_EMAIL;
   const sendEmailBinding = env.SEND_EMAIL;
+  const mailchannelsKey = env.MAILCHANNELS_API_KEY?.trim();
 
   const ip = request.headers.get('CF-Connecting-IP') ?? request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() ?? 'unknown';
   const bucket = env.BIONICLE_COLLECTION;
@@ -65,26 +69,56 @@ export const POST = async ({ request, locals }: any) => {
   const fromName = name || 'Anonymous';
   const emailBody = `You received a message from the Community page:\n\nFrom: ${fromName} <${email}>\nSubject: ${subject}\n\n---\n\n${message}`;
 
-  const { ok, error } = await sendContactEmailViaCloudflare({
-    binding: sendEmailBinding,
+  const payload = {
     to: ownerEmail,
     from: FROM_EMAIL,
     fromName: 'The Bionicle Collective',
     replyTo: email,
     subject: `[Community] ${subject}`,
     text: emailBody,
-  });
+  };
 
-  if (!ok) {
-    console.error('Contact email send failed:', error);
+  if (sendEmailBinding) {
+    const cf = await sendContactEmailViaCloudflare({ binding: sendEmailBinding, ...payload });
+    if (cf.ok) {
+      return new Response(
+        JSON.stringify({ ok: true, message: 'Message sent successfully' }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    console.error('Cloudflare email send failed:', cf.error);
+  }
+
+  if (mailchannelsKey) {
+    const mc = await sendEmailViaMailChannels({ ...payload, apiKey: mailchannelsKey });
+    if (mc.ok) {
+      return new Response(
+        JSON.stringify({ ok: true, message: 'Message sent successfully' }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    console.error('MailChannels fallback failed:', mc.error);
+  }
+
+  if (!sendEmailBinding && !mailchannelsKey) {
     return new Response(
-      JSON.stringify({ error: 'Failed to send message. Please try again later.' }),
-      { status: 502, headers: { 'Content-Type': 'application/json' } }
+      JSON.stringify({
+        error:
+          'Email is not configured: add send_email named SEND_EMAIL in wrangler.jsonc (see docs/DEPLOY-CLOUDFLARE-GIT.md), or set MAILCHANNELS_API_KEY.',
+        code: 'EMAIL_NOT_CONFIGURED',
+      }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } }
     );
   }
 
   return new Response(
-    JSON.stringify({ ok: true, message: 'Message sent successfully' }),
-    { status: 200, headers: { 'Content-Type': 'application/json' } }
+    JSON.stringify({
+      error: 'Failed to send message. Please try again later.',
+      code: 'EMAIL_SEND_FAILED',
+      hint:
+        'Check Workers logs. Email Routing send_email is set in wrangler (not the dashboard bindings list). Set OWNER_EMAIL to a verified destination if needed.',
+    }),
+    { status: 502, headers: { 'Content-Type': 'application/json' } }
   );
+
 };

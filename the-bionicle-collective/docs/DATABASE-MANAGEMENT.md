@@ -18,6 +18,7 @@ All persistent application data lives in **Cloudflare R2 Object Storage** in the
 | **Suggestion votes** | `suggestion-votes.json` | `src/utils/suggestionsStoreR2.ts` | Visitor vote history (IP+UA hash → suggestionId → direction) |
 | **Suggestions** | `suggestions.json` | `src/utils/suggestionsStoreR2.ts` | Community suggestions, replies, upvotes/downvotes |
 | **Rate limit** | `rate-limit.json` | `src/utils/rateLimitR2.ts` | Contact (5/hour), suggestions (5/day), replies (20/hour) per IP |
+| **Media covers** | `media-covers/<media-id>/main.png` (or `.jpg`, `alt.png`) | `src/pages/api/media/cover/[id].ts` | Comic/book art in R2; **not** public URLs — site serves them via this API (`getMediaCoverSrc` in `media.ts`). `media.json` may still store the raw R2 URL for scripts/reference. |
 
 ### Binding
 
@@ -37,7 +38,7 @@ These fallbacks are *never* used in production. R2 is the single source of truth
 
 ## 2. Email and API — Cloudflare First
 
-Email and API configuration should be established **through Cloudflare** (dashboard, Workers, Pages), not via wrangler config or third-party services where Cloudflare has native support.
+Email and API configuration should be established **through Cloudflare** (dashboard, Workers, Pages). For **Git deploys**, `wrangler.jsonc` in the repo is applied automatically (see `docs/DEPLOY-CLOUDFLARE-GIT.md`).
 
 ### API Endpoints
 
@@ -52,8 +53,7 @@ Email and API configuration should be established **through Cloudflare** (dashbo
 - **Inbound email**: Use **Cloudflare Email Routing** (Dashboard → Email → Email Routing).
   - Create catch-all or specific addresses (e.g. `contact@bioniclecollective.com`).
   - Forward to your real inbox; no code required.
-- **Contact form (outbound)**: Uses **Cloudflare Email Routing** (“Send emails from Workers”) with a **`SEND_EMAIL`** binding (see `docs/EMAIL-CLOUDFLARE-ROUTING.md`).
-  - No MailChannels or third-party mail API.
+- **Contact form (outbound)**: Prefers **Cloudflare Email Routing** with **`send_email`** / **`SEND_EMAIL`** in **`wrangler.jsonc`** (not a dashboard “Add binding” option for Email Routing). See `docs/EMAIL-CLOUDFLARE-ROUTING.md`. Optional **`MAILCHANNELS_API_KEY`** if Cloudflare send is missing or fails.
   - Optional: `OWNER_EMAIL` env var to override recipient (default: `contact@bioniclecollective.com`).
 
 ---

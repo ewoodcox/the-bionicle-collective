@@ -47,6 +47,27 @@ export function getMediaById(id: string): MediaRecord | undefined {
   return mediaItems.find((m) => m.id === id);
 }
 
+function getExtFromUrl(url: string | undefined): string {
+  if (!url) return 'png';
+  const m = url.match(/\.(png|jpe?g|webp|gif)(?:\?|$)/i);
+  if (!m) return 'png';
+  const ext = m[1].toLowerCase();
+  return ext === 'jpeg' ? 'jpg' : ext;
+}
+
+/** Local static path (preferred). Use with data-fallback + onerror for API fallback when missing. */
+export function getMediaCoverSrc(m: MediaRecord, variant: 'main' | 'alt' = 'main'): string {
+  const url = variant === 'alt' ? m.imageUrlAlt : m.imageUrl;
+  const ext = getExtFromUrl(url);
+  return `/media-covers/${encodeURIComponent(m.id)}/${variant}.${ext}`;
+}
+
+/** API fallback when local file is missing (e.g. media not yet prefetched). */
+export function getMediaCoverApiUrl(id: string, variant: 'main' | 'alt' = 'main'): string {
+  const q = variant === 'alt' ? '?variant=alt' : '';
+  return `/api/media/cover/${encodeURIComponent(id)}${q}`;
+}
+
 export function getMediaYears(): number[] {
   const years = new Set<number>();
   for (const m of mediaItems) years.add(m.year);

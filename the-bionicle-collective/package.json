@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "deploy": "astro build && wrangler deploy",
+    "deploy": "astro build && wrangler pages deploy",
     "preview": "astro preview",
     "upload:kv": "node scripts/upload-collection-store-to-kv.mjs",
     "verify:r2": "node scripts/verify-r2-collection-format.mjs",
@@ -19,6 +19,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260301.1",
-    "@types/node": "^25.3.3"
+    "@types/node": "^25.3.3",
+    "wrangler": "^4.59.2"
   }
 }

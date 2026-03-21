@@ -1,7 +1,7 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { renderers } from './renderers.mjs';
 import { c as createExports, s as serverEntrypointModule } from './chunks/_@astrojs-ssr-adapter_CGrA2VpU.mjs';
-import { manifest } from './manifest_Bi_hApA-.mjs';
+import { manifest } from './manifest_BnFzZuax.mjs';
 
 const serverIslandMap = new Map();;
 
@@ -15,16 +15,17 @@ const _page6 = () => import('./pages/api/contact.astro.mjs');
 const _page7 = () => import('./pages/api/kanohi/collection.astro.mjs');
 const _page8 = () => import('./pages/api/kanohi/image/__---path__.astro.mjs');
 const _page9 = () => import('./pages/api/media/collection.astro.mjs');
-const _page10 = () => import('./pages/api/suggestions/_id_/reply.astro.mjs');
-const _page11 = () => import('./pages/api/suggestions/_id_/vote.astro.mjs');
-const _page12 = () => import('./pages/api/suggestions/_id_.astro.mjs');
-const _page13 = () => import('./pages/api/suggestions.astro.mjs');
-const _page14 = () => import('./pages/collection/_id_.astro.mjs');
-const _page15 = () => import('./pages/collection.astro.mjs');
-const _page16 = () => import('./pages/community.astro.mjs');
-const _page17 = () => import('./pages/login.astro.mjs');
-const _page18 = () => import('./pages/media/_id_.astro.mjs');
-const _page19 = () => import('./pages/index.astro.mjs');
+const _page10 = () => import('./pages/api/media/cover/_id_.astro.mjs');
+const _page11 = () => import('./pages/api/suggestions/_id_/reply.astro.mjs');
+const _page12 = () => import('./pages/api/suggestions/_id_/vote.astro.mjs');
+const _page13 = () => import('./pages/api/suggestions/_id_.astro.mjs');
+const _page14 = () => import('./pages/api/suggestions.astro.mjs');
+const _page15 = () => import('./pages/collection/_id_.astro.mjs');
+const _page16 = () => import('./pages/collection.astro.mjs');
+const _page17 = () => import('./pages/community.astro.mjs');
+const _page18 = () => import('./pages/login.astro.mjs');
+const _page19 = () => import('./pages/media/_id_.astro.mjs');
+const _page20 = () => import('./pages/index.astro.mjs');
 const pageMap = new Map([
     ["node_modules/@astrojs/cloudflare/dist/entrypoints/image-endpoint.js", _page0],
     ["src/pages/api/admin/check.ts", _page1],
@@ -36,16 +37,17 @@ const pageMap = new Map([
     ["src/pages/api/kanohi/collection.ts", _page7],
     ["src/pages/api/kanohi/image/[[...path]].ts", _page8],
     ["src/pages/api/media/collection.ts", _page9],
-    ["src/pages/api/suggestions/[id]/reply.ts", _page10],
-    ["src/pages/api/suggestions/[id]/vote.ts", _page11],
-    ["src/pages/api/suggestions/[id].ts", _page12],
-    ["src/pages/api/suggestions/index.ts", _page13],
-    ["src/pages/collection/[id].astro", _page14],
-    ["src/pages/collection/index.astro", _page15],
-    ["src/pages/community/index.astro", _page16],
-    ["src/pages/login.astro", _page17],
-    ["src/pages/media/[id].astro", _page18],
-    ["src/pages/index.astro", _page19]
+    ["src/pages/api/media/cover/[id].ts", _page10],
+    ["src/pages/api/suggestions/[id]/reply.ts", _page11],
+    ["src/pages/api/suggestions/[id]/vote.ts", _page12],
+    ["src/pages/api/suggestions/[id].ts", _page13],
+    ["src/pages/api/suggestions/index.ts", _page14],
+    ["src/pages/collection/[id].astro", _page15],
+    ["src/pages/collection/index.astro", _page16],
+    ["src/pages/community/index.astro", _page17],
+    ["src/pages/login.astro", _page18],
+    ["src/pages/media/[id].astro", _page19],
+    ["src/pages/index.astro", _page20]
 ]);
 
 const _manifest = Object.assign(manifest, {
