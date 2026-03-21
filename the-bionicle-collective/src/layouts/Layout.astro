@@ -16,7 +16,7 @@ const { title = site.name, description = site.description } = Astro.props;
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
     <title>{title}</title>
-    <link rel="icon" type="image/png" sizes="16x16" href={new URL('/favicon-16x16.png', Astro.url.origin).href} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="manifest" href="/site.webmanifest" />
   </head>
   <body>

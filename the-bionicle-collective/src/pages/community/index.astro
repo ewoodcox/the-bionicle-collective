@@ -11,33 +11,10 @@ import { site } from '../../config/site';
 
     <section class="community-section" aria-labelledby="contact-heading">
       <h2 id="contact-heading">Contact</h2>
-      <p class="section-desc">Send me a private message! Your message will be forwarded via email.</p>
-      <form id="contact-form" class="community-form">
-        <div class="form-row">
-          <label for="contact-name">Name</label>
-          <input id="contact-name" name="name" type="text" required placeholder="Your name" autocomplete="name" />
-        </div>
-        <div class="form-row">
-          <label for="contact-email">Email</label>
-          <input id="contact-email" name="email" type="email" required placeholder="your@email.com" autocomplete="email" />
-        </div>
-        <div class="form-row">
-          <label for="contact-subject">Subject</label>
-          <select id="contact-subject" name="subject">
-            <option value="General inquiry">General inquiry</option>
-            <option value="Collection question">Collection question</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-        <div class="form-row">
-          <label for="contact-message">Message</label>
-          <textarea id="contact-message" name="message" required rows="5" placeholder="Your message..." maxlength="2000"></textarea>
-        </div>
-        <div class="form-actions">
-          <button type="submit" class="button-primary">Send message</button>
-          <span id="contact-status" class="form-status" aria-live="polite"></span>
-        </div>
-      </form>
+      <p class="section-desc">
+        Contact via email is temporarily disabled while we debug the email flow.
+        Please use the Suggestions form below.
+      </p>
     </section>
 
     <section class="community-section" aria-labelledby="suggestions-heading">
@@ -73,8 +50,6 @@ import { site } from '../../config/site';
     (function () {
       if (typeof document === 'undefined') return;
 
-      const contactForm = document.getElementById('contact-form');
-      const contactStatus = document.getElementById('contact-status');
       const suggestionForm = document.getElementById('suggestion-form');
       const suggestionStatus = document.getElementById('suggestion-status');
       const suggestionsList = document.getElementById('suggestions-list');
@@ -83,35 +58,6 @@ import { site } from '../../config/site';
         if (!el) return;
         el.textContent = text;
         el.className = 'form-status' + (isError ? ' form-status--error' : '');
-      }
-
-      if (contactForm && contactStatus) {
-        contactForm.addEventListener('submit', async (e) => {
-          e.preventDefault();
-          const fd = new FormData(contactForm as HTMLFormElement);
-          setStatus(contactStatus, 'Sending...', false);
-          try {
-            const res = await fetch('/api/contact', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                name: fd.get('name'),
-                email: fd.get('email'),
-                subject: fd.get('subject'),
-                message: fd.get('message'),
-              }),
-            });
-            const data = await res.json();
-            if (res.ok) {
-              setStatus(contactStatus, 'Message sent! We\'ll get back to you soon.', false);
-              (contactForm as HTMLFormElement).reset();
-            } else {
-              setStatus(contactStatus, data.error || 'Failed to send. Try again later.', true);
-            }
-          } catch {
-            setStatus(contactStatus, 'Network error. Please try again.', true);
-          }
-        });
       }
 
       type ReplyItem = { id: string; text: string; authorName?: string; createdAt: string; pinned?: boolean };
