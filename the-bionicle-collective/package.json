@@ -12,6 +12,7 @@
     "deploy": "astro build && wrangler pages deploy",
     "preview": "astro preview",
     "verify:r2": "node scripts/verify-r2-collection-format.mjs",
+    "sync:media-covers-r2": "node scripts/sync-public-media-covers-to-r2.mjs",
     "fetch:kanohi": "node scripts/fetch-kanohi-bricklink.mjs",
     "warm:kanohi-images": "node scripts/warm-kanohi-image-cache.mjs"
   },
