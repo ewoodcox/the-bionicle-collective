@@ -9,7 +9,7 @@ const FROM_EMAIL = 'noreply@bioniclecollective.com';
 
 type Env = {
   OWNER_EMAIL?: string;
-  /** Cloudflare send_email binding — Pages/Workers dashboard or wrangler.jsonc */
+  /** Cloudflare send_email binding — from wrangler.jsonc `send_email` or dashboard */
   SEND_EMAIL?: { send: (message: unknown) => Promise<void> };
   /** Optional fallback if SEND_EMAIL is missing or rejects the message */
   MAILCHANNELS_API_KEY?: string;
@@ -104,7 +104,7 @@ export const POST = async ({ request, locals }: any) => {
     return new Response(
       JSON.stringify({
         error:
-          'Email is not configured: add send_email named SEND_EMAIL in wrangler.jsonc (see docs/DEPLOY-CLOUDFLARE-GIT.md), or set MAILCHANNELS_API_KEY.',
+          'Email is not configured: add send_email named SEND_EMAIL in wrangler.jsonc (see docs/DEPLOY-CLOUDFLARE-GIT.md), or set MAILCHANNELS_API_KEY as optional fallback.',
         code: 'EMAIL_NOT_CONFIGURED',
       }),
       { status: 503, headers: { 'Content-Type': 'application/json' } }
@@ -116,7 +116,7 @@ export const POST = async ({ request, locals }: any) => {
       error: 'Failed to send message. Please try again later.',
       code: 'EMAIL_SEND_FAILED',
       hint:
-        'Check Workers logs. Email Routing send_email is set in wrangler (not the dashboard bindings list). Set OWNER_EMAIL to a verified destination if needed.',
+        'Check Workers logs and wrangler.jsonc send_email. Set OWNER_EMAIL to a verified Email Routing destination if sends are rejected.',
     }),
     { status: 502, headers: { 'Content-Type': 'application/json' } }
   );

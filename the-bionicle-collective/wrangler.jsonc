@@ -18,5 +18,6 @@
     }
   ],
   // Email Routing — https://developers.cloudflare.com/email-routing/email-workers/send-email-workers/
+  // Binding name must match env.SEND_EMAIL in src/pages/api/contact.ts
   "send_email": [{ "name": "SEND_EMAIL" }]
 }

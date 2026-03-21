@@ -1,79 +1,101 @@
-# Deploy with Wrangler config (Git only — no CLI on your machine)
+# Deploy with Wrangler (`wrangler.jsonc`)
 
-Your `wrangler.jsonc` in the repo is the **source of truth** for bindings (`SEND_EMAIL`, R2, KV, etc.). Cloudflare applies it when the project builds from Git—you do **not** need to run `wrangler` locally.
-
-## What you do once (dashboard)
-
-### 1. Cloudflare resources that need to exist
-
-| Resource | Where to create |
-|----------|------------------|
-| **KV namespace** for Astro sessions (`SESSION`) | **Workers & Pages → KV** → Create namespace. Copy the **ID** into `wrangler.jsonc` → `kv_namespaces[0].id` (replace `REPLACE_WITH_SESSION_KV_ID`). |
-| **R2 bucket** `bionicle-collection` | **R2** → Create bucket (name must match `wrangler.jsonc` `bucket_name` unless you change the file). |
-| **Email Routing** | **Email** → Email Routing on `bioniclecollective.com`, verified destination + rules for `contact@` (or whatever you use). |
-
-### 2. Connect the Git repository (Cloudflare Pages)
-
-1. **Workers & Pages** → **Create** → **Pages** → **Connect to Git**.
-2. Select your Git provider and the repo.
-3. Configure the build:
-
-   | Setting | Value |
-   |---------|--------|
-   | **Framework preset** | Astro (or “None”) |
-   | **Build command** | `npm run build` |
-   | **Build output directory** | `dist` |
-   | **Root directory** | `/` (or your monorepo subpath if applicable) |
-
-4. **Environment variables** (project → **Settings** → **Environment variables**), at least for **Production**:
-
-   - `OWNER_EMAIL` — optional; defaults to `contact@bioniclecollective.com` in code.
-   - `MAILCHANNELS_API_KEY` — only if you use the MailChannels fallback (optional).
-
-5. **Use the Wrangler file from the repo**
-
-   - In **Settings**, find **Functions** / **Bindings** / **Wrangler configuration** (labels vary).
-   - Enable using the **Wrangler configuration file** from the repository as the [source of truth](https://developers.cloudflare.com/pages/functions/wrangler-configuration/#source-of-truth).
-   - Ensure the file path is **`wrangler.jsonc`** at the project root (or set the path Cloudflare asks for).
-
-   After this, **dashboard bindings for the same resources are overridden** by the file—don’t duplicate them in the UI.
-
-6. **Node version** (if builds fail): **Settings** → **Environment variables** → add `NODE_VERSION` = `20` or `22` (match what you use locally).
-
-7. **Save** and **Deploy** (or push a commit to `main` / your production branch).
-
-### 3. Custom domain
-
-**Workers & Pages** → your project → **Custom domains** → add `bioniclecollective.com` and follow DNS.
+Your **`wrangler.jsonc`** in the repo is the **source of truth** for bindings: **KV**, **R2**, **`send_email`**, etc. Cloudflare applies it when you deploy—you can use **Git-connected Pages** and/or **`npm run deploy`** (`wrangler pages deploy`). See **`docs/EMAIL-CLOUDFLARE-ROUTING.md`** for contact email (Cloudflare Email Routing only; no MailChannels required).
 
 ---
 
-## What you do ongoing (no Wrangler CLI)
+## Email Routing + `SEND_EMAIL` — settings checklist
 
-1. Edit **`wrangler.jsonc`** when bindings change (e.g. new KV id, `send_email` tweaks).
-2. **Commit and push** to the branch Cloudflare builds for production.
-3. Cloudflare runs `npm run build` and applies **`wrangler.jsonc`** to the deployment.
+Do these in order (same Cloudflare account as your zone and Pages project).
 
-You do **not** need to run `npx wrangler deploy` or `wrangler pages deploy` on your laptop unless you want to.
+### A. Domain: Email Routing
+
+1. In the dashboard, select your zone **`bioniclecollective.com`** (or the domain you use).
+2. Go to **Email** → **Email Routing**.
+3. **Enable** Email Routing if it isn’t already.
+4. **Destination addresses**: add your real inbox (e.g. Gmail) and complete the **verification** email Cloudflare sends.
+5. **Routing rules** → **Create address** (or rule):
+   - Create an address like **`contact@bioniclecollective.com`** (or the address you want mail *delivered* to for inbound routing).
+   - Set action to forward to your **verified** destination.
+6. Ensure **DNS** shows the required **MX** (and any other) records Email Routing asks for—use **automatic** DNS on Cloudflare when possible.
+
+You need at least one **[verified destination](https://developers.cloudflare.com/email-routing/setup/email-routing-addresses/#destination-addresses)** so outbound send from Workers is allowed to that mailbox (or use **`OWNER_EMAIL`** to match a verified address).
+
+### B. Repo: `wrangler.jsonc`
+
+This repo already includes:
+
+```jsonc
+"send_email": [{ "name": "SEND_EMAIL" }]
+```
+
+Optional tightening (same file): add `destination_address` or `allowed_destination_addresses` per [Send emails from Workers](https://developers.cloudflare.com/email-routing/email-workers/send-email-workers/) if you want to restrict recipients.
+
+### C. Pages project (Workers & Pages)
+
+1. **Workers & Pages** → your **Pages** project → **Settings**.
+2. **Build**:
+   - **Build command:** `npm run build`
+   - **Build output directory:** `dist`
+   - **Root directory:** path to this app if the repo is a monorepo (e.g. `the-bionicle-collective`); otherwise `/`.
+3. **Environment variables** (Production / Preview as needed):
+   - **`OWNER_EMAIL`** (optional) — recipient for the contact form. Use a **verified** Email Routing destination if sends are rejected. Defaults to `contact@bioniclecollective.com` in code.
+4. **Functions / Wrangler configuration**
+   - Turn on **Use Wrangler configuration file** from the repository ([docs](https://developers.cloudflare.com/pages/functions/wrangler-configuration/#source-of-truth)).
+   - Point to **`wrangler.jsonc`** at the project root (adjust if your app lives in a subdirectory).
+5. **Node** (if builds fail): add **`NODE_VERSION`** = `20` or `22` under Environment variables.
+
+### D. Deploy
+
+- **From Git:** push to the branch connected to **Production**. Cloudflare runs `npm run build` and applies `wrangler.jsonc`.
+- **From your machine (Wrangler):** in the project directory, after `npm install`:
+
+  ```bash
+  npx wrangler login
+  npm run deploy
+  ```
+
+  (`deploy` = `astro build && wrangler pages deploy` — uses the same `wrangler.jsonc`.)
+
+### E. If Git build fails on `send_email`
+
+Some **Pages** builds still validate the config and show:
+
+`Configuration file for Pages projects does not support "send_email"`
+
+**Workarounds:**
+
+1. **Dashboard binding only:** Remove the `"send_email"` block from the **committed** `wrangler.jsonc`, push so the build passes, then in **Workers & Pages** → project → **Settings** → **Bindings** → **Add**, add **Send email** (if your UI shows it) with variable name **`SEND_EMAIL`**. Redeploy.
+2. **CLI-only deploys:** Use **`npm run deploy`** after `astro build` so Wrangler applies bindings without relying on that validator path (keep `send_email` in `wrangler.jsonc` locally).
+3. Watch Cloudflare’s [Pages Wrangler configuration](https://developers.cloudflare.com/pages/functions/wrangler-configuration/) docs for updates.
 
 ---
 
-## `wrangler.jsonc` shape for Pages (Git)
+## Other resources (once)
 
-This repo uses **`pages_build_output_dir`** so Cloudflare **Pages** can read the same file Astro builds into (`dist/` with `_worker.js`).
+| Resource | Where |
+|----------|--------|
+| **KV** (`SESSION`) | **Workers & Pages** → **KV** → create namespace → copy **ID** into `wrangler.jsonc` → `kv_namespaces[0].id`. |
+| **R2** `bionicle-collection` | **R2** → create bucket; name must match `r2_buckets[0].bucket_name` in `wrangler.jsonc`. |
 
-If you previously deployed with **`main` + `assets`** (`wrangler deploy` only), that was the **Workers + Assets** flow. **Git-based Pages** should use the Pages-oriented file in the repo.
+---
+
+## Ongoing
+
+1. Edit **`wrangler.jsonc`** when bindings change (KV id, R2 name, `send_email` options).
+2. **Commit and push** (or run **`npm run deploy`**).
 
 ---
 
 ## Checklist
 
-- [ ] `KV` SESSION id in `wrangler.jsonc` is real (not `REPLACE_WITH_SESSION_KV_ID`).
-- [ ] R2 bucket `bionicle-collection` exists (or names in file match your bucket).
-- [ ] `send_email` with `"name": "SEND_EMAIL"` is present.
-- [ ] Pages project **build** = `npm run build`, output = `dist`.
-- [ ] Wrangler file from repo is **enabled** as source of truth.
-- [ ] Push → deployment succeeds; test **Community** contact form.
+- [ ] Email Routing **enabled**; at least one **verified** destination.
+- [ ] Routing rule for **`contact@…`** (or your chosen address).
+- [ ] **`send_email`** with **`SEND_EMAIL`** in `wrangler.jsonc` (this repo).
+- [ ] Pages **build** = `npm run build`, output = `dist`, correct **root directory**.
+- [ ] **Wrangler file from repo** enabled (or deploy via **`npm run deploy`**).
+- [ ] Optional: **`OWNER_EMAIL`** set to a verified address if needed.
+- [ ] Contact form tested on **Community** page.
 
 ---
 
