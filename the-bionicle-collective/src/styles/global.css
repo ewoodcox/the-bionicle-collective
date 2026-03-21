@@ -46,6 +46,16 @@ body {
   position: relative;
 }
 
+/* Balances the hamburger column so the logo stays visually centered on mobile */
+.site-header__bar {
+  display: contents;
+}
+
+.site-header__spacer {
+  display: none;
+  flex-shrink: 0;
+}
+
 .logo {
   display: inline-flex;
   align-items: center;
@@ -59,19 +69,31 @@ body {
 
 .nav-toggle {
   display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex-shrink: 0;
   background: none;
   border: none;
   cursor: pointer;
-  margin-left: auto;
-  padding: 0.25rem;
+  padding: 0.35rem;
+  margin: 0;
+  border-radius: 6px;
 }
 
-.nav-toggle span {
+.nav-toggle:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.nav-toggle__line {
   display: block;
-  width: 20px;
+  width: 1.5rem;
   height: 2px;
   background: var(--color-text);
-  margin: 3px 0;
   border-radius: 1px;
 }
 
@@ -189,10 +211,20 @@ body {
   pointer-events: none;
 }
 
+/* Desktop / tablet: keep character from dominating */
 @media (max-width: 767px) {
   .home-page::before {
     background-size: contain;
     background-position: center;
+  }
+}
+
+/* Portrait phones: scale up so the Matoran fills more of the viewport */
+@media (max-width: 767px) and (orientation: portrait) {
+  .home-page::before {
+    background-size: cover;
+    background-position: center 38%;
+    opacity: 0.22;
   }
 }
 
@@ -288,6 +320,34 @@ body {
 }
 
 @media (max-width: 640px) {
+  .site-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .site-header__bar {
+    display: grid;
+    grid-template-columns: 2.75rem 1fr 2.75rem;
+    align-items: center;
+    width: 100%;
+  }
+
+  .site-header__bar .nav-toggle {
+    justify-self: start;
+  }
+
+  .site-header__bar .logo {
+    justify-self: center;
+  }
+
+  .site-header__spacer {
+    display: block;
+    width: 2.75rem;
+    height: 2.75rem;
+    pointer-events: none;
+  }
+
   .site-nav {
     position: absolute;
     top: 100%;
@@ -316,6 +376,16 @@ body {
 }
 
 @media (min-width: 641px) {
+  .site-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .site-header__bar {
+    display: contents;
+  }
+
   .site-nav {
     display: flex;
     align-items: center;
@@ -325,6 +395,10 @@ body {
   }
 
   .nav-toggle {
+    display: none;
+  }
+
+  .site-header__spacer {
     display: none;
   }
 }

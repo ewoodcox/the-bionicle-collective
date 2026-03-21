@@ -28,14 +28,17 @@ const webManifest = new URL('/site.webmanifest', iconOrigin).href;
   </head>
   <body>
     <header class="site-header">
-      <a href="/" class="logo">
-        <img src="/TBC%20logo%20for%20site.png" alt={site.name} class="logo-image" />
-      </a>
-      <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
+      <div class="site-header__bar">
+        <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false" aria-controls="site-nav">
+          <span class="nav-toggle__line" aria-hidden="true"></span>
+          <span class="nav-toggle__line" aria-hidden="true"></span>
+          <span class="nav-toggle__line" aria-hidden="true"></span>
+        </button>
+        <a href="/" class="logo">
+          <img src="/TBC%20logo%20for%20site.png" alt={site.name} class="logo-image" />
+        </a>
+        <span class="site-header__spacer" aria-hidden="true"></span>
+      </div>
       <nav class="site-nav" id="site-nav">
         <a href="/">Home</a>
         <a href="/collection/">Collection</a>
