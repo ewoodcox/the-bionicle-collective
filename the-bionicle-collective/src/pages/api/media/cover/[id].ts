@@ -2,29 +2,76 @@
  * Serve media cover images from R2 (private bucket). Browser-safe replacement for
  * direct *.r2.cloudflarestorage.com URLs, which require auth and fail as <img src>.
  */
-import { getMediaById } from '../../../../data/media';
+import { getMediaById, type MediaRecord } from '../../../../data/media';
 
 export const prerender = false;
 
 /** Must match bucket segment in stored URLs (see wrangler.jsonc bucket_name). */
 const R2_BUCKET_SEGMENT = 'bionicle-collection';
 
-type Env = { BIONICLE_COLLECTION?: R2Bucket };
+/** Subset of R2 get() result used below (avoids tight coupling to Workers typings in this file). */
+type R2ObjectForResponse = {
+  body: ReadableStream;
+  httpMetadata?: { contentType?: string };
+  etag?: string;
+};
 
-function getBucket(locals: { runtime?: { env?: Env } }): R2Bucket | null {
+/** Minimal R2 binding surface for this route. */
+interface R2BucketLike {
+  get(key: string): Promise<R2ObjectForResponse | null>;
+}
+
+type Env = { BIONICLE_COLLECTION?: R2BucketLike };
+
+function getBucket(locals: { runtime?: { env?: Env } }): R2BucketLike | null {
   return locals.runtime?.env?.BIONICLE_COLLECTION ?? null;
 }
 
 function objectKeyFromStoredUrl(imageUrl: string): string | null {
   try {
     const u = new URL(imageUrl);
-    if (!u.hostname.includes('r2.cloudflarestorage.com')) return null;
     const parts = u.pathname.split('/').filter(Boolean);
-    if (parts[0] !== R2_BUCKET_SEGMENT) return null;
-    return parts.slice(1).join('/');
+    // S3-style: https://<account>.r2.cloudflarestorage.com/<bucket>/<key...>
+    if (u.hostname.includes('r2.cloudflarestorage.com') && parts[0] === R2_BUCKET_SEGMENT) {
+      return parts.slice(1).join('/');
+    }
+    // Public/custom host: path may start with `media-covers/...` (no bucket segment)
+    if (parts[0] === 'media-covers') {
+      return parts.join('/');
+    }
+    return null;
   } catch {
     return null;
   }
+}
+
+function extFromStoredUrl(url: string | undefined): string {
+  if (!url) return 'png';
+  const m = url.match(/\.(png|jpe?g|webp|gif)(?:\?|$)/i);
+  if (!m) return 'png';
+  const ext = m[1].toLowerCase();
+  return ext === 'jpeg' ? 'jpg' : ext;
+}
+
+/** Try several keys in order: parsed URL, then canonical `media-covers/<id>/main|alt.<ext>` fallbacks. */
+function candidateKeysForMedia(
+  media: import('../../../../data/media').MediaRecord,
+  variant: 'main' | 'alt'
+): string[] {
+  const primaryUrl = variant === 'alt' && media.imageUrlAlt?.trim() ? media.imageUrlAlt : media.imageUrl;
+  const keys: string[] = [];
+  const fromStored = primaryUrl ? objectKeyFromStoredUrl(primaryUrl) : null;
+  if (fromStored) keys.push(fromStored);
+
+  const ext = extFromStoredUrl(primaryUrl);
+  keys.push(`media-covers/${media.id}/${variant}.${ext}`);
+
+  // Extension fallbacks (uploaded file may differ from JSON hint)
+  const exts = ['png', 'jpg', 'jpeg', 'webp', 'gif'] as const;
+  for (const e of exts) {
+    keys.push(`media-covers/${media.id}/${variant}.${e}`);
+  }
+  return [...new Set(keys)];
 }
 
 function contentTypeForKey(key: string): string {
@@ -37,7 +84,8 @@ function contentTypeForKey(key: string): string {
 }
 
 export const GET = async ({ params, url, locals }: { params: { id?: string }; url: URL; locals: any }) => {
-  const id = params.id;
+  const rawId = params.id;
+  const id = rawId ? decodeURIComponent(rawId) : '';
   if (!id) {
     return new Response('Not found', { status: 404 });
   }
@@ -60,22 +108,28 @@ export const GET = async ({ params, url, locals }: { params: { id?: string }; ur
     return Response.redirect(chosenUrl, 302);
   }
 
-  const key = objectKeyFromStoredUrl(chosenUrl);
-  if (!key) {
-    return new Response('Invalid media image URL', { status: 400 });
-  }
-
   const bucket = getBucket(locals);
   if (!bucket) {
     return new Response('Storage not configured', { status: 503 });
   }
 
-  const obj = await bucket.get(key);
-  if (!obj) {
+  const keys = candidateKeysForMedia(media, variant);
+  let obj: R2ObjectForResponse | null = null;
+  let resolvedKey: string | null = null;
+  for (const key of keys) {
+    const o = await bucket.get(key);
+    if (o) {
+      obj = o;
+      resolvedKey = key;
+      break;
+    }
+  }
+
+  if (!obj || !resolvedKey) {
     return new Response('Not found', { status: 404 });
   }
 
-  const contentType = obj.httpMetadata?.contentType || contentTypeForKey(key);
+  const contentType = obj.httpMetadata?.contentType || contentTypeForKey(resolvedKey);
 
   return new Response(obj.body, {
     status: 200,

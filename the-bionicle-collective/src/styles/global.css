@@ -538,7 +538,8 @@ body {
   border-color: var(--color-accent);
 }
 
-.media-era-carousel {
+.media-era-carousel,
+.set-carousel {
   display: flex;
   flex-wrap: nowrap;
   overflow-x: auto;
@@ -548,7 +549,8 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
-.media-era-carousel::-webkit-scrollbar {
+.media-era-carousel::-webkit-scrollbar,
+.set-carousel::-webkit-scrollbar {
   display: none;
 }
 
@@ -730,7 +732,7 @@ body {
   color: var(--color-text-muted);
 }
 
-/* Missing sets (not owned) – same grid/card layout, visually muted */
+/* Missing sets (not owned) – same card layout in horizontal strip, visually muted */
 .missing-section {
   margin-top: 2rem;
   padding-top: 1.5rem;

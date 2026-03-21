@@ -1,0 +1,32 @@
+---
+/**
+ * Horizontal scrolling strip matching the comics/media carousel UI (prev/next + overflow-x).
+ */
+interface Props {
+  /** `aria-label` for the scroll region */
+  ariaLabel: string;
+  /** Unique value for `data-carousel-kind` (for debugging / future use) */
+  carouselKind: string;
+  prevLabel?: string;
+  nextLabel?: string;
+}
+
+const {
+  ariaLabel,
+  carouselKind,
+  prevLabel = 'Scroll left',
+  nextLabel = 'Scroll right',
+} = Astro.props;
+---
+
+<div class="media-era-carousel-section set-carousel-section">
+  <div class="media-era-carousel-wrap" data-carousel-kind={carouselKind}>
+    <div class="media-era-carousel-controls" aria-hidden="false">
+      <button type="button" class="media-era-prev" aria-label={prevLabel}>←</button>
+      <button type="button" class="media-era-next" aria-label={nextLabel}>→</button>
+    </div>
+    <div class="media-era-carousel set-carousel" role="region" aria-label={ariaLabel}>
+      <slot />
+    </div>
+  </div>
+</div>

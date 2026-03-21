@@ -55,14 +55,16 @@ function getExtFromUrl(url: string | undefined): string {
   return ext === 'jpeg' ? 'jpg' : ext;
 }
 
-/** Local static path (preferred). Use with data-fallback + onerror for API fallback when missing. */
+/**
+ * URL for `<img src>` — **served by `/api/media/cover/[id]`** from R2 (see `src/pages/api/media/cover/[id].ts`).
+ * We no longer use `/media-covers/...` as the primary src: those files are optional in `public/` and often
+ * aren’t deployed, which produced spurious 404s before the real API request.
+ */
 export function getMediaCoverSrc(m: MediaRecord, variant: 'main' | 'alt' = 'main'): string {
-  const url = variant === 'alt' ? m.imageUrlAlt : m.imageUrl;
-  const ext = getExtFromUrl(url);
-  return `/media-covers/${encodeURIComponent(m.id)}/${variant}.${ext}`;
+  return getMediaCoverApiUrl(m.id, variant);
 }
 
-/** API fallback when local file is missing (e.g. media not yet prefetched). */
+/** Same URL as `getMediaCoverSrc` — kept for callers that need the path without a full `MediaRecord`. */
 export function getMediaCoverApiUrl(id: string, variant: 'main' | 'alt' = 'main'): string {
   const q = variant === 'alt' ? '?variant=alt' : '';
   return `/api/media/cover/${encodeURIComponent(id)}${q}`;

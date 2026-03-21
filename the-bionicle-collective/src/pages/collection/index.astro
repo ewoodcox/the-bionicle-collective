@@ -1,10 +1,11 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import SetCarouselStrip from '../../components/SetCarouselStrip.astro';
 import { sets } from '../../data/sets';
 import { getSetDisplayLabel, getSetNumber, getSetSortKey, getMissingSetEntries } from '../../data/setNamesByYear';
 import { YEAR_GROUPS, getYearGroup, getYearsForGroup } from '../../config/constants';
 import { getMasksByYear, getKanohiYears } from '../../data/kanohi';
-import { MEDIA_CATEGORIES, mediaItems, getMediaCardName, getMediaCoverSrc, getMediaCoverApiUrl, type MediaCategoryId } from '../../data/media';
+import { MEDIA_CATEGORIES, mediaItems, getMediaCardName, getMediaCoverSrc, type MediaCategoryId } from '../../data/media';
 import { getMediaEraLabel, sortMediaByEra } from '../../data/mediaEras';
 import type { SetRecord } from '../../data/sets';
 
@@ -169,11 +170,16 @@ const defaultGroupId =
                 data-group-id={group.id}
                 data-active={firstOtherTab === 'combiner'}
               >
-                <div class="set-grid">
+                <SetCarouselStrip
+                  ariaLabel="Combiner models"
+                  carouselKind="other-combiner"
+                  prevLabel="Scroll combiner models left"
+                  nextLabel="Scroll combiner models right"
+                >
                   {items
                     .filter((s) => (s.theme ?? '') === 'Combiner Models')
                     .map((set) => (
-                      <a href={`/collection/${set.id}/?gen=${group.id}&year=combiner`} class="set-card">
+                      <a href={`/collection/${set.id}/?gen=${group.id}&year=combiner`} class="set-card media-era-card">
                         <img src={`/set-photos/${set.id}.jpg`} data-fallback={set.imageUrl} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" onerror="this.onerror=null;this.src=this.dataset.fallback" />
                         <div class="info">
                           <div class="name">{getSetDisplayLabel(set)}</div>
@@ -181,7 +187,7 @@ const defaultGroupId =
                         </div>
                       </a>
                     ))}
-                </div>
+                </SetCarouselStrip>
               </div>
             )}
             {hasAlternate && (
@@ -194,11 +200,16 @@ const defaultGroupId =
                 data-group-id={group.id}
                 data-active={firstOtherTab === 'alternate'}
               >
-                <div class="set-grid">
+                <SetCarouselStrip
+                  ariaLabel="Alternate models"
+                  carouselKind="other-alternate"
+                  prevLabel="Scroll alternate models left"
+                  nextLabel="Scroll alternate models right"
+                >
                   {items
                     .filter((s) => (s.theme ?? '') === 'Alternate Models')
                     .map((set) => (
-                      <a href={`/collection/${set.id}/?gen=${group.id}&year=alternate`} class="set-card">
+                      <a href={`/collection/${set.id}/?gen=${group.id}&year=alternate`} class="set-card media-era-card">
                         <img src={`/set-photos/${set.id}.jpg`} data-fallback={set.imageUrl} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" onerror="this.onerror=null;this.src=this.dataset.fallback" />
                         <div class="info">
                           <div class="name">{getSetDisplayLabel(set)}</div>
@@ -206,7 +217,7 @@ const defaultGroupId =
                         </div>
                       </a>
                     ))}
-                </div>
+                </SetCarouselStrip>
               </div>
             )}
             {hasKanohi && (
@@ -251,10 +262,15 @@ const defaultGroupId =
                       data-group-id="other-kanohi"
                       data-active={y === kanohiYears[0]}
                     >
-                      <div class="set-grid">
+                      <SetCarouselStrip
+                        ariaLabel={`Kanohi for ${y}`}
+                        carouselKind={`other-kanohi-${y}`}
+                        prevLabel={`Scroll Kanohi for ${y} left`}
+                        nextLabel={`Scroll Kanohi for ${y} right`}
+                      >
                         {yearMasks.map((mask) => (
                           <div
-                            class={`set-card mask-card${mask.owned ? '' : ' set-card--missing'}`}
+                            class={`set-card mask-card media-era-card${mask.owned ? '' : ' set-card--missing'}`}
                             data-mask-id={mask.id}
                             aria-label={`${mask.name} ${mask.colorLabel}${mask.owned ? ', owned' : ', not owned'}`}
                           >
@@ -277,7 +293,7 @@ const defaultGroupId =
                             </label>
                           </div>
                         ))}
-                      </div>
+                      </SetCarouselStrip>
                     </div>
                   );
                 })}
@@ -347,24 +363,20 @@ const defaultGroupId =
                                 <img
                                   class="media-cover-main"
                                   src={getMediaCoverSrc(m, 'main')}
-                                  data-fallback={getMediaCoverApiUrl(m.id, 'main')}
                                   alt={m.title}
                                   width="160"
                                   height="160"
                                   loading="lazy"
-                                  onerror="if(this.dataset.fallback){this.src=this.dataset.fallback;this.onerror=null}"
                                 />
                                 {m.imageUrlAlt ? (
                                   <img
                                     class="media-cover-alt"
                                     src={getMediaCoverSrc(m, 'alt')}
-                                    data-fallback={getMediaCoverApiUrl(m.id, 'alt')}
                                     alt=""
                                     width="160"
                                     height="160"
                                     loading="lazy"
                                     aria-hidden="true"
-                                    onerror="if(this.dataset.fallback){this.src=this.dataset.fallback;this.onerror=null}"
                                   />
                                 ) : null}
                               </div>
@@ -428,12 +440,10 @@ const defaultGroupId =
                             >
                               <img
                                 src={getMediaCoverSrc(m, 'main')}
-                                data-fallback={getMediaCoverApiUrl(m.id, 'main')}
                                 alt={m.title}
                                 width="160"
                                 height="160"
                                 loading="lazy"
-                                onerror="if(this.dataset.fallback){this.src=this.dataset.fallback;this.onerror=null}"
                               />
                               <div class="info">
                                 <div class="name">{getMediaCardName(m)}</div>
@@ -548,12 +558,10 @@ const defaultGroupId =
                                         >
                                           <img
                                             src={getMediaCoverSrc(m, 'main')}
-                                            data-fallback={getMediaCoverApiUrl(m.id, 'main')}
                                             alt={m.title}
                                             width="160"
                                             height="160"
                                             loading="lazy"
-                                            onerror="if(this.dataset.fallback){this.src=this.dataset.fallback;this.onerror=null}"
                                           />
                                           <div class="info">
                                             <div class="name">{getMediaCardName(m)}</div>
@@ -610,9 +618,14 @@ const defaultGroupId =
                     data-group-id={group.id}
                     data-active={y === firstYear}
                   >
-                    <div class="set-grid">
+                    <SetCarouselStrip
+                      ariaLabel={`Sets released in ${y}`}
+                      carouselKind={`sets-${group.id}-${yearKey}`}
+                      prevLabel={`Scroll ${y} sets left`}
+                      nextLabel={`Scroll ${y} sets right`}
+                    >
                       {yearItems.map((set) => (
-                        <a href={`/collection/${set.id}/?gen=${group.id}&year=${y}`} class="set-card">
+                        <a href={`/collection/${set.id}/?gen=${group.id}&year=${y}`} class="set-card media-era-card">
                           <img src={`/set-photos/${set.id}.jpg`} data-fallback={set.imageUrl} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" onerror="this.onerror=null;this.src=this.dataset.fallback" />
                           <div class="info">
                             <div class="name">{getSetDisplayLabel(set)}</div>
@@ -620,13 +633,18 @@ const defaultGroupId =
                           </div>
                         </a>
                       ))}
-                    </div>
+                    </SetCarouselStrip>
                     {missingEntries.length > 0 && (
                       <div class="missing-section">
                         <h3 class="missing-heading">Missing</h3>
-                        <div class="set-grid">
+                        <SetCarouselStrip
+                          ariaLabel={`Missing sets for ${y}`}
+                          carouselKind={`sets-missing-${group.id}-${yearKey}`}
+                          prevLabel={`Scroll missing ${y} left`}
+                          nextLabel={`Scroll missing ${y} right`}
+                        >
                           {missingEntries.map((entry) => (
-                            <div class="set-card set-card--missing">
+                            <div class="set-card set-card--missing media-era-card">
                               <img
                                 src={`https://placehold.co/160x160?text=${encodeURIComponent(entry.setNumber)}`}
                                 alt={`${entry.setNumber} - ${entry.name}`}
@@ -640,7 +658,7 @@ const defaultGroupId =
                               </div>
                             </div>
                           ))}
-                        </div>
+                        </SetCarouselStrip>
                       </div>
                     )}
                   </div>
@@ -649,9 +667,14 @@ const defaultGroupId =
             )}
           </>
         ) : (
-          <div class="set-grid">
+          <SetCarouselStrip
+            ariaLabel={`${group.label} sets`}
+            carouselKind={`sets-${group.id}-flat`}
+            prevLabel="Scroll sets left"
+            nextLabel="Scroll sets right"
+          >
             {items.map((set) => (
-              <a href={`/collection/${set.id}/?gen=${group.id}`} class="set-card">
+              <a href={`/collection/${set.id}/?gen=${group.id}`} class="set-card media-era-card">
                 <img src={`/set-photos/${set.id}.jpg`} data-fallback={set.imageUrl} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" onerror="this.onerror=null;this.src=this.dataset.fallback" />
                 <div class="info">
                   <div class="name">{getSetDisplayLabel(set)}</div>
@@ -659,7 +682,7 @@ const defaultGroupId =
                 </div>
               </a>
             ))}
-          </div>
+          </SetCarouselStrip>
         )}
       </section>
     );
