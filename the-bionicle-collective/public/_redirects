@@ -1,0 +1,2 @@
+# Many clients request /favicon.ico before parsing <link rel="icon">; serve the same asset as favicon-16x16.png
+/favicon.ico /favicon-16x16.png 302

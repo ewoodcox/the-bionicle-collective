@@ -1,5 +1,11 @@
 # Dependencies (install with npm ci / npm install)
 node_modules/
 
+# Build output (Cloudflare Pages runs `npm run build` on deploy)
+dist/
+
+# Local Vercel adapter output (not used for Cloudflare deploy)
+.vercel/
+
 # Spreadsheet no longer used; collection.json is the source of truth
 data/*.xlsx

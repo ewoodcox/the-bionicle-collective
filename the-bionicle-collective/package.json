@@ -11,7 +11,6 @@
     "build": "astro build",
     "deploy": "astro build && wrangler pages deploy",
     "preview": "astro preview",
-    "upload:kv": "node scripts/upload-collection-store-to-kv.mjs",
     "verify:r2": "node scripts/verify-r2-collection-format.mjs",
     "fetch:kanohi": "node scripts/fetch-kanohi-bricklink.mjs",
     "warm:kanohi-images": "node scripts/warm-kanohi-image-cache.mjs"
