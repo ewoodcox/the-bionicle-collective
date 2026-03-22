@@ -103,7 +103,7 @@ function main() {
     }
 
     try {
-      execSync(`npx wrangler r2 object put "${r2FullKey}" --file="${fileArg}"`, {
+      execSync(`npx wrangler r2 object put "${r2FullKey}" --file="${fileArg}" --remote`, {
         cwd: projectRoot,
         stdio: 'inherit',
       });

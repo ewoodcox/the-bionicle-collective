@@ -199,9 +199,13 @@ function extFromUrl(url) {
   }
 }
 
+const FETCH_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (compatible; BionicleCollective/1.0; +https://bioniclecollective.com)',
+};
+
 async function fetchWikitextForIssue(pageTitle) {
   const apiUrl = `https://biosector01.com/w/api.php?action=parse&page=${encodeURIComponent(pageTitle)}&prop=wikitext&format=json`;
-  const res = await fetch(apiUrl);
+  const res = await fetch(apiUrl, { headers: FETCH_HEADERS });
   if (!res.ok) {
     throw new Error(`Biosector API failed (${res.status}) for ${pageTitle}`);
   }
@@ -211,7 +215,7 @@ async function fetchWikitextForIssue(pageTitle) {
 
 /** Returns { ok: true, ext, tempPath } or { ok: false } */
 async function tryDownloadToTemp(url, tempPath) {
-  const res = await fetch(url, { redirect: 'follow' });
+  const res = await fetch(url, { redirect: 'follow', headers: FETCH_HEADERS });
   if (!res.ok) return { ok: false };
   const ct = res.headers.get('content-type') || '';
   if (!ct.includes('image/')) return { ok: false };
@@ -225,7 +229,7 @@ async function tryDownloadToTemp(url, tempPath) {
 function uploadTempToR2({ key, tempPath }) {
   const r2Key = `${R2_BUCKET}/${key}`;
   const fileArg = tempPath.replace(/\\/g, '/');
-  execSync(`npx wrangler r2 object put "${r2Key}" --file="${fileArg}"`, { cwd: projectRoot, stdio: 'inherit' });
+  execSync(`npx wrangler r2 object put "${r2Key}" --file="${fileArg}" --remote`, { cwd: projectRoot, stdio: 'inherit' });
 }
 
 function parseIssueN(m) {
@@ -298,7 +302,7 @@ async function resolveFilenames(m) {
 }
 
 async function downloadToFinal(url, finalTempPath) {
-  const res = await fetch(url, { redirect: 'follow' });
+  const res = await fetch(url, { redirect: 'follow', headers: FETCH_HEADERS });
   if (!res.ok) throw new Error(`Download failed (${res.status}) for ${url}`);
   const buf = await res.arrayBuffer();
   writeFileSync(finalTempPath, Buffer.from(buf));
