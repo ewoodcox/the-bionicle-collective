@@ -22,7 +22,11 @@ interface R2BucketLike {
   get(key: string): Promise<R2ObjectForResponse | null>;
 }
 
-type Env = { BIONICLE_COLLECTION?: R2BucketLike };
+type Env = {
+  BIONICLE_COLLECTION?: R2BucketLike;
+  /** Optional: public base for the same object keys, e.g. `https://pub-xxxxx.r2.dev` (no trailing slash). */
+  MEDIA_PUBLIC_ORIGIN?: string;
+};
 
 /**
  * R2 binding: `locals.runtime.env` (Astro 5) and/or `cloudflare:workers` `env` (Astro 6+).
@@ -33,6 +37,14 @@ function getBucket(locals: { runtime?: { env?: Env } }): R2BucketLike | null {
   if (fromLocals) return fromLocals;
   const fromCf = cfEnv as unknown as Env;
   return fromCf?.BIONICLE_COLLECTION ?? null;
+}
+
+function getMediaPublicOrigin(locals: { runtime?: { env?: Env } }): string | null {
+  const fromLocals = locals?.runtime?.env?.MEDIA_PUBLIC_ORIGIN;
+  const fromCf = (cfEnv as unknown as Env)?.MEDIA_PUBLIC_ORIGIN;
+  const v = fromLocals ?? fromCf;
+  if (typeof v !== 'string' || !v.startsWith('http')) return null;
+  return v.replace(/\/$/, '');
 }
 
 function objectKeyFromStoredUrl(imageUrl: string): string | null {
@@ -131,9 +143,14 @@ export const GET = async ({ params, url, locals }: { params: { id?: string }; ur
   }
 
   if (!obj || !resolvedKey) {
+    const publicOrigin = getMediaPublicOrigin(locals);
+    if (publicOrigin && keys.length > 0) {
+      return Response.redirect(`${publicOrigin}/${keys[0]}`, 302);
+    }
     const body =
       `Cover not found in R2 for media id "${id}". Keys tried (in order):\n${keys.join('\n')}\n\n` +
-      `Upload/sync must use this exact id as the folder name, e.g. media-covers/${id}/main.png in bucket "bionicle-collection".`;
+      `Upload/sync must use this exact id as the folder name, e.g. media-covers/${id}/main.png in bucket "bionicle-collection".\n` +
+      `Or set env MEDIA_PUBLIC_ORIGIN to your public R2/custom domain base (same keys) for redirect fallback.`;
     return new Response(body, {
       status: 404,
       headers: { 'Content-Type': 'text/plain; charset=utf-8' },

@@ -56,12 +56,13 @@ function getExtFromUrl(url: string | undefined): string {
 }
 
 /**
- * URL for `<img src>` — **served by `/api/media/cover/[id]`** from R2 (see `src/pages/api/media/cover/[id].ts`).
- * We no longer use `/media-covers/...` as the primary src: those files are optional in `public/` and often
- * aren’t deployed, which produced spurious 404s before the real API request.
+ * Primary URL for `<img src>` — **static** files under `public/media-covers/<id>/main|alt.<ext>` (deployed as `/media-covers/...`).
+ * Templates should set `data-cover-api` + `onerror` to fall back to {@link getMediaCoverApiUrl} (R2 via `/api/media/cover/[id]`).
  */
 export function getMediaCoverSrc(m: MediaRecord, variant: 'main' | 'alt' = 'main'): string {
-  return getMediaCoverApiUrl(m.id, variant);
+  const url = variant === 'alt' && m.imageUrlAlt?.trim() ? m.imageUrlAlt : m.imageUrl;
+  const ext = getExtFromUrl(url);
+  return `/media-covers/${encodeURIComponent(m.id)}/${variant}.${ext}`;
 }
 
 /** Same URL as `getMediaCoverSrc` — kept for callers that need the path without a full `MediaRecord`. */
