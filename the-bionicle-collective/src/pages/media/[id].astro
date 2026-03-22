@@ -1,6 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { mediaItems, getMediaById, getMediaCoverSrc, getMediaCoverApiUrl, MEDIA_CATEGORIES, getMediaCardName } from '../../data/media';
+import { mediaItems, getMediaById, getMediaCoverSrc, MEDIA_CATEGORIES, getMediaCardName } from '../../data/media';
 import { getMediaEraLabel } from '../../data/mediaEras';
 
 export function getStaticPaths() {
@@ -42,12 +42,10 @@ function formatAcquiredDate(acquiredDate: string | undefined): string {
       <div class="image-wrap">
         <img
           src={getMediaCoverSrc(media, 'main')}
-          data-cover-api={getMediaCoverApiUrl(media.id, 'main')}
           alt={media.title}
           width="280"
           height="420"
           loading="eager"
-          onerror="if(this.dataset.coverApi){this.src=this.dataset.coverApi;this.removeAttribute('data-cover-api');this.onerror=null}"
         />
       </div>
       <div>

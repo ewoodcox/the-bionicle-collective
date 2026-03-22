@@ -601,7 +601,7 @@ body {
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .media-era-card:hover .media-cover-main {
+  .media-era-card:has(.media-cover-alt):hover .media-cover-main {
     opacity: 0;
   }
   .media-era-card:hover .media-cover-alt {

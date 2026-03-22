@@ -5,7 +5,7 @@ import { sets } from '../../data/sets';
 import { getSetDisplayLabel, getSetNumber, getSetSortKey, getMissingSetEntries } from '../../data/setNamesByYear';
 import { YEAR_GROUPS, getYearGroup, getYearsForGroup } from '../../config/constants';
 import { getMasksByYear, getKanohiYears } from '../../data/kanohi';
-import { MEDIA_CATEGORIES, mediaItems, getMediaCardName, getMediaCoverSrc, getMediaCoverApiUrl, type MediaCategoryId } from '../../data/media';
+import { MEDIA_CATEGORIES, mediaItems, getMediaCardName, getMediaCoverSrc, type MediaCategoryId } from '../../data/media';
 import { getMediaEraLabel, sortMediaByEra } from '../../data/mediaEras';
 import type { SetRecord } from '../../data/sets';
 
@@ -363,24 +363,20 @@ const defaultGroupId =
                                 <img
                                   class="media-cover-main"
                                   src={getMediaCoverSrc(m, 'main')}
-                                  data-cover-api={getMediaCoverApiUrl(m.id, 'main')}
                                   alt={m.title}
                                   width="160"
                                   height="240"
                                   loading="lazy"
-                                  onerror="if(this.dataset.coverApi){this.src=this.dataset.coverApi;this.removeAttribute('data-cover-api');this.onerror=null}"
                                 />
                                 {m.imageUrlAlt ? (
                                   <img
                                     class="media-cover-alt"
                                     src={getMediaCoverSrc(m, 'alt')}
-                                    data-cover-api={getMediaCoverApiUrl(m.id, 'alt')}
                                     alt=""
                                     width="160"
                                     height="240"
                                     loading="lazy"
                                     aria-hidden="true"
-                                    onerror="if(this.dataset.coverApi){this.src=this.dataset.coverApi;this.removeAttribute('data-cover-api');this.onerror=null}"
                                   />
                                 ) : null}
                               </div>
@@ -444,12 +440,10 @@ const defaultGroupId =
                             >
                               <img
                                 src={getMediaCoverSrc(m, 'main')}
-                                data-cover-api={getMediaCoverApiUrl(m.id, 'main')}
                                 alt={m.title}
                                 width="160"
                                 height="240"
                                 loading="lazy"
-                                onerror="if(this.dataset.coverApi){this.src=this.dataset.coverApi;this.removeAttribute('data-cover-api');this.onerror=null}"
                               />
                               <div class="info">
                                 <div class="name">{getMediaCardName(m)}</div>
@@ -564,12 +558,10 @@ const defaultGroupId =
                                         >
                                           <img
                                             src={getMediaCoverSrc(m, 'main')}
-                                            data-cover-api={getMediaCoverApiUrl(m.id, 'main')}
                                             alt={m.title}
                                             width="160"
                                             height="240"
                                             loading="lazy"
-                                            onerror="if(this.dataset.coverApi){this.src=this.dataset.coverApi;this.removeAttribute('data-cover-api');this.onerror=null}"
                                           />
                                           <div class="info">
                                             <div class="name">{getMediaCardName(m)}</div>
