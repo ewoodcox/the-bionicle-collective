@@ -3,8 +3,6 @@
  * Reads/writes suggestions.json in the bound R2 bucket.
  */
 
-/// <reference types="@cloudflare/workers-types" />
-
 const R2_KEY = 'suggestions.json';
 const VOTES_R2_KEY = 'suggestion-votes.json';
 

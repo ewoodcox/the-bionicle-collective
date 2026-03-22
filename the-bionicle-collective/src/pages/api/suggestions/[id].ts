@@ -1,4 +1,3 @@
-/// <reference types="@cloudflare/workers-types" />
 import type { APIRoute } from 'astro';
 import { isAuthenticated } from '../../../utils/adminAuth';
 import * as storeR2 from '../../../utils/suggestionsStoreR2';

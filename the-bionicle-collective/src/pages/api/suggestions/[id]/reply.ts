@@ -1,4 +1,3 @@
-/// <reference types="@cloudflare/workers-types" />
 import type { APIRoute } from 'astro';
 import * as storeR2 from '../../../../utils/suggestionsStoreR2';
 import * as storeMem from '../../../../utils/suggestionsStore';

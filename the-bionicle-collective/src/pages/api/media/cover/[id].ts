@@ -3,6 +3,7 @@
  * direct *.r2.cloudflarestorage.com URLs, which require auth and fail as <img src>.
  */
 import { getMediaById, type MediaRecord } from '../../../../data/media';
+import { env as cfEnv } from 'cloudflare:workers';
 
 export const prerender = false;
 
@@ -23,8 +24,15 @@ interface R2BucketLike {
 
 type Env = { BIONICLE_COLLECTION?: R2BucketLike };
 
+/**
+ * R2 binding: `locals.runtime.env` (Astro 5) and/or `cloudflare:workers` `env` (Astro 6+).
+ * Binding name must match `wrangler.jsonc` → `r2_buckets[].binding` (`BIONICLE_COLLECTION`).
+ */
 function getBucket(locals: { runtime?: { env?: Env } }): R2BucketLike | null {
-  return locals.runtime?.env?.BIONICLE_COLLECTION ?? null;
+  const fromLocals = locals?.runtime?.env?.BIONICLE_COLLECTION;
+  if (fromLocals) return fromLocals;
+  const fromCf = cfEnv as unknown as Env;
+  return fromCf?.BIONICLE_COLLECTION ?? null;
 }
 
 function objectKeyFromStoredUrl(imageUrl: string): string | null {
@@ -54,10 +62,7 @@ function extFromStoredUrl(url: string | undefined): string {
 }
 
 /** Try several keys in order: parsed URL, then canonical `media-covers/<id>/main|alt.<ext>` fallbacks. */
-function candidateKeysForMedia(
-  media: import('../../../../data/media').MediaRecord,
-  variant: 'main' | 'alt'
-): string[] {
+function candidateKeysForMedia(media: MediaRecord, variant: 'main' | 'alt'): string[] {
   const primaryUrl = variant === 'alt' && media.imageUrlAlt?.trim() ? media.imageUrlAlt : media.imageUrl;
   const keys: string[] = [];
   const fromStored = primaryUrl ? objectKeyFromStoredUrl(primaryUrl) : null;
@@ -126,7 +131,13 @@ export const GET = async ({ params, url, locals }: { params: { id?: string }; ur
   }
 
   if (!obj || !resolvedKey) {
-    return new Response('Not found', { status: 404 });
+    const body =
+      `Cover not found in R2 for media id "${id}". Keys tried (in order):\n${keys.join('\n')}\n\n` +
+      `Upload/sync must use this exact id as the folder name, e.g. media-covers/${id}/main.png in bucket "bionicle-collection".`;
+    return new Response(body, {
+      status: 404,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    });
   }
 
   const contentType = obj.httpMetadata?.contentType || contentTypeForKey(resolvedKey);

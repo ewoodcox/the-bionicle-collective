@@ -3,8 +3,6 @@
  * Stores timestamps per IP for contact (5/hour), suggestions (5/day), replies (20/hour).
  */
 
-/// <reference types="@cloudflare/workers-types" />
-
 const R2_KEY = 'rate-limit.json';
 const CONTACT_LIMIT = 5;
 const CONTACT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
