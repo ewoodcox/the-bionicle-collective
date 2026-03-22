@@ -577,7 +577,7 @@ body {
 .media-cover-stack {
   position: relative;
   width: 100%;
-  aspect-ratio: 1;
+  aspect-ratio: 2/3;
 }
 
 .media-cover-stack img {
@@ -730,6 +730,10 @@ body {
   aspect-ratio: 1;
   object-fit: cover;
   display: block;
+}
+
+.media-card > img {
+  aspect-ratio: 2/3;
 }
 
 .set-card .info {
