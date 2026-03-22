@@ -1027,7 +1027,13 @@ body {
 
 .set-detail .image-wrap img {
   width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
   display: block;
+}
+
+.media-detail .image-wrap img {
+  aspect-ratio: 2/3;
 }
 
 .set-detail .meta-list {

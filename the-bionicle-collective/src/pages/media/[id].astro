@@ -37,7 +37,7 @@ function formatAcquiredDate(acquiredDate: string | undefined): string {
 <Layout title={`${media.title} | The Bionicle Collective`} description={`${media.title} (${media.year})`}>
   <a href={backHref} class="button-primary back-link">← Back to collection</a>
 
-  <div class="set-detail-layout">
+  <div class="set-detail-layout media-detail">
     <article class="set-detail">
       <div class="image-wrap">
         <img
@@ -45,7 +45,7 @@ function formatAcquiredDate(acquiredDate: string | undefined): string {
           data-cover-api={getMediaCoverApiUrl(media.id, 'main')}
           alt={media.title}
           width="280"
-          height="280"
+          height="420"
           loading="eager"
           onerror="if(this.dataset.coverApi){this.src=this.dataset.coverApi;this.removeAttribute('data-cover-api');this.onerror=null}"
         />
