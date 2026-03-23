@@ -5,6 +5,8 @@
   ],
   "exclude": [
     "/_astro/*",
+    "/#",
+    "/favicon.ico",
     "/.assetsignore",
     "/.gitkeep",
     "/Matoran_FoldArms_v1.png",

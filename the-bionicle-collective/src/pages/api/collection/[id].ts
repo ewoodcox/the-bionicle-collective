@@ -125,3 +125,57 @@ export const PUT = async ({ params, request, locals }) => {
     headers: { 'Content-Type': 'application/json' },
   });
 };
+
+export const PATCH = async ({ params, request, locals }) => {
+  const id = params.id;
+  if (!id) {
+    return new Response(JSON.stringify({ error: 'Missing id' }), { status: 400 });
+  }
+
+  const store = await getStore(locals);
+  if (!store) {
+    return new Response(
+      JSON.stringify({ error: 'Collection storage (R2) is not configured.' }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const env = (locals as { runtime?: { env?: Env } }).runtime?.env;
+  if (isAuthConfigured(env)) {
+    const ok = await isAuthenticated(request, env);
+    if (!ok) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized. Log in at the edit site home page.' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+  }
+
+  let body: any;
+  try {
+    body = await request.json();
+  } catch {
+    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400 });
+  }
+
+  try {
+    const existing = (await store.get(id)) ?? {};
+    const merged = {
+      acquiredDate: 'acquiredDate' in body ? String(body.acquiredDate ?? '') : (existing.acquiredDate ?? ''),
+      acquiredFrom: 'acquiredFrom' in body ? String(body.acquiredFrom ?? '') : (existing.acquiredFrom ?? ''),
+      status: 'status' in body ? String(body.status ?? '') : (existing.status ?? ''),
+      notes: 'notes' in body ? String(body.notes ?? '') : (existing.notes ?? ''),
+    };
+    const saved = await store.put(id, merged);
+    return new Response(JSON.stringify(saved), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return new Response(
+      JSON.stringify({ error: 'Failed to save collection entry', details: message }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+};

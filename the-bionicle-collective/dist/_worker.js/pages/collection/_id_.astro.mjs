@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { e as createAstro, f as createComponent, r as renderTemplate, k as defineScriptVars, l as renderComponent, m as maybeRenderHead, h as addAttribute } from '../../chunks/astro/server_DXfHa-2P.mjs';
-import { $ as $$Layout } from '../../chunks/Layout_BU6XUjh3.mjs';
+import { e as createAstro, f as createComponent, r as renderTemplate, k as defineScriptVars, l as renderComponent, m as maybeRenderHead, h as addAttribute } from '../../chunks/astro/server_DPDpufRN.mjs';
+import { $ as $$Layout } from '../../chunks/Layout_DcLzPPtX.mjs';
 import { g as getSetById, a as getSetDisplayLabel, b as getSetNumber, s as sets, c as getSetSortKey, d as getYearGroup, e as getYearsForGroup } from '../../chunks/constants_YHYpcfeA.mjs';
 export { renderers } from '../../renderers.mjs';
 
@@ -95,9 +95,9 @@ const $$id = createComponent(async ($$result, $$props, $$slots) => {
     })();
     return renderTemplate`<option${addAttribute(y, "value")}${addAttribute(selected, "selected")}>${y}</option>`;
   })} </select> </div> <label class="collection-label" for="input-acquiredFrom">Purchased from</label> <input type="text" id="input-acquiredFrom" class="collection-input" name="acquiredFrom"${addAttribute(set.acquiredFrom ?? "", "value")} placeholder="e.g. LEGO Store"> <label class="collection-label" for="input-status">Status</label> <select id="input-status" class="collection-input collection-select" name="status"> <option value="">—</option> <option value="new">New</option> <option value="used-complete">Used – Complete</option> <option value="used-incomplete">Used – Incomplete</option> </select> <label class="collection-label" for="input-notes">Collector notes</label> <textarea id="input-notes" class="collection-input collection-textarea" name="notes" rows="3" placeholder="Optional notes">${set.notes ?? ""}</textarea> <div class="collection-form-actions"> <button type="submit" class="button-primary">Save</button> <button type="button" class="button-secondary collection-cancel-btn" id="collection-cancel-btn">Cancel</button> </div> </form> </div> </div> </article> <nav class="set-detail-nav" aria-label="Set navigation"> ${nextHref ? renderTemplate`<a${addAttribute(nextHref, "href")} class="set-detail-arrow-btn" aria-label="Next set">→</a>` : renderTemplate`<span class="set-detail-arrow-btn set-detail-arrow-btn--disabled" aria-hidden="true">→</span>`} </nav> </div> ` }), defineScriptVars({ setId: set.id, initialAcquiredDate: set.acquiredDate ?? "", initialAcquiredFrom: set.acquiredFrom ?? "", initialNotes: set.notes ?? "", initialStatus: "" }));
-}, "/Users/ethan/Library/Mobile Documents/com~apple~CloudDocs/Development/the-bionicle-collective/src/pages/collection/[id].astro", void 0);
+}, "/Users/ethan/Development/the-bionicle-collective/src/pages/collection/[id].astro", void 0);
 
-const $$file = "/Users/ethan/Library/Mobile Documents/com~apple~CloudDocs/Development/the-bionicle-collective/src/pages/collection/[id].astro";
+const $$file = "/Users/ethan/Development/the-bionicle-collective/src/pages/collection/[id].astro";
 const $$url = "/collection/[id]";
 
 const _page = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({

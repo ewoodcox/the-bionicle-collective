@@ -70,6 +70,10 @@ const defaultGroupId =
     </div>
   )}
 
+  <div class="bulk-edit-toggle-row" data-edit-only>
+    <button type="button" class="bulk-edit-toggle-btn" id="bulk-edit-toggle">Bulk edit</button>
+  </div>
+
   {VISIBLE_GROUPS.map((group) => {
     const items =
       group.id === 'other'
@@ -179,12 +183,13 @@ const defaultGroupId =
                   {items
                     .filter((s) => (s.theme ?? '') === 'Combiner Models')
                     .map((set) => (
-                      <a href={`/collection/${set.id}/?gen=${group.id}&year=combiner`} class="set-card media-era-card">
+                      <a href={`/collection/${set.id}/?gen=${group.id}&year=combiner`} class="set-card media-era-card" data-set-id={set.id}>
                         <img src={`/set-photos/${set.id}.jpg`} data-fallback={set.imageUrl} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" onerror="this.onerror=null;this.src=this.dataset.fallback" />
                         <div class="info">
                           <div class="name">{getSetDisplayLabel(set)}</div>
                           <div class="meta">{set.year}</div>
                         </div>
+                        <span class="bulk-select-box" aria-hidden="true"></span>
                       </a>
                     ))}
                 </SetCarouselStrip>
@@ -209,12 +214,13 @@ const defaultGroupId =
                   {items
                     .filter((s) => (s.theme ?? '') === 'Alternate Models')
                     .map((set) => (
-                      <a href={`/collection/${set.id}/?gen=${group.id}&year=alternate`} class="set-card media-era-card">
+                      <a href={`/collection/${set.id}/?gen=${group.id}&year=alternate`} class="set-card media-era-card" data-set-id={set.id}>
                         <img src={`/set-photos/${set.id}.jpg`} data-fallback={set.imageUrl} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" onerror="this.onerror=null;this.src=this.dataset.fallback" />
                         <div class="info">
                           <div class="name">{getSetDisplayLabel(set)}</div>
                           <div class="meta">{set.year}</div>
                         </div>
+                        <span class="bulk-select-box" aria-hidden="true"></span>
                       </a>
                     ))}
                 </SetCarouselStrip>
@@ -643,12 +649,13 @@ const defaultGroupId =
                       nextLabel={`Scroll ${y} sets right`}
                     >
                       {yearItems.map((set) => (
-                        <a href={`/collection/${set.id}/?gen=${group.id}&year=${y}`} class="set-card media-era-card">
+                        <a href={`/collection/${set.id}/?gen=${group.id}&year=${y}`} class="set-card media-era-card" data-set-id={set.id}>
                           <img src={`/set-photos/${set.id}.jpg`} data-fallback={set.imageUrl} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" onerror="this.onerror=null;this.src=this.dataset.fallback" />
                           <div class="info">
                             <div class="name">{getSetDisplayLabel(set)}</div>
                             <div class="meta">{set.year}</div>
                           </div>
+                          <span class="bulk-select-box" aria-hidden="true"></span>
                         </a>
                       ))}
                     </SetCarouselStrip>
@@ -692,12 +699,13 @@ const defaultGroupId =
             nextLabel="Scroll sets right"
           >
             {items.map((set) => (
-              <a href={`/collection/${set.id}/?gen=${group.id}`} class="set-card media-era-card">
+              <a href={`/collection/${set.id}/?gen=${group.id}`} class="set-card media-era-card" data-set-id={set.id}>
                 <img src={`/set-photos/${set.id}.jpg`} data-fallback={set.imageUrl} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" onerror="this.onerror=null;this.src=this.dataset.fallback" />
                 <div class="info">
                   <div class="name">{getSetDisplayLabel(set)}</div>
                   <div class="meta">{set.year}</div>
                 </div>
+                <span class="bulk-select-box" aria-hidden="true"></span>
               </a>
             ))}
           </SetCarouselStrip>
@@ -1143,5 +1151,213 @@ const defaultGroupId =
         }
       }
     })();
+
+    (function () {
+      const isEditHost = window.location.hostname === 'edit.bioniclecollective.com';
+      if (!isEditHost) return;
+
+      const toggleBtn = document.getElementById('bulk-edit-toggle');
+      const bar = document.getElementById('bulk-edit-bar');
+      const countEl = document.getElementById('bulk-edit-count');
+      const applyBtn = document.getElementById('bulk-apply-btn') as HTMLButtonElement | null;
+      const cancelBtn = document.getElementById('bulk-cancel-btn');
+      const fieldDateCheck = document.getElementById('bulk-field-acquiredDate') as HTMLInputElement | null;
+      const fieldFromCheck = document.getElementById('bulk-field-acquiredFrom') as HTMLInputElement | null;
+      const fieldStatusCheck = document.getElementById('bulk-field-status') as HTMLInputElement | null;
+      const inputMonth = document.getElementById('bulk-acquiredMonth') as HTMLSelectElement | null;
+      const inputYear = document.getElementById('bulk-acquiredYear') as HTMLSelectElement | null;
+      const inputFrom = document.getElementById('bulk-acquiredFrom') as HTMLInputElement | null;
+      const inputStatus = document.getElementById('bulk-status') as HTMLSelectElement | null;
+
+      if (!toggleBtn || !bar || !countEl || !applyBtn || !cancelBtn) return;
+
+      const selectedIds = new Set<string>();
+      let isBulkEdit = false;
+
+      function hasEnabledFields() {
+        return !!(fieldDateCheck?.checked || fieldFromCheck?.checked || fieldStatusCheck?.checked);
+      }
+
+      function updateBar() {
+        const n = selectedIds.size;
+        countEl!.textContent = n === 1 ? '1 set selected' : `${n} sets selected`;
+        applyBtn!.textContent = `Apply to ${n} set${n !== 1 ? 's' : ''}`;
+        applyBtn!.disabled = n === 0 || !hasEnabledFields();
+      }
+
+      function getPayload(): Record<string, string> {
+        const fields: Record<string, string> = {};
+        if (fieldDateCheck?.checked) {
+          const month = inputMonth?.value ?? '';
+          const year = inputYear?.value ?? '';
+          fields.acquiredDate = year ? (month ? `${year}-${month}` : year) : '';
+        }
+        if (fieldFromCheck?.checked) fields.acquiredFrom = inputFrom?.value.trim() ?? '';
+        if (fieldStatusCheck?.checked) fields.status = inputStatus?.value ?? '';
+        return fields;
+      }
+
+      function enterBulkEdit() {
+        isBulkEdit = true;
+        document.documentElement.setAttribute('data-bulk-edit', 'true');
+        selectedIds.clear();
+        updateBar();
+        toggleBtn!.textContent = 'Exit bulk edit';
+      }
+
+      function exitBulkEdit() {
+        isBulkEdit = false;
+        document.documentElement.removeAttribute('data-bulk-edit');
+        selectedIds.clear();
+        document.querySelectorAll('[data-set-id].bulk-selected').forEach((card) => {
+          card.classList.remove('bulk-selected');
+        });
+        toggleBtn!.textContent = 'Bulk edit';
+        // Reset field toggles
+        if (fieldDateCheck) fieldDateCheck.checked = false;
+        if (fieldFromCheck) fieldFromCheck.checked = false;
+        if (fieldStatusCheck) fieldStatusCheck.checked = false;
+        if (inputMonth) inputMonth.disabled = true;
+        if (inputYear) inputYear.disabled = true;
+        if (inputFrom) inputFrom.disabled = true;
+        if (inputStatus) inputStatus.disabled = true;
+      }
+
+      // Card click — select/deselect in bulk edit mode (non-missing owned cards only)
+      document.querySelectorAll('[data-set-id]').forEach((card) => {
+        if (card.classList.contains('set-card--missing')) return;
+        card.addEventListener('click', (e) => {
+          if (!isBulkEdit) return;
+          e.preventDefault();
+          const id = card.getAttribute('data-set-id');
+          if (!id) return;
+          if (selectedIds.has(id)) {
+            selectedIds.delete(id);
+            card.classList.remove('bulk-selected');
+          } else {
+            selectedIds.add(id);
+            card.classList.add('bulk-selected');
+          }
+          updateBar();
+        });
+      });
+
+      // Field toggle enables/disables its inputs
+      fieldDateCheck?.addEventListener('change', () => {
+        const on = !!fieldDateCheck.checked;
+        if (inputMonth) inputMonth.disabled = !on;
+        if (inputYear) inputYear.disabled = !on;
+        updateBar();
+      });
+      fieldFromCheck?.addEventListener('change', () => {
+        if (inputFrom) inputFrom.disabled = !fieldFromCheck.checked;
+        updateBar();
+      });
+      fieldStatusCheck?.addEventListener('change', () => {
+        if (inputStatus) inputStatus.disabled = !fieldStatusCheck.checked;
+        updateBar();
+      });
+
+      toggleBtn.addEventListener('click', () => {
+        if (isBulkEdit) exitBulkEdit();
+        else enterBulkEdit();
+      });
+
+      cancelBtn.addEventListener('click', exitBulkEdit);
+
+      applyBtn.addEventListener('click', async () => {
+        const payload = getPayload();
+        if (Object.keys(payload).length === 0 || selectedIds.size === 0) return;
+        applyBtn.disabled = true;
+        applyBtn.textContent = 'Saving…';
+        const ids = Array.from(selectedIds);
+        const failed: string[] = [];
+        await Promise.all(
+          ids.map(async (id) => {
+            try {
+              const res = await fetch(`/api/collection/${encodeURIComponent(id)}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                credentials: 'include',
+              });
+              if (res.status === 401) {
+                window.location.href = '/?next=' + encodeURIComponent(window.location.pathname);
+                return;
+              }
+              if (!res.ok) failed.push(id);
+            } catch {
+              failed.push(id);
+            }
+          })
+        );
+        if (failed.length > 0) {
+          alert(`Failed to save ${failed.length} set(s). Please try again.`);
+          applyBtn.disabled = false;
+          updateBar();
+          return;
+        }
+        window.location.reload();
+      });
+    })();
   </script>
+
+  <div class="bulk-edit-bar" id="bulk-edit-bar">
+    <div class="bulk-edit-bar-inner">
+      <span class="bulk-edit-count" id="bulk-edit-count">0 sets selected</span>
+
+      <div class="bulk-edit-fields">
+        <div class="bulk-field-row">
+          <label class="bulk-field-label">
+            <input type="checkbox" id="bulk-field-acquiredDate" />
+            Date acquired
+          </label>
+          <div class="bulk-field-inputs">
+            <select id="bulk-acquiredMonth" disabled>
+              <option value="">—</option>
+              {['January','February','March','April','May','June','July','August','September','October','November','December'].map((name, i) => (
+                <option value={String(i + 1).padStart(2, '0')}>{name}</option>
+              ))}
+            </select>
+            <select id="bulk-acquiredYear" disabled>
+              <option value="">—</option>
+              {Array.from({ length: 2026 - 2001 + 1 }, (_, i) => 2001 + i).reverse().map((y) => (
+                <option value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div class="bulk-field-row">
+          <label class="bulk-field-label">
+            <input type="checkbox" id="bulk-field-acquiredFrom" />
+            Purchased from
+          </label>
+          <div class="bulk-field-inputs">
+            <input type="text" id="bulk-acquiredFrom" class="bulk-text-input" disabled placeholder="e.g. LEGO Store" />
+          </div>
+        </div>
+
+        <div class="bulk-field-row">
+          <label class="bulk-field-label">
+            <input type="checkbox" id="bulk-field-status" />
+            Status
+          </label>
+          <div class="bulk-field-inputs">
+            <select id="bulk-status" disabled>
+              <option value="">—</option>
+              <option value="new">New</option>
+              <option value="used-complete">Used – Complete</option>
+              <option value="used-incomplete">Used – Incomplete</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="bulk-edit-actions">
+        <button type="button" class="button-primary" id="bulk-apply-btn" disabled>Apply to 0 sets</button>
+        <button type="button" class="button-secondary" id="bulk-cancel-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
 </Layout>

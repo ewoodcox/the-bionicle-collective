@@ -40,13 +40,27 @@ function formatAcquiredDate(acquiredDate: string | undefined): string {
   <div class="set-detail-layout media-detail">
     <article class="set-detail">
       <div class="image-wrap">
-        <img
-          src={getMediaCoverSrc(media, 'main')}
-          alt={media.title}
-          width="280"
-          height="420"
-          loading="eager"
-        />
+        <div class="media-cover-stack">
+          <img
+            class="media-cover-main"
+            src={getMediaCoverSrc(media, 'main')}
+            alt={media.title}
+            width="280"
+            height="420"
+            loading="eager"
+          />
+          {media.imageUrlAlt ? (
+            <img
+              class="media-cover-alt"
+              src={getMediaCoverSrc(media, 'alt')}
+              alt=""
+              width="280"
+              height="420"
+              loading="eager"
+              aria-hidden="true"
+            />
+          ) : null}
+        </div>
       </div>
       <div>
         <h1>{getMediaCardName(media)}</h1>
