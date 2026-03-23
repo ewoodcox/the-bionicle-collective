@@ -82,6 +82,32 @@ export async function getCollectionEntry(bucket: any, setId: string): Promise<Co
   return store[setId] ?? null;
 }
 
+export async function bulkPatchCollectionEntries(
+  bucket: any,
+  ids: string[],
+  fields: Partial<CollectionEntry>
+): Promise<void> {
+  const raw = await getStoreRaw(bucket);
+  const store = parseStore(raw);
+  for (const id of ids) {
+    const existing = store[id] ?? {};
+    store[id] = {
+      acquiredDate: 'acquiredDate' in fields ? (fields.acquiredDate ?? '') : (existing.acquiredDate ?? ''),
+      acquiredFrom: 'acquiredFrom' in fields ? (fields.acquiredFrom ?? '') : (existing.acquiredFrom ?? ''),
+      status: 'status' in fields ? (fields.status ?? '') : (existing.status ?? ''),
+      notes: 'notes' in fields ? (fields.notes ?? '') : (existing.notes ?? ''),
+    };
+  }
+  try {
+    await bucket.put(R2_KEY, JSON.stringify(store), {
+      httpMetadata: { contentType: 'application/json' },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`R2 put failed for key "${R2_KEY}": ${message}`);
+  }
+}
+
 export async function upsertCollectionEntry(
   bucket: any,
   setId: string,

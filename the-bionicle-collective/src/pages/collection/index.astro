@@ -1270,29 +1270,26 @@ const defaultGroupId =
         if (Object.keys(payload).length === 0 || selectedIds.size === 0) return;
         applyBtn.disabled = true;
         applyBtn.textContent = 'Saving…';
-        const ids = Array.from(selectedIds);
-        const failed: string[] = [];
-        await Promise.all(
-          ids.map(async (id) => {
-            try {
-              const res = await fetch(`/api/collection/${encodeURIComponent(id)}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-                credentials: 'include',
-              });
-              if (res.status === 401) {
-                window.location.href = '/?next=' + encodeURIComponent(window.location.pathname);
-                return;
-              }
-              if (!res.ok) failed.push(id);
-            } catch {
-              failed.push(id);
-            }
-          })
-        );
-        if (failed.length > 0) {
-          alert(`Failed to save ${failed.length} set(s). Please try again.`);
+        try {
+          const res = await fetch('/api/collection/bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: Array.from(selectedIds), ...payload }),
+            credentials: 'include',
+          });
+          if (res.status === 401) {
+            window.location.href = '/?next=' + encodeURIComponent(window.location.pathname);
+            return;
+          }
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            alert('Save failed. ' + (err.error ?? res.status));
+            applyBtn.disabled = false;
+            updateBar();
+            return;
+          }
+        } catch {
+          alert('Network error. Please try again.');
           applyBtn.disabled = false;
           updateBar();
           return;
