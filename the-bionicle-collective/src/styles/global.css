@@ -836,9 +836,33 @@ body {
   content: '✓';
 }
 
-/* Media card edit mode: ownership checkbox */
+/* Media card edit mode: ownership checkbox + view button */
 .media-card {
   position: relative;
+}
+
+.media-card-view-btn {
+  display: none;
+  position: absolute;
+  bottom: 0.5rem;
+  right: 2.4rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 0.8rem;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+  padding: 0;
+  line-height: 1;
+}
+
+[data-host="edit"] .media-card-view-btn {
+  display: flex;
 }
 
 [data-host="edit"] .media-card.set-card--missing {

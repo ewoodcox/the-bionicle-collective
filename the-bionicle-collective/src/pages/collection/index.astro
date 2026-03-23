@@ -387,6 +387,12 @@ const defaultGroupId =
                                 </div>
                               </div>
 
+                              <button
+                                class="media-card-view-btn"
+                                data-edit-only
+                                aria-label={`View ${getMediaCardName(m)}`}
+                                onClick="event.stopPropagation();"
+                              >↗</button>
                               <label
                                 class="media-card-checkbox-wrap"
                                 aria-label={`${getMediaCardName(m)} - mark as owned`}
@@ -452,6 +458,12 @@ const defaultGroupId =
                                 </div>
                               </div>
 
+                              <button
+                                class="media-card-view-btn"
+                                data-edit-only
+                                aria-label={`View ${getMediaCardName(m)}`}
+                                onClick="event.stopPropagation();"
+                              >↗</button>
                               <label
                                 class="media-card-checkbox-wrap"
                                 aria-label={`${getMediaCardName(m)} - mark as owned`}
@@ -570,6 +582,12 @@ const defaultGroupId =
                                             </div>
                                           </div>
 
+                                          <button
+                                            class="media-card-view-btn"
+                                            data-edit-only
+                                            aria-label={`View ${getMediaCardName(m)}`}
+                                            onClick="event.stopPropagation();"
+                                          >↗</button>
                                           <label
                                             class="media-card-checkbox-wrap"
                                             aria-label={`${getMediaCardName(m)} - mark as owned`}
@@ -926,13 +944,31 @@ const defaultGroupId =
         });
       }
 
-      // Navigate to detail page when clicking a card (checkbox clicks stop propagation).
+      // In edit mode: card click toggles ownership; view button navigates to detail.
+      // In normal mode: card click navigates to detail.
       mediaCards.forEach((card) => {
         const href = card.getAttribute('data-media-href');
         if (!href) return;
         card.addEventListener('click', () => {
-          window.location.href = href;
+          if (isEditHost) {
+            const cb = card.querySelector('.media-card-checkbox');
+            if (cb instanceof HTMLInputElement) {
+              cb.checked = !cb.checked;
+              cb.dispatchEvent(new Event('change'));
+            }
+          } else {
+            window.location.href = href;
+          }
         });
+        if (isEditHost) {
+          const viewBtn = card.querySelector('.media-card-view-btn');
+          if (viewBtn) {
+            viewBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              window.location.href = href;
+            });
+          }
+        }
       });
 
       fetch('/api/media/collection')
@@ -1000,6 +1036,7 @@ const defaultGroupId =
               } else {
                 applyOwnedState(ownedIds);
               }
+              window.location.reload();
             } finally {
               btn.disabled = false;
             }
@@ -1095,6 +1132,7 @@ const defaultGroupId =
               } else {
                 applyOwnedState(ownedIds);
               }
+              window.location.reload();
             } catch (e) {
               console.error('Kanohi save error:', e);
               alert('Save failed. Check the console.');

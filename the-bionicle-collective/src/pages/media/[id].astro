@@ -246,8 +246,7 @@ function formatAcquiredDate(acquiredDate: string | undefined): string {
           return;
         }
         if (!res.ok) return;
-        applyToView(data);
-        showView();
+        window.location.reload();
       })
       .catch(() => {});
   }

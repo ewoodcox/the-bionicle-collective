@@ -1,0 +1,7 @@
+{
+  "name": "the-bionicle-email-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-02-23",
+  "compatibility_flags": ["nodejs_compat"],
+  "send_email": [{ "name": "SEND_EMAIL" }]
+}
