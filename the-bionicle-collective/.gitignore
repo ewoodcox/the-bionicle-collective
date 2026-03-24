@@ -9,3 +9,12 @@ dist/
 
 # Spreadsheet no longer used; collection.json is the source of truth
 data/*.xlsx
+
+# Astro internal cache
+.astro/
+
+# Wrangler local dev state
+.wrangler/
+
+# macOS metadata
+.DS_Store
