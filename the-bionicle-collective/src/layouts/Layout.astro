@@ -83,5 +83,80 @@ const webManifest = new URL('/site.webmanifest', iconOrigin).href;
       <p>&copy; {new Date().getFullYear()} {site.name}</p>
       <SocialMediaIcons variant="footer" />
     </footer>
+    <script>
+      (function () {
+        // Suppress right-click context menu on all images and canvases
+        document.addEventListener('contextmenu', function (e) {
+          if (e.target instanceof HTMLImageElement || e.target instanceof HTMLCanvasElement) {
+            e.preventDefault();
+          }
+        });
+
+        // Replace set photo <img> elements with watermarked <canvas> elements.
+        // When the user right-clicks and saves, the canvas content (with watermark) is what gets saved.
+        function watermarkSetPhoto(img) {
+          if (!img.naturalWidth || !img.naturalHeight) return;
+
+          // Square crop — replicates object-fit: cover for a 1:1 canvas
+          const srcW = img.naturalWidth;
+          const srcH = img.naturalHeight;
+          const size = Math.min(srcW, srcH);
+          const sx = (srcW - size) / 2;
+          const sy = (srcH - size) / 2;
+
+          const canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return;
+
+          ctx.drawImage(img, sx, sy, size, size, 0, 0, size, size);
+
+          // Diagonal watermark text
+          const fontSize = Math.max(13, size * 0.065);
+          ctx.save();
+          ctx.translate(size / 2, size / 2);
+          ctx.rotate(-Math.PI / 6);
+          ctx.globalAlpha = 0.32;
+          ctx.font = 'bold ' + fontSize + 'px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+          ctx.lineWidth = 1;
+          ctx.fillStyle = '#ffffff';
+          ctx.strokeText('bioniclecollective.com', 0, 0);
+          ctx.fillText('bioniclecollective.com', 0, 0);
+          ctx.restore();
+
+          canvas.className = img.className;
+          img.parentNode && img.parentNode.replaceChild(canvas, img);
+        }
+
+        function attachWatermark(img) {
+          if (!img.src || !img.src.includes('/api/sets/photo/')) return;
+          if (img.complete && img.naturalWidth) {
+            watermarkSetPhoto(img);
+          } else {
+            img.addEventListener('load', function () { watermarkSetPhoto(img); }, { once: true });
+          }
+        }
+
+        document.querySelectorAll('img').forEach(attachWatermark);
+
+        // Catch any images added to the DOM after initial parse (lazy-load edge cases)
+        new MutationObserver(function (mutations) {
+          mutations.forEach(function (m) {
+            m.addedNodes.forEach(function (node) {
+              if (node instanceof HTMLImageElement) {
+                attachWatermark(node);
+              } else if (node instanceof Element) {
+                node.querySelectorAll('img').forEach(attachWatermark);
+              }
+            });
+          });
+        }).observe(document.body, { childList: true, subtree: true });
+      })();
+    </script>
   </body>
 </html>

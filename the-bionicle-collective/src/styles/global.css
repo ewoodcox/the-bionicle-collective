@@ -1732,3 +1732,24 @@ body {
 .reply-submit { align-self: flex-start; padding: 0.35rem 0.75rem; font-size: 0.9rem; background: var(--color-accent); color: #fff; border: none; border-radius: 6px; cursor: pointer; }
 .reply-submit:hover { opacity: 0.9; }
 .reply-author-admin { font-weight: 700; color: var(--color-accent); }
+
+/* ── Image & canvas protection ──────────────────────────────────────────── */
+img,
+canvas {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -webkit-touch-callout: none;
+}
+
+/* Canvas mirrors img layout rules where set photos are watermark-replaced */
+.set-card canvas {
+  width: 100%;
+  aspect-ratio: 1;
+  display: block;
+}
+
+.set-detail .image-wrap canvas {
+  width: 100%;
+  aspect-ratio: 1;
+  display: block;
+}
