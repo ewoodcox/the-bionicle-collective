@@ -1,0 +1,177 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { sets } from '../../data/sets';
+import { getSetDisplayLabel, getSetNumber, getSetSortKey } from '../../data/setNamesByYear';
+
+// Sort by year, then by numeric set number within each year
+const sorted = [...sets].sort((a, b) => {
+  if (a.year !== b.year) return a.year - b.year;
+  return getSetSortKey(a) - getSetSortKey(b);
+});
+
+// Group by year for section headers
+const byYear = new Map<number, typeof sets>();
+for (const set of sorted) {
+  if (!byYear.has(set.year)) byYear.set(set.year, []);
+  byYear.get(set.year)!.push(set);
+}
+---
+<Layout title="All Sets | The Bionicle Collective" description="Every set in The Bionicle Collective, ordered by year and set number.">
+  <div class="sets-stat-page">
+    <div class="sets-stat-header">
+      <a href="/" class="back-link">&larr; Home</a>
+      <h1>All Sets <span class="sets-stat-count">{sets.length}</span></h1>
+      <p class="sets-stat-subtitle">Every set in the collection, ordered by year and set number.</p>
+    </div>
+
+    {[...byYear.entries()].map(([year, yearSets]) => (
+      <section class="sets-stat-year">
+        <h2 class="sets-stat-year__heading">{year}</h2>
+        <div class="sets-stat-grid">
+          {yearSets.map((set) => (
+            <a href={`/collection/${set.id}/`} class="sets-stat-card">
+              <div class="sets-stat-card__img-wrap">
+                <img src={`/api/sets/photo/${set.id}`} alt={getSetDisplayLabel(set)} width="80" height="80" loading="lazy" />
+              </div>
+              <div class="sets-stat-card__info">
+                <span class="sets-stat-card__num">{getSetNumber(set)}</span>
+                <span class="sets-stat-card__name">{set.name}</span>
+                <span class="sets-stat-card__theme">{set.theme}</span>
+              </div>
+            </a>
+          ))}
+        </div>
+      </section>
+    ))}
+  </div>
+</Layout>
+
+<style>
+.sets-stat-page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+}
+
+.sets-stat-header {
+  margin-bottom: 2.5rem;
+}
+
+.back-link {
+  display: inline-block;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  margin-bottom: 1rem;
+  letter-spacing: 0.04em;
+  transition: color 0.15s;
+}
+.back-link:hover { color: var(--color-accent); }
+
+h1 {
+  font-size: 2rem;
+  margin: 0 0 0.4rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
+.sets-stat-count {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+}
+
+.sets-stat-subtitle {
+  color: var(--color-text-muted);
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+/* Year sections */
+.sets-stat-year {
+  margin-bottom: 2.5rem;
+}
+
+.sets-stat-year__heading {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  border-bottom: 1px solid rgba(196, 137, 60, 0.25);
+  padding-bottom: 0.4rem;
+  margin: 0 0 1rem;
+}
+
+/* Cards grid */
+.sets-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.6rem;
+}
+
+.sets-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  text-decoration: none;
+  color: var(--color-text);
+  transition: background 0.15s, border-color 0.15s;
+  min-width: 0;
+}
+.sets-stat-card:hover {
+  background: rgba(196, 137, 60, 0.08);
+  border-color: rgba(196, 137, 60, 0.3);
+}
+
+.sets-stat-card__img-wrap {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+}
+.sets-stat-card__img-wrap img,
+.sets-stat-card__img-wrap canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.sets-stat-card__info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.1rem;
+}
+
+.sets-stat-card__num {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  letter-spacing: 0.05em;
+}
+
+.sets-stat-card__name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sets-stat-card__theme {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+</style>

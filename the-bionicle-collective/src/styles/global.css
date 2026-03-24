@@ -336,6 +336,20 @@ body {
   gap: 0.15rem;
 }
 
+.hero-stat--link {
+  text-decoration: none;
+  border-radius: 8px;
+  padding: 0.4rem 0.6rem;
+  margin: -0.4rem -0.6rem;
+  transition: background 0.15s;
+}
+.hero-stat--link:hover {
+  background: rgba(196, 137, 60, 0.1);
+}
+.hero-stat--link:hover .hero-stat__label {
+  color: var(--color-accent);
+}
+
 .hero-stat__value {
   font-family: var(--font-heading);
   font-size: 1.3rem;
