@@ -58,7 +58,15 @@ for (const [, group] of byType) {
             {group.map(mask => (
               <div class={`kanohi-card${mask.owned ? '' : ' kanohi-card--missing'}`}>
                 <div class="kanohi-card__img-wrap">
-                  <img src={mask.imageUrl} alt={`${mask.colorLabel} ${mask.name}`} width="64" height="64" loading="lazy" />
+                  <img
+                    src={mask.imageUrl}
+                    data-fallback={`https://img.bricklink.com/ItemImage/PN/${mask.bricklinkColorId}/${mask.partId}.png`}
+                    alt={`${mask.colorLabel} ${mask.name}`}
+                    width="64"
+                    height="64"
+                    loading="lazy"
+                    onerror="this.onerror=null;this.src=this.dataset.fallback"
+                  />
                 </div>
                 <div class="kanohi-card__info">
                   <span class="kanohi-card__name">{mask.name}</span>
