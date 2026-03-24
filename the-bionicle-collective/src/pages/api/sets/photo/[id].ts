@@ -1,8 +1,8 @@
 /**
  * Serve set photos from R2.
  *
- * R2 key structure: `set-photos/{setId}/{variant}.{ext}`
- * e.g. `set-photos/tahu-2001/built.jpg`
+ * R2 key structure: `set-photos/{year}/{setId}/{variant}.{ext}`
+ * e.g. `set-photos/2001/tahu-2001/built.jpg`
  *
  * GET /api/sets/photo/{setId}             → auto-picks best available variant
  * GET /api/sets/photo/{setId}?variant=box → serves that specific variant
@@ -41,17 +41,12 @@ function contentTypeForKey(key: string): string {
   return 'image/jpeg';
 }
 
-function candidateKeys(setId: string, variant: string | null): string[] {
+function candidateKeys(setId: string, year: number, variant: string | null): string[] {
   const keys: string[] = [];
-  if (variant) {
+  const variants = variant ? [variant] : DEFAULT_VARIANT_PRIORITY;
+  for (const v of variants) {
     for (const ext of EXTENSIONS) {
-      keys.push(`set-photos/${setId}/${variant}.${ext}`);
-    }
-  } else {
-    for (const v of DEFAULT_VARIANT_PRIORITY) {
-      for (const ext of EXTENSIONS) {
-        keys.push(`set-photos/${setId}/${v}.${ext}`);
-      }
+      keys.push(`set-photos/${year}/${setId}/${v}.${ext}`);
     }
   }
   return keys;
@@ -62,10 +57,14 @@ export const GET = async ({ params, url, locals }: { params: { id?: string }; ur
   if (!id) return new Response('Not found', { status: 404 });
 
   const variant = url.searchParams.get('variant') || null;
+
+  // Need the set record for year (used in R2 key) and imageUrl fallback
+  const set = getSetById(id);
+
   const bucket = getBucket(locals);
 
-  if (bucket) {
-    const keys = candidateKeys(id, variant);
+  if (bucket && set) {
+    const keys = candidateKeys(id, set.year, variant);
     for (const key of keys) {
       const obj = await bucket.get(key);
       if (obj) {
@@ -83,7 +82,6 @@ export const GET = async ({ params, url, locals }: { params: { id?: string }; ur
   }
 
   // Fall back to imageUrl from collection.json
-  const set = getSetById(id);
   if (set?.imageUrl) {
     return Response.redirect(set.imageUrl, 302);
   }

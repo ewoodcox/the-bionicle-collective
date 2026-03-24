@@ -1,7 +1,7 @@
 /**
  * Upload everything under `public/set-photos/` to the R2 bucket.
- * Expected local structure: `public/set-photos/{setId}/{variant}.{ext}`
- * R2 object keys:           `set-photos/{setId}/{variant}.{ext}`
+ * Expected local structure: `public/set-photos/{year}/{setId}/{variant}.{ext}`
+ * R2 object keys:           `set-photos/{year}/{setId}/{variant}.{ext}`
  *
  * Requirements:
  * - `.env`: `R2_BUCKET_NAME` (must match `wrangler.jsonc` → `bucket_name`, e.g. `bionicle-collection`)
@@ -50,38 +50,29 @@ if (!R2_BUCKET) {
 
 /**
  * Walk set photos and return { absPath, r2Key } pairs.
- *
- * Subfolder files:  public/set-photos/{setId}/{variant}.jpg  → set-photos/{setId}/{variant}.jpg
- * Flat files:       public/set-photos/{setId}.jpg            → set-photos/{setId}/built.jpg
+ * Expected structure: public/set-photos/{year}/{setId}/{variant}.jpg
+ * Skips entries that don't match this 3-level layout.
  */
 function collectUploads(dir) {
   /** @type {{ absPath: string; r2Key: string }[]} */
   const results = [];
   if (!existsSync(dir)) return results;
-  const entries = readdirSync(dir, { withFileTypes: true });
-  for (const ent of entries) {
-    if (ent.name.startsWith('.') || ent.name === 'Thumbs.db') continue;
-    const p = join(dir, ent.name);
-    if (ent.isDirectory()) {
-      // Subfolder: {setId}/
-      const inner = readdirSync(p, { withFileTypes: true });
-      for (const file of inner) {
-        if (file.name.startsWith('.') || file.name === 'Thumbs.db') continue;
-        if (file.isFile()) {
-          results.push({
-            absPath: join(p, file.name),
-            r2Key: `${R2_PREFIX}/${ent.name}/${file.name}`,
-          });
-        }
+
+  for (const yearEnt of readdirSync(dir, { withFileTypes: true })) {
+    if (yearEnt.name.startsWith('.') || !yearEnt.isDirectory()) continue;
+    const yearDir = join(dir, yearEnt.name);
+
+    for (const setEnt of readdirSync(yearDir, { withFileTypes: true })) {
+      if (setEnt.name.startsWith('.') || !setEnt.isDirectory()) continue;
+      const setDir = join(yearDir, setEnt.name);
+
+      for (const file of readdirSync(setDir, { withFileTypes: true })) {
+        if (file.name.startsWith('.') || file.name === 'Thumbs.db' || !file.isFile()) continue;
+        results.push({
+          absPath: join(setDir, file.name),
+          r2Key: `${R2_PREFIX}/${yearEnt.name}/${setEnt.name}/${file.name}`,
+        });
       }
-    } else if (ent.isFile()) {
-      // Flat file: {setId}.jpg → treat as built variant
-      const ext = ent.name.includes('.') ? ent.name.slice(ent.name.lastIndexOf('.')) : '';
-      const stem = ent.name.slice(0, ent.name.length - ext.length);
-      results.push({
-        absPath: p,
-        r2Key: `${R2_PREFIX}/${stem}/built${ext}`,
-      });
     }
   }
   return results;
