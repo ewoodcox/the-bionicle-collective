@@ -106,7 +106,7 @@ function formatAcquiredDate(acquiredDate: string | undefined): string {
 
     <article class="set-detail">
       <div class="image-wrap">
-        <img src={`/set-photos/${set.id}.jpg`} data-fallback={set.imageUrl} alt={displayLabel} width="280" height="280" onerror="this.onerror=null;this.src=this.dataset.fallback" />
+        <img src={`/api/sets/photo/${set.id}`} alt={displayLabel} width="280" height="280" />
       </div>
       <div>
         <h1>{displayLabel}</h1>

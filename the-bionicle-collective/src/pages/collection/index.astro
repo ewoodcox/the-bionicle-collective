@@ -184,7 +184,7 @@ const defaultGroupId =
                     .filter((s) => (s.theme ?? '') === 'Combiner Models')
                     .map((set) => (
                       <a href={`/collection/${set.id}/?gen=${group.id}&year=combiner`} class="set-card media-era-card" data-set-id={set.id}>
-                        <img src={`/set-photos/${set.id}.jpg`} data-fallback={set.imageUrl} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" onerror="this.onerror=null;this.src=this.dataset.fallback" />
+                        <img src={`/api/sets/photo/${set.id}`} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" />
                         <div class="info">
                           <div class="name">{getSetDisplayLabel(set)}</div>
                           <div class="meta">{set.year}</div>
@@ -215,7 +215,7 @@ const defaultGroupId =
                     .filter((s) => (s.theme ?? '') === 'Alternate Models')
                     .map((set) => (
                       <a href={`/collection/${set.id}/?gen=${group.id}&year=alternate`} class="set-card media-era-card" data-set-id={set.id}>
-                        <img src={`/set-photos/${set.id}.jpg`} data-fallback={set.imageUrl} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" onerror="this.onerror=null;this.src=this.dataset.fallback" />
+                        <img src={`/api/sets/photo/${set.id}`} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" />
                         <div class="info">
                           <div class="name">{getSetDisplayLabel(set)}</div>
                           <div class="meta">{set.year}</div>
@@ -650,7 +650,7 @@ const defaultGroupId =
                     >
                       {yearItems.map((set) => (
                         <a href={`/collection/${set.id}/?gen=${group.id}&year=${y}`} class="set-card media-era-card" data-set-id={set.id}>
-                          <img src={`/set-photos/${set.id}.jpg`} data-fallback={set.imageUrl} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" onerror="this.onerror=null;this.src=this.dataset.fallback" />
+                          <img src={`/api/sets/photo/${set.id}`} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" />
                           <div class="info">
                             <div class="name">{getSetDisplayLabel(set)}</div>
                             <div class="meta">{set.year}</div>
@@ -700,7 +700,7 @@ const defaultGroupId =
           >
             {items.map((set) => (
               <a href={`/collection/${set.id}/?gen=${group.id}`} class="set-card media-era-card" data-set-id={set.id}>
-                <img src={`/set-photos/${set.id}.jpg`} data-fallback={set.imageUrl} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" onerror="this.onerror=null;this.src=this.dataset.fallback" />
+                <img src={`/api/sets/photo/${set.id}`} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" />
                 <div class="info">
                   <div class="name">{getSetDisplayLabel(set)}</div>
                   <div class="meta">{set.year}</div>

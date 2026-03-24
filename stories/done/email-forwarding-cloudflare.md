@@ -1,8 +1,10 @@
 # Migrate contact form to Cloudflare-managed email (MailChannels)
 
-**Status:** Todo  
-**Sprint:** _TBD_  
+**Status:** Done — Won't do
+**Sprint:** Sprint 1
 **Created:** 2025-03-15
+**Completed:** 2026-03-24
+**Resolution:** MailChannels migration abandoned. Contact form handled by the separate `the-bionicle-email-worker`; current setup is sufficient.
 
 ---
 
