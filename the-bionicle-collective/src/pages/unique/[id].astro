@@ -1,0 +1,326 @@
+---
+export const prerender = false;
+
+import Layout from '../../layouts/Layout.astro';
+import { getUniqueItem } from '../../utils/uniqueStoreR2';
+import type { UniqueItem } from '../../utils/uniqueStoreR2';
+
+const { id } = Astro.params;
+const bucket = (Astro.locals as any).runtime?.env?.BIONICLE_COLLECTION;
+
+let item: UniqueItem | null = null;
+if (bucket && id) {
+  try {
+    item = await getUniqueItem(bucket, id);
+  } catch {
+    // fall through to 404
+  }
+}
+
+if (!item) {
+  return Astro.redirect('/collection/');
+}
+
+const backHref = item.kind === 'media' ? '/collection/?gen=media' : '/collection/?gen=other';
+
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+function formatDate(d: string | undefined): string {
+  if (!d || d.trim() === '') return '—';
+  const parts = d.trim().split('-');
+  const year = parts[0];
+  const monthNum = parts[1];
+  if (monthNum) {
+    const mi = parseInt(monthNum, 10) - 1;
+    if (mi >= 0 && mi < 12) return `${MONTH_NAMES[mi]} ${year}`;
+  }
+  return year;
+}
+---
+<Layout title={`${item.name} | The Bionicle Collective`} description={item.description ?? `${item.name} — unique item in The Bionicle Collective.`}>
+  <a href={backHref} class="button-primary back-link">← Back to collection</a>
+
+  <div class="unique-detail-layout">
+    <article class="unique-detail">
+      {item.imageUrl ? (
+        <div class="image-wrap">
+          <img src={item.imageUrl} alt={item.name} width="280" height="280" />
+        </div>
+      ) : (
+        <div class="image-wrap image-wrap--placeholder">
+          <span class="image-placeholder-text">{item.name.charAt(0)}</span>
+        </div>
+      )}
+
+      <div class="unique-detail-info">
+        <div class="unique-detail-kind">{item.kind === 'build' ? 'Custom Build' : 'Unique Media'}</div>
+        <h1>{item.name}</h1>
+
+        <ul class="meta-list">
+          {item.year && <li><span>Year</span><span>{item.year}</span></li>}
+          {item.builder && <li><span>Builder</span><span>{item.builder}</span></li>}
+          {item.signedBy && <li><span>Signed by</span><span>{item.signedBy}</span></li>}
+          {item.acquiredDate && <li><span>Acquired</span><span>{formatDate(item.acquiredDate)}</span></li>}
+          {item.acquiredFrom && <li><span>From</span><span>{item.acquiredFrom}</span></li>}
+          {item.mediaRef && <li><span>Based on</span><span>{item.mediaRef}</span></li>}
+        </ul>
+
+        {item.description && (
+          <div class="unique-description">
+            <p>{item.description}</p>
+          </div>
+        )}
+
+        {item.notes && (
+          <div class="unique-notes">
+            <h3>Notes</h3>
+            <p>{item.notes}</p>
+          </div>
+        )}
+
+        <!-- Admin edit panel (only visible on edit subdomain) -->
+        <div class="unique-admin-panel" id="unique-admin-panel" hidden>
+          <h3>Edit Item</h3>
+          <form id="unique-edit-form" class="unique-edit-form">
+            <label class="collection-label" for="edit-name">Name</label>
+            <input type="text" id="edit-name" name="name" class="collection-input" value={item.name} required />
+
+            <label class="collection-label" for="edit-kind">Kind</label>
+            <select id="edit-kind" name="kind" class="collection-input collection-select">
+              <option value="build" selected={item.kind === 'build'}>Custom Build (Other tab)</option>
+              <option value="media" selected={item.kind === 'media'}>Unique Media (Media tab)</option>
+            </select>
+
+            <label class="collection-label" for="edit-year">Year</label>
+            <input type="number" id="edit-year" name="year" class="collection-input" value={item.year ?? ''} min="2001" max="2030" placeholder="e.g. 2003" />
+
+            <label class="collection-label" for="edit-imageUrl">Image URL</label>
+            <input type="url" id="edit-imageUrl" name="imageUrl" class="collection-input" value={item.imageUrl ?? ''} placeholder="https://..." />
+
+            <label class="collection-label" for="edit-description">Description</label>
+            <textarea id="edit-description" name="description" class="collection-input collection-textarea" rows="3">{item.description ?? ''}</textarea>
+
+            <label class="collection-label" for="edit-builder">Builder (builds only)</label>
+            <input type="text" id="edit-builder" name="builder" class="collection-input" value={item.builder ?? ''} placeholder="e.g. Me, Custom MOC" />
+
+            <label class="collection-label" for="edit-signedBy">Signed by (media only)</label>
+            <input type="text" id="edit-signedBy" name="signedBy" class="collection-input" value={item.signedBy ?? ''} placeholder="e.g. Greg Farshtey" />
+
+            <label class="collection-label" for="edit-mediaRef">Based on (media reference)</label>
+            <input type="text" id="edit-mediaRef" name="mediaRef" class="collection-input" value={item.mediaRef ?? ''} placeholder="e.g. BIONICLE #1" />
+
+            <label class="collection-label" for="edit-acquiredDate">Date acquired</label>
+            <input type="text" id="edit-acquiredDate" name="acquiredDate" class="collection-input" value={item.acquiredDate ?? ''} placeholder="YYYY-MM" />
+
+            <label class="collection-label" for="edit-acquiredFrom">Acquired from</label>
+            <input type="text" id="edit-acquiredFrom" name="acquiredFrom" class="collection-input" value={item.acquiredFrom ?? ''} placeholder="e.g. eBay" />
+
+            <label class="collection-label" for="edit-notes">Notes</label>
+            <textarea id="edit-notes" name="notes" class="collection-input collection-textarea" rows="3">{item.notes ?? ''}</textarea>
+
+            <div class="collection-form-actions">
+              <button type="submit" class="button-primary">Save</button>
+              <button type="button" class="button-secondary" id="unique-delete-btn">Delete item</button>
+            </div>
+            <p class="unique-save-status" id="unique-save-status" aria-live="polite"></p>
+          </form>
+        </div>
+      </div>
+    </article>
+  </div>
+</Layout>
+
+<script define:vars={{ itemId: item.id, itemKind: item.kind }}>
+  (function () {
+    const isEdit = typeof window !== 'undefined' && window.location.hostname === 'edit.bioniclecollective.com';
+    if (!isEdit) return;
+
+    const panel = document.getElementById('unique-admin-panel');
+    if (panel) panel.hidden = false;
+
+    const form = document.getElementById('unique-edit-form');
+    const status = document.getElementById('unique-save-status');
+    const deleteBtn = document.getElementById('unique-delete-btn');
+
+    if (form) {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(form));
+        // Coerce year to number or remove it
+        if (data.year === '' || data.year === undefined) {
+          delete data.year;
+        } else {
+          data.year = parseInt(data.year, 10);
+        }
+        // Remove empty strings for optional fields
+        ['imageUrl', 'description', 'builder', 'signedBy', 'mediaRef', 'acquiredDate', 'acquiredFrom', 'notes'].forEach((k) => {
+          if (data[k] === '') delete data[k];
+        });
+
+        if (status) { status.textContent = 'Saving…'; }
+        try {
+          const res = await fetch(`/api/unique/${itemId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(data),
+          });
+          if (res.ok) {
+            if (status) status.textContent = 'Saved!';
+            setTimeout(() => { if (status) status.textContent = ''; }, 2000);
+          } else {
+            const err = await res.json().catch(() => ({ error: 'Unknown error' }));
+            if (status) status.textContent = `Error: ${err.error}`;
+          }
+        } catch (err) {
+          if (status) status.textContent = `Error: ${err.message}`;
+        }
+      });
+    }
+
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', async () => {
+        if (!confirm('Delete this item? This cannot be undone.')) return;
+        try {
+          const res = await fetch(`/api/unique/${itemId}`, {
+            method: 'DELETE',
+            credentials: 'include',
+          });
+          if (res.ok || res.status === 204) {
+            window.location.href = itemKind === 'media' ? '/collection/?gen=media' : '/collection/?gen=other';
+          } else {
+            const err = await res.json().catch(() => ({ error: 'Unknown error' }));
+            alert(`Delete failed: ${err.error}`);
+          }
+        } catch (err) {
+          alert(`Delete failed: ${err.message}`);
+        }
+      });
+    }
+  })();
+</script>
+
+<style>
+.back-link {
+  display: inline-block;
+  margin: 1.5rem 1rem 0;
+}
+
+.unique-detail-layout {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 4rem;
+}
+
+.unique-detail {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 2.5rem;
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .unique-detail {
+    grid-template-columns: 1fr;
+  }
+}
+
+.image-wrap {
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.image-wrap--placeholder {
+  font-size: 5rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.15);
+}
+
+.unique-detail-kind {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  margin-bottom: 0.4rem;
+}
+
+.unique-detail-info h1 {
+  margin: 0 0 1.25rem;
+  font-size: 1.8rem;
+}
+
+.meta-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.5rem;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 1rem;
+  font-size: 0.9rem;
+}
+
+.meta-list li {
+  display: contents;
+}
+
+.meta-list li span:first-child {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.unique-description,
+.unique-notes {
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+}
+
+.unique-notes h3 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-accent);
+  margin: 0 0 0.4rem;
+}
+
+.unique-admin-panel {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.unique-admin-panel h3 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-accent);
+  margin: 0 0 1rem;
+}
+
+.unique-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.unique-save-status {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  min-height: 1.2em;
+  margin: 0.25rem 0 0;
+}
+</style>

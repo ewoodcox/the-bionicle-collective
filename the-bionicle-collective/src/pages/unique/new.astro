@@ -1,0 +1,137 @@
+---
+export const prerender = false;
+import Layout from '../../layouts/Layout.astro';
+---
+<Layout title="Add Unique Item | The Bionicle Collective" description="Add a new unique item to the collection.">
+  <div class="unique-new-page">
+    <a href="/collection/" class="button-primary back-link">← Back to collection</a>
+    <h1>Add Unique Item</h1>
+
+    <form id="unique-new-form" class="unique-edit-form">
+      <label class="collection-label" for="new-name">Name <span class="required">*</span></label>
+      <input type="text" id="new-name" name="name" class="collection-input" required placeholder="e.g. Custom Takua MOC" />
+
+      <label class="collection-label" for="new-kind">Kind <span class="required">*</span></label>
+      <select id="new-kind" name="kind" class="collection-input collection-select" required>
+        <option value="build">Custom Build (Other tab)</option>
+        <option value="media">Unique Media (Media tab)</option>
+      </select>
+
+      <label class="collection-label" for="new-year">Year</label>
+      <input type="number" id="new-year" name="year" class="collection-input" min="2001" max="2030" placeholder="e.g. 2003" />
+
+      <label class="collection-label" for="new-imageUrl">Image URL</label>
+      <input type="url" id="new-imageUrl" name="imageUrl" class="collection-input" placeholder="https://..." />
+
+      <label class="collection-label" for="new-description">Description</label>
+      <textarea id="new-description" name="description" class="collection-input collection-textarea" rows="3" placeholder="Brief description of the item"></textarea>
+
+      <label class="collection-label" for="new-builder">Builder (builds only)</label>
+      <input type="text" id="new-builder" name="builder" class="collection-input" placeholder="e.g. Me, Custom MOC" />
+
+      <label class="collection-label" for="new-signedBy">Signed by (media only)</label>
+      <input type="text" id="new-signedBy" name="signedBy" class="collection-input" placeholder="e.g. Greg Farshtey" />
+
+      <label class="collection-label" for="new-mediaRef">Based on (media reference)</label>
+      <input type="text" id="new-mediaRef" name="mediaRef" class="collection-input" placeholder="e.g. BIONICLE #1" />
+
+      <label class="collection-label" for="new-acquiredDate">Date acquired</label>
+      <input type="text" id="new-acquiredDate" name="acquiredDate" class="collection-input" placeholder="YYYY-MM" />
+
+      <label class="collection-label" for="new-acquiredFrom">Acquired from</label>
+      <input type="text" id="new-acquiredFrom" name="acquiredFrom" class="collection-input" placeholder="e.g. eBay, gift" />
+
+      <label class="collection-label" for="new-notes">Notes</label>
+      <textarea id="new-notes" name="notes" class="collection-input collection-textarea" rows="3" placeholder="Optional notes"></textarea>
+
+      <div class="collection-form-actions">
+        <button type="submit" class="button-primary">Create item</button>
+      </div>
+      <p class="unique-save-status" id="unique-save-status" aria-live="polite"></p>
+    </form>
+  </div>
+</Layout>
+
+<script>
+  (function () {
+    const isEdit = typeof window !== 'undefined' && window.location.hostname === 'edit.bioniclecollective.com';
+    if (!isEdit) {
+      // Redirect non-admin visitors
+      window.location.href = '/collection/';
+      return;
+    }
+
+    const form = document.getElementById('unique-new-form') as HTMLFormElement | null;
+    const status = document.getElementById('unique-save-status');
+
+    if (!form) return;
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data: Record<string, string | number | undefined> = Object.fromEntries(new FormData(form) as any);
+
+      if (data.year === '' || data.year === undefined) {
+        delete data.year;
+      } else {
+        data.year = parseInt(data.year as string, 10);
+      }
+
+      ['imageUrl', 'description', 'builder', 'signedBy', 'mediaRef', 'acquiredDate', 'acquiredFrom', 'notes'].forEach((k) => {
+        if (data[k] === '') delete data[k];
+      });
+
+      if (status) status.textContent = 'Creating…';
+      try {
+        const res = await fetch('/api/unique/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(data),
+        });
+        if (res.ok || res.status === 201) {
+          const created = await res.json();
+          window.location.href = `/unique/${created.id}/`;
+        } else {
+          const err = await res.json().catch(() => ({ error: 'Unknown error' }));
+          if (status) status.textContent = `Error: ${err.error}`;
+        }
+      } catch (err: any) {
+        if (status) status.textContent = `Error: ${err.message}`;
+      }
+    });
+  })();
+</script>
+
+<style>
+.unique-new-page {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 4rem;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 1.5rem;
+}
+
+h1 {
+  margin: 0 0 1.5rem;
+}
+
+.unique-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.required {
+  color: var(--color-accent);
+}
+
+.unique-save-status {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  min-height: 1.2em;
+  margin: 0.25rem 0 0;
+}
+</style>

@@ -1207,6 +1207,37 @@ body {
   cursor: not-allowed;
 }
 
+/* Unique items */
+.unique-card-placeholder {
+  width: 160px;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  font-size: 3rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.unique-card-placeholder--tall {
+  height: 240px;
+}
+
+.unique-add-row {
+  display: none;
+  margin-top: 1rem;
+}
+
+[data-host="edit"] .unique-add-row {
+  display: block;
+}
+
+.unique-add-btn {
+  font-size: 0.9rem;
+}
+
 /* Bulk edit mode */
 .bulk-edit-toggle-row {
   display: none;

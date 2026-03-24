@@ -8,6 +8,17 @@ import { getMasksByYear, getKanohiYears } from '../../data/kanohi';
 import { MEDIA_CATEGORIES, mediaItems, getMediaCardName, getMediaCoverSrc, type MediaCategoryId } from '../../data/media';
 import { getMediaEraLabel, sortMediaByEra } from '../../data/mediaEras';
 import type { SetRecord } from '../../data/sets';
+import { getUniqueItems, type UniqueItem } from '../../utils/uniqueStoreR2';
+
+const bucket = (Astro.locals as any).runtime?.env?.BIONICLE_COLLECTION;
+let uniqueItems: UniqueItem[] = [];
+if (bucket) {
+  try { uniqueItems = await getUniqueItems(bucket); } catch { /* no unique items yet */ }
+}
+const uniqueBuilds = uniqueItems.filter((u) => u.kind === 'build');
+const uniqueMedia = uniqueItems.filter((u) => u.kind === 'media');
+const hasUniqueBuilds = uniqueBuilds.length > 0;
+const hasUniqueMedia = uniqueMedia.length > 0;
 
 const byGroup = new Map<string, SetRecord[]>();
 for (const g of YEAR_GROUPS) byGroup.set(g.id, []);
@@ -29,9 +40,9 @@ const groupsWithData = VISIBLE_GROUPS.filter((g) => {
       sets.some((s) => {
         const theme = s.theme ?? '';
         return theme === 'Combiner Models' || theme === 'Alternate Models';
-      }) || hasKanohi
+      }) || hasKanohi || hasUniqueBuilds
     );
-  if (g.id === 'media') return mediaItems.length > 0;
+  if (g.id === 'media') return mediaItems.length > 0 || hasUniqueMedia;
   return (byGroup.get(g.id) ?? []).length > 0;
 });
 const defaultGroupId =
@@ -110,12 +121,14 @@ const defaultGroupId =
     const hasCombiner = group.id === 'other' && items.some((s) => (s.theme ?? '') === 'Combiner Models');
     const hasAlternate = group.id === 'other' && items.some((s) => (s.theme ?? '') === 'Alternate Models');
     const hasPromotional = group.id === 'other' && items.some((s) => (s.theme ?? '') === 'Promotional');
+    const showUniqueBuilds = group.id === 'other' && hasUniqueBuilds;
+    const showUniqueMedia = group.id === 'media' && hasUniqueMedia;
     const firstOtherTab =
-      group.id === 'other' ? (hasCombiner ? 'combiner' : hasAlternate ? 'alternate' : hasPromotional ? 'promotional' : 'kanohi') : '';
+      group.id === 'other' ? (hasCombiner ? 'combiner' : hasAlternate ? 'alternate' : hasPromotional ? 'promotional' : showUniqueBuilds ? 'unique' : 'kanohi') : '';
 
     return (
       <section class="collection-section" id={group.id} data-group-id={group.id} data-active={group.id === defaultGroupId}>
-        {items.length === 0 && !(group.id === 'other' && hasKanohi) ? (
+        {items.length === 0 && !(group.id === 'other' && (hasKanohi || showUniqueBuilds)) && !(group.id === 'media' && showUniqueMedia) ? (
           <p class="collection-empty">No sets added yet for this generation.</p>
         ) : group.id === 'other' ? (
           <>
@@ -177,7 +190,25 @@ const defaultGroupId =
                   Kanohi
                 </button>
               )}
+              {showUniqueBuilds && (
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={firstOtherTab === 'unique'}
+                  aria-controls={`${group.id}-year-unique`}
+                  id={`${group.id}-tab-unique`}
+                  data-year="unique"
+                  data-group-id={group.id}
+                >
+                  Unique
+                </button>
+              )}
             </div>
+            {!showUniqueBuilds && (
+              <div class="unique-add-row" data-edit-only>
+                <a href="/unique/new/" class="button-primary unique-add-btn">+ Add unique build</a>
+              </div>
+            )}
             {hasCombiner && (
               <div
                 class="year-pane"
@@ -351,6 +382,41 @@ const defaultGroupId =
                 })}
                 <div class="kanohi-save-row" data-edit-only>
                   <button type="button" class="kanohi-save-btn">Save Kanohi ownership</button>
+                </div>
+              </div>
+            )}
+            {showUniqueBuilds && (
+              <div
+                class="year-pane"
+                id={`${group.id}-year-unique`}
+                role="tabpanel"
+                aria-labelledby={`${group.id}-tab-unique`}
+                data-year="unique"
+                data-group-id={group.id}
+                data-active={firstOtherTab === 'unique'}
+              >
+                <SetCarouselStrip
+                  ariaLabel="Unique builds"
+                  carouselKind="other-unique"
+                  prevLabel="Scroll unique builds left"
+                  nextLabel="Scroll unique builds right"
+                >
+                  {uniqueBuilds.map((u) => (
+                    <a href={`/unique/${u.id}/`} class="set-card media-era-card">
+                      {u.imageUrl ? (
+                        <img src={u.imageUrl} alt={u.name} width="160" height="160" loading="lazy" />
+                      ) : (
+                        <div class="unique-card-placeholder" aria-hidden="true">{u.name.charAt(0)}</div>
+                      )}
+                      <div class="info">
+                        <div class="name">{u.name}</div>
+                        <div class="meta">{u.year ?? 'Custom'}</div>
+                      </div>
+                    </a>
+                  ))}
+                </SetCarouselStrip>
+                <div class="unique-add-row" data-edit-only>
+                  <a href="/unique/new/" class="button-primary unique-add-btn">+ Add unique item</a>
                 </div>
               </div>
             )}
@@ -671,6 +737,43 @@ const defaultGroupId =
                 <div class="media-save-row" data-edit-only>
                   <button type="button" class="media-save-btn">Save Media ownership</button>
                 </div>
+
+                {!showUniqueMedia && (
+                  <div class="unique-add-row" data-edit-only>
+                    <a href="/unique/new/" class="button-primary unique-add-btn">+ Add unique media</a>
+                  </div>
+                )}
+                {showUniqueMedia && (
+                  <div class="media-era-carousel-section">
+                    <div class="media-era-carousel-wrap" data-carousel-kind="unique-media">
+                      <div class="media-era-carousel-header">
+                        <div class="media-era-carousel-title">Unique</div>
+                      </div>
+                      <div class="media-era-carousel-controls" aria-hidden="false">
+                        <button type="button" class="media-era-prev" aria-label="Scroll unique media left">←</button>
+                        <button type="button" class="media-era-next" aria-label="Scroll unique media right">→</button>
+                      </div>
+                      <div class="media-era-carousel" role="region" aria-label="Unique media carousel">
+                        {uniqueMedia.map((u) => (
+                          <a href={`/unique/${u.id}/`} class="set-card media-card media-era-card">
+                            {u.imageUrl ? (
+                              <img src={u.imageUrl} alt={u.name} width="160" height="240" loading="lazy" />
+                            ) : (
+                              <div class="unique-card-placeholder unique-card-placeholder--tall" aria-hidden="true">{u.name.charAt(0)}</div>
+                            )}
+                            <div class="info">
+                              <div class="name">{u.name}</div>
+                              <div class="meta">{u.year ?? 'Unique'}{u.signedBy ? ` · Signed` : ''}</div>
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                    <div class="unique-add-row" data-edit-only>
+                      <a href="/unique/new/" class="button-primary unique-add-btn">+ Add unique item</a>
+                    </div>
+                  </div>
+                )}
               </>
             ) : (
               yearsWithData.map((y) => {
