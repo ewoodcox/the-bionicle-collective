@@ -109,8 +109,9 @@ const defaultGroupId =
 
     const hasCombiner = group.id === 'other' && items.some((s) => (s.theme ?? '') === 'Combiner Models');
     const hasAlternate = group.id === 'other' && items.some((s) => (s.theme ?? '') === 'Alternate Models');
+    const hasPromotional = group.id === 'other' && items.some((s) => (s.theme ?? '') === 'Promotional');
     const firstOtherTab =
-      group.id === 'other' ? (hasCombiner ? 'combiner' : hasAlternate ? 'alternate' : 'kanohi') : '';
+      group.id === 'other' ? (hasCombiner ? 'combiner' : hasAlternate ? 'alternate' : hasPromotional ? 'promotional' : 'kanohi') : '';
 
     return (
       <section class="collection-section" id={group.id} data-group-id={group.id} data-active={group.id === defaultGroupId}>
@@ -148,6 +149,19 @@ const defaultGroupId =
                   data-group-id={group.id}
                 >
                   Alternate Models
+                </button>
+              )}
+              {hasPromotional && (
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={firstOtherTab === 'promotional'}
+                  aria-controls={`${group.id}-year-promotional`}
+                  id={`${group.id}-tab-promotional`}
+                  data-year="promotional"
+                  data-group-id={group.id}
+                >
+                  Promotional
                 </button>
               )}
               {hasKanohi && (
@@ -215,6 +229,38 @@ const defaultGroupId =
                     .filter((s) => (s.theme ?? '') === 'Alternate Models')
                     .map((set) => (
                       <a href={`/collection/${set.id}/?gen=${group.id}&year=alternate`} class="set-card media-era-card" data-set-id={set.id}>
+                        <img src={`/api/sets/photo/${set.id}`} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" />
+                        <div class="info">
+                          <div class="name">{getSetDisplayLabel(set)}</div>
+                          <div class="meta">{set.year}</div>
+                        </div>
+                        <span class="bulk-select-box" aria-hidden="true"></span>
+                      </a>
+                    ))}
+                </SetCarouselStrip>
+              </div>
+            )}
+            {hasPromotional && (
+              <div
+                class="year-pane"
+                id={`${group.id}-year-promotional`}
+                role="tabpanel"
+                aria-labelledby={`${group.id}-tab-promotional`}
+                data-year="promotional"
+                data-group-id={group.id}
+                data-active={firstOtherTab === 'promotional'}
+              >
+                <SetCarouselStrip
+                  ariaLabel="Promotional sets"
+                  carouselKind="other-promotional"
+                  prevLabel="Scroll promotional sets left"
+                  nextLabel="Scroll promotional sets right"
+                >
+                  {items
+                    .filter((s) => (s.theme ?? '') === 'Promotional')
+                    .sort((a, b) => a.year - b.year)
+                    .map((set) => (
+                      <a href={`/collection/${set.id}/?gen=${group.id}&year=promotional`} class="set-card media-era-card" data-set-id={set.id}>
                         <img src={`/api/sets/photo/${set.id}`} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" />
                         <div class="info">
                           <div class="name">{getSetDisplayLabel(set)}</div>

@@ -2534,5 +2534,21 @@
     "year": 2010,
     "theme": "Combiner Models",
     "imageUrl": "https://placehold.co/280x280?text=Gaardus"
+  },
+  {
+    "id": "tahu-and-takua-2022",
+    "name": "BIONICLE\u00ae Tahu and Takua",
+    "setNumber": "40581",
+    "year": 2022,
+    "theme": "Promotional",
+    "imageUrl": "https://placehold.co/280x280?text=40581"
+  },
+  {
+    "id": "90-years-of-play-2023",
+    "name": "90 Years of Play",
+    "setNumber": "11021",
+    "year": 2023,
+    "theme": "Promotional",
+    "imageUrl": "https://placehold.co/280x280?text=11021"
   }
 ]
