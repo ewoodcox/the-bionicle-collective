@@ -1,0 +1,219 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getMasks, getKanohiYears, type KanohiMask } from '../../data/kanohi';
+import { getKanohiOwnedIds } from '../../utils/kanohiStoreR2';
+import kanohiCollectionStatic from '../../data/kanohi-collection.json';
+
+const bucket = (Astro.locals as any).runtime?.env?.BIONICLE_COLLECTION;
+let ownedIds: string[];
+try {
+  ownedIds = bucket ? await getKanohiOwnedIds(bucket) : (kanohiCollectionStatic as string[]);
+} catch {
+  ownedIds = kanohiCollectionStatic as string[];
+}
+const ownedSet = new Set(ownedIds);
+
+// Apply live owned state (overrides the static kanohi-collection.json)
+const allMasks: KanohiMask[] = getMasks().map(m => ({ ...m, owned: ownedSet.has(m.id) }));
+const ownedCount = allMasks.filter(m => m.owned).length;
+
+const TYPE_ORDER: KanohiMask['type'][] = ['great', 'noble', 'nuva', 'special'];
+const TYPE_LABELS: Record<KanohiMask['type'], string> = {
+  great: 'Great Kanohi',
+  noble: 'Noble Kanohi',
+  nuva: 'Kanohi Nuva',
+  protodermic: 'Protodermic',
+  special: 'Special',
+};
+
+const byType = new Map<KanohiMask['type'], KanohiMask[]>();
+for (const type of TYPE_ORDER) byType.set(type, []);
+for (const mask of allMasks) {
+  byType.get(mask.type)?.push(mask);
+}
+// Within each type, sort by name then color
+for (const [, group] of byType) {
+  group.sort((a, b) => a.name.localeCompare(b.name) || a.colorLabel.localeCompare(b.colorLabel));
+}
+---
+<Layout title="Kanohi Collection | The Bionicle Collective" description="Every Kanohi mask in The Bionicle Collective.">
+  <div class="kanohi-page">
+    <div class="kanohi-header">
+      <a href="/" class="back-link">&larr; Home</a>
+      <h1>Kanohi <span class="kanohi-count">{ownedCount} / {allMasks.length}</span></h1>
+      <p class="kanohi-subtitle">Masks of Power collected across 2001–2003.</p>
+    </div>
+
+    {TYPE_ORDER.map(type => {
+      const group = byType.get(type) ?? [];
+      if (group.length === 0) return null;
+      const typeOwned = group.filter(m => m.owned).length;
+      return (
+        <section class="kanohi-section">
+          <h2 class="kanohi-section__heading">
+            {TYPE_LABELS[type]}
+            <span class="kanohi-section__tally">{typeOwned}/{group.length}</span>
+          </h2>
+          <div class="kanohi-grid">
+            {group.map(mask => (
+              <div class={`kanohi-card${mask.owned ? '' : ' kanohi-card--missing'}`}>
+                <div class="kanohi-card__img-wrap">
+                  <img src={mask.imageUrl} alt={`${mask.colorLabel} ${mask.name}`} width="64" height="64" loading="lazy" />
+                </div>
+                <div class="kanohi-card__info">
+                  <span class="kanohi-card__name">{mask.name}</span>
+                  <span class="kanohi-card__color">{mask.colorLabel}</span>
+                  {mask.isRare && <span class="kanohi-card__rare">Rare</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      );
+    })}
+  </div>
+</Layout>
+
+<style>
+.kanohi-page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+}
+
+.kanohi-header {
+  margin-bottom: 2.5rem;
+}
+
+.back-link {
+  display: inline-block;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  margin-bottom: 1rem;
+  letter-spacing: 0.04em;
+  transition: color 0.15s;
+}
+.back-link:hover { color: var(--color-accent); }
+
+h1 {
+  font-size: 2rem;
+  margin: 0 0 0.4rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
+.kanohi-count {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+}
+
+.kanohi-subtitle {
+  color: var(--color-text-muted);
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+/* Sections */
+.kanohi-section {
+  margin-bottom: 2.5rem;
+}
+
+.kanohi-section__heading {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  border-bottom: 1px solid rgba(196, 137, 60, 0.25);
+  padding-bottom: 0.4rem;
+  margin: 0 0 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.kanohi-section__tally {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+/* Grid */
+.kanohi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.6rem;
+}
+
+/* Cards */
+.kanohi-card {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  min-width: 0;
+}
+
+.kanohi-card--missing {
+  opacity: 0.38;
+  filter: grayscale(0.6);
+}
+
+.kanohi-card__img-wrap {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.kanohi-card__img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.kanohi-card__info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.1rem;
+}
+
+.kanohi-card__name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kanohi-card__color {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kanohi-card__rare {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+</style>
