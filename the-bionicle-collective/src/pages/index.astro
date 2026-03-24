@@ -2,16 +2,39 @@
 import Layout from '../layouts/Layout.astro';
 import SocialMediaIcons from '../components/SocialMediaIcons.astro';
 import { site } from '../config/site';
+import { sets } from '../data/sets';
+
+const years = [...new Set(sets.map(s => s.year))].sort((a, b) => a - b);
+const yearRange = `${years[0]}–${years[years.length - 1]}`;
+const themeCount = new Set(sets.map(s => s.theme)).size;
 ---
 <Layout title={site.name} description={site.description}>
   <div class="home-page" id="home-main">
-    <h1 class="site-title">{site.name}</h1>
-    <SocialMediaIcons variant="home" />
-    <hr class="home-about-divider" />
-    <p class="home-description">{site.description}</p>
-    <p class="home-cta">
-      <a href="/collection/" class="button-primary">View the collection</a>
-    </p>
+    <div class="home-hero">
+      <h1 class="site-title">{site.name}</h1>
+      <SocialMediaIcons variant="home" />
+      <hr class="home-about-divider" />
+      <p class="home-description">{site.description}</p>
+      <p class="home-cta">
+        <a href="/collection/" class="button-primary">View the collection</a>
+      </p>
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <span class="hero-stat__value">{sets.length}</span>
+          <span class="hero-stat__label">Sets</span>
+        </div>
+        <div class="hero-stat__sep"></div>
+        <div class="hero-stat">
+          <span class="hero-stat__value">{yearRange}</span>
+          <span class="hero-stat__label">Years</span>
+        </div>
+        <div class="hero-stat__sep"></div>
+        <div class="hero-stat">
+          <span class="hero-stat__value">{themeCount}</span>
+          <span class="hero-stat__label">Themes</span>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Edit subdomain: show login form or "logged in" (filled by JS) -->

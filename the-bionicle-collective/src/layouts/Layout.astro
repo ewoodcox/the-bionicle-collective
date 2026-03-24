@@ -9,6 +9,10 @@ interface Props {
 }
 const { title = site.name, description = site.description } = Astro.props;
 
+const path = Astro.url.pathname;
+const isActive = (href: string) =>
+  href === '/' ? path === '/' : path.startsWith(href);
+
 /** Per-request origin so `edit.bioniclecollective.com` and apex both get correct absolute icon URLs. */
 const iconOrigin = Astro.url.origin;
 const faviconPng = new URL('/favicon-16x16.png', iconOrigin).href;
@@ -25,6 +29,8 @@ const webManifest = new URL('/site.webmanifest', iconOrigin).href;
     <link rel="shortcut icon" type="image/png" href={faviconPng} />
     <link rel="apple-touch-icon" href={faviconPng} />
     <link rel="manifest" href={webManifest} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   </head>
   <body>
     <header class="site-header">
@@ -40,9 +46,9 @@ const webManifest = new URL('/site.webmanifest', iconOrigin).href;
         <span class="site-header__spacer" aria-hidden="true"></span>
       </div>
       <nav class="site-nav" id="site-nav">
-        <a href="/">Home</a>
-        <a href="/collection/">Collection</a>
-        <a href="/community/">Community</a>
+        <a href="/" aria-current={isActive('/') ? 'page' : undefined}>Home</a>
+        <a href="/collection/" aria-current={isActive('/collection/') ? 'page' : undefined}>Collection</a>
+        <a href="/community/" aria-current={isActive('/community/') ? 'page' : undefined}>Community</a>
         <a href="/api/admin/logout" class="nav-logout" id="nav-logout" hidden>Log out</a>
       </nav>
     </header>
