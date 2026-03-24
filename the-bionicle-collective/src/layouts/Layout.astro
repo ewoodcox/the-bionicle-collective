@@ -113,20 +113,19 @@ const webManifest = new URL('/site.webmanifest', iconOrigin).href;
 
           ctx.drawImage(img, sx, sy, size, size, 0, 0, size, size);
 
-          // Diagonal watermark text
-          const fontSize = Math.max(13, size * 0.065);
+          // Bottom-right watermark text
+          const fontSize = Math.max(11, size * 0.055);
+          const padding = Math.max(6, size * 0.03);
           ctx.save();
-          ctx.translate(size / 2, size / 2);
-          ctx.rotate(-Math.PI / 6);
-          ctx.globalAlpha = 0.32;
+          ctx.globalAlpha = 0.55;
           ctx.font = 'bold ' + fontSize + 'px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-          ctx.lineWidth = 1;
+          ctx.textAlign = 'right';
+          ctx.textBaseline = 'bottom';
+          ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+          ctx.lineWidth = 2;
           ctx.fillStyle = '#ffffff';
-          ctx.strokeText('bioniclecollective.com', 0, 0);
-          ctx.fillText('bioniclecollective.com', 0, 0);
+          ctx.strokeText('bioniclecollective.com', size - padding, size - padding);
+          ctx.fillText('bioniclecollective.com', size - padding, size - padding);
           ctx.restore();
 
           canvas.className = img.className;
