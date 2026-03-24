@@ -695,51 +695,417 @@
     "sourceUrl": "https://biosector01.com/wiki/BIONICLE:_Escape_from_the_Underworld"
   },
   {
-    "id": "disks-2001-1",
-    "title": "BIONICLE Disks (2001)",
+    "id": "cd-toa-mata-mini-promo",
+    "title": "Toa Mata Mini Promo CD",
     "category": "disks",
     "year": 2001,
-    "imageUrl": "https://placehold.co/280x280?text=Disks%202001",
-    "sourceUrl": "https://biosector01.com/wiki/"
+    "imageUrl": "https://placehold.co/280x280?text=Toa+Mata+Mini+Promo+CD",
+    "sourceUrl": "https://biosector01.com/wiki/Mini_Promo_CDs"
   },
   {
-    "id": "games-2001-1",
-    "title": "BIONICLE Games (2001)",
-    "category": "games",
-    "year": 2001,
-    "imageUrl": "https://placehold.co/280x280?text=Games%202001",
-    "sourceUrl": "https://biosector01.com/wiki/"
-  },
-  {
-    "id": "cards-2001-1",
-    "title": "BIONICLE Cards (2001)",
-    "category": "cards",
-    "year": 2001,
-    "imageUrl": "https://placehold.co/280x280?text=Cards%202001",
-    "sourceUrl": "https://biosector01.com/wiki/"
-  },
-  {
-    "id": "disks-2015-1",
-    "title": "BIONICLE Disks (2015)",
+    "id": "cd-toa-mata-nestle-promo",
+    "title": "Toa Mata Nestlé Promo CD",
     "category": "disks",
-    "year": 2015,
-    "imageUrl": "https://placehold.co/280x280?text=Disks%202015",
-    "sourceUrl": "https://biosector01.com/wiki/"
+    "year": 2001,
+    "imageUrl": "https://placehold.co/280x280?text=Toa+Mata+Nestl%C3%A9+Promo+CD",
+    "sourceUrl": "https://biosector01.com/wiki/Mini_Promo_CDs"
   },
   {
-    "id": "games-2015-1",
-    "title": "BIONICLE Games (2015)",
+    "id": "cd-power-pack",
+    "title": "Power Pack CD",
+    "category": "disks",
+    "year": 2001,
+    "imageUrl": "https://placehold.co/280x280?text=Power+Pack+CD",
+    "sourceUrl": "https://biosector01.com/wiki/Mini_Promo_CDs"
+  },
+  {
+    "id": "cd-interactive-demo",
+    "title": "Interactive Demo CD",
+    "category": "disks",
+    "year": 2001,
+    "imageUrl": "https://placehold.co/280x280?text=Interactive+Demo+CD",
+    "sourceUrl": "https://biosector01.com/wiki/Mini_Promo_CDs"
+  },
+  {
+    "id": "cd-bohrok-swarms-promo",
+    "title": "Bohrok Swarms Promo CD",
+    "category": "disks",
+    "year": 2002,
+    "imageUrl": "https://placehold.co/280x280?text=Bohrok+Swarms+Promo+CD",
+    "sourceUrl": "https://biosector01.com/wiki/Mini_Promo_CDs"
+  },
+  {
+    "id": "cd-toa-nuva-promo",
+    "title": "Toa Nuva Promo CD",
+    "category": "disks",
+    "year": 2002,
+    "imageUrl": "https://placehold.co/280x280?text=Toa+Nuva+Promo+CD",
+    "sourceUrl": "https://biosector01.com/wiki/Mini_Promo_CDs"
+  },
+  {
+    "id": "cd-bohrok-kal-tahnok",
+    "title": "Bohrok-Kal Mini Promo CD: Tahnok-Kal",
+    "category": "disks",
+    "year": 2003,
+    "imageUrl": "https://placehold.co/280x280?text=Tahnok-Kal+CD",
+    "sourceUrl": "https://biosector01.com/wiki/Mini_Promo_CDs"
+  },
+  {
+    "id": "cd-bohrok-kal-gahlok",
+    "title": "Bohrok-Kal Mini Promo CD: Gahlok-Kal",
+    "category": "disks",
+    "year": 2003,
+    "imageUrl": "https://placehold.co/280x280?text=Gahlok-Kal+CD",
+    "sourceUrl": "https://biosector01.com/wiki/Mini_Promo_CDs"
+  },
+  {
+    "id": "cd-bohrok-kal-lehvak",
+    "title": "Bohrok-Kal Mini Promo CD: Lehvak-Kal",
+    "category": "disks",
+    "year": 2003,
+    "imageUrl": "https://placehold.co/280x280?text=Lehvak-Kal+CD",
+    "sourceUrl": "https://biosector01.com/wiki/Mini_Promo_CDs"
+  },
+  {
+    "id": "cd-bohrok-kal-kohrak",
+    "title": "Bohrok-Kal Mini Promo CD: Kohrak-Kal",
+    "category": "disks",
+    "year": 2003,
+    "imageUrl": "https://placehold.co/280x280?text=Kohrak-Kal+CD",
+    "sourceUrl": "https://biosector01.com/wiki/Mini_Promo_CDs"
+  },
+  {
+    "id": "cd-bohrok-kal-pahrak",
+    "title": "Bohrok-Kal Mini Promo CD: Pahrak-Kal",
+    "category": "disks",
+    "year": 2003,
+    "imageUrl": "https://placehold.co/280x280?text=Pahrak-Kal+CD",
+    "sourceUrl": "https://biosector01.com/wiki/Mini_Promo_CDs"
+  },
+  {
+    "id": "cd-bohrok-kal-nuhvok",
+    "title": "Bohrok-Kal Mini Promo CD: Nuhvok-Kal",
+    "category": "disks",
+    "year": 2003,
+    "imageUrl": "https://placehold.co/280x280?text=Nuhvok-Kal+CD",
+    "sourceUrl": "https://biosector01.com/wiki/Mini_Promo_CDs"
+  },
+  {
+    "id": "cd-rahkshi-guurahk",
+    "title": "Rahkshi Mini Promo CD: Guurahk",
+    "category": "disks",
+    "year": 2003,
+    "imageUrl": "https://placehold.co/280x280?text=Guurahk+CD",
+    "sourceUrl": "https://biosector01.com/wiki/Mini_Promo_CDs"
+  },
+  {
+    "id": "cd-rahkshi-lerahk",
+    "title": "Rahkshi Mini Promo CD: Lerahk",
+    "category": "disks",
+    "year": 2003,
+    "imageUrl": "https://placehold.co/280x280?text=Lerahk+CD",
+    "sourceUrl": "https://biosector01.com/wiki/Mini_Promo_CDs"
+  },
+  {
+    "id": "cd-rahkshi-panrahk",
+    "title": "Rahkshi Mini Promo CD: Panrahk",
+    "category": "disks",
+    "year": 2003,
+    "imageUrl": "https://placehold.co/280x280?text=Panrahk+CD",
+    "sourceUrl": "https://biosector01.com/wiki/Mini_Promo_CDs"
+  },
+  {
+    "id": "cd-rahkshi-turahk",
+    "title": "Rahkshi Mini Promo CD: Turahk",
+    "category": "disks",
+    "year": 2003,
+    "imageUrl": "https://placehold.co/280x280?text=Turahk+CD",
+    "sourceUrl": "https://biosector01.com/wiki/Mini_Promo_CDs"
+  },
+  {
+    "id": "cd-rahkshi-vorahk",
+    "title": "Rahkshi Mini Promo CD: Vorahk",
+    "category": "disks",
+    "year": 2003,
+    "imageUrl": "https://placehold.co/280x280?text=Vorahk+CD",
+    "sourceUrl": "https://biosector01.com/wiki/Mini_Promo_CDs"
+  },
+  {
+    "id": "cd-rahkshi-kurahk",
+    "title": "Rahkshi Mini Promo CD: Kurahk",
+    "category": "disks",
+    "year": 2003,
+    "imageUrl": "https://placehold.co/280x280?text=Kurahk+CD",
+    "sourceUrl": "https://biosector01.com/wiki/Mini_Promo_CDs"
+  },
+  {
+    "id": "cd-mask-of-light-promo",
+    "title": "Mask of Light Promo CD",
+    "category": "disks",
+    "year": 2003,
+    "imageUrl": "https://placehold.co/280x280?text=Mask+of+Light+CD",
+    "sourceUrl": "https://biosector01.com/wiki/Mini_Promo_CDs"
+  },
+  {
+    "id": "cd-toa-metru-vakama",
+    "title": "Toa Metru Mini Promo CD: Vakama",
+    "category": "disks",
+    "year": 2004,
+    "imageUrl": "https://placehold.co/280x280?text=Vakama+CD",
+    "sourceUrl": "https://biosector01.com/wiki/Mini_Promo_CDs"
+  },
+  {
+    "id": "cd-toa-metru-nokama",
+    "title": "Toa Metru Mini Promo CD: Nokama",
+    "category": "disks",
+    "year": 2004,
+    "imageUrl": "https://placehold.co/280x280?text=Nokama+CD",
+    "sourceUrl": "https://biosector01.com/wiki/Mini_Promo_CDs"
+  },
+  {
+    "id": "cd-toa-metru-matau",
+    "title": "Toa Metru Mini Promo CD: Matau",
+    "category": "disks",
+    "year": 2004,
+    "imageUrl": "https://placehold.co/280x280?text=Matau+CD",
+    "sourceUrl": "https://biosector01.com/wiki/Mini_Promo_CDs"
+  },
+  {
+    "id": "cd-toa-metru-whenua",
+    "title": "Toa Metru Mini Promo CD: Whenua",
+    "category": "disks",
+    "year": 2004,
+    "imageUrl": "https://placehold.co/280x280?text=Whenua+CD",
+    "sourceUrl": "https://biosector01.com/wiki/Mini_Promo_CDs"
+  },
+  {
+    "id": "cd-toa-metru-nuju",
+    "title": "Toa Metru Mini Promo CD: Nuju",
+    "category": "disks",
+    "year": 2004,
+    "imageUrl": "https://placehold.co/280x280?text=Nuju+CD",
+    "sourceUrl": "https://biosector01.com/wiki/Mini_Promo_CDs"
+  },
+  {
+    "id": "cd-toa-metru-onewa",
+    "title": "Toa Metru Mini Promo CD: Onewa",
+    "category": "disks",
+    "year": 2004,
+    "imageUrl": "https://placehold.co/280x280?text=Onewa+CD",
+    "sourceUrl": "https://biosector01.com/wiki/Mini_Promo_CDs"
+  },
+  {
+    "id": "cd-toa-inika-mini-promo",
+    "title": "Toa Inika Mini Promo CD",
+    "category": "disks",
+    "year": 2006,
+    "imageUrl": "https://placehold.co/280x280?text=Toa+Inika+Promo+CD",
+    "sourceUrl": "https://biosector01.com/wiki/Mini_Promo_CDs"
+  },
+  {
+    "id": "cd-barraki-promo",
+    "title": "Barraki Promo CD",
+    "category": "disks",
+    "year": 2007,
+    "imageUrl": "https://placehold.co/280x280?text=Barraki+Promo+CD",
+    "sourceUrl": "https://biosector01.com/wiki/Mini_Promo_CDs"
+  },
+  {
+    "id": "game-quest-for-the-toa",
+    "title": "BIONICLE: Quest for the Toa",
+    "issueNumber": "Game Boy Advance",
+    "category": "games",
+    "year": 2001,
+    "imageUrl": "https://placehold.co/280x280?text=Quest+for+the+Toa",
+    "sourceUrl": "https://biosector01.com/wiki/BIONICLE:_Quest_for_the_Toa"
+  },
+  {
+    "id": "boardgame-quest-for-makuta",
+    "title": "BIONICLE: Quest for Makuta",
+    "issueNumber": "Board Game",
+    "category": "games",
+    "year": 2001,
+    "imageUrl": "https://placehold.co/280x280?text=Quest+for+Makuta",
+    "sourceUrl": "https://biosector01.com/wiki/BIONICLE:_Quest_for_Makuta"
+  },
+  {
+    "id": "game-matoran-adventures",
+    "title": "BIONICLE: Matoran Adventures",
+    "issueNumber": "Game Boy Advance",
+    "category": "games",
+    "year": 2002,
+    "imageUrl": "https://placehold.co/280x280?text=Matoran+Adventures",
+    "sourceUrl": "https://biosector01.com/wiki/BIONICLE:_Matoran_Adventures"
+  },
+  {
+    "id": "boardgame-quest-for-the-nest",
+    "title": "BIONICLE: Quest for the Nest",
+    "issueNumber": "Board Game",
+    "category": "games",
+    "year": 2002,
+    "imageUrl": "https://placehold.co/280x280?text=Quest+for+the+Nest",
+    "sourceUrl": "https://biosector01.com/wiki/BIONICLE:_Quest_for_the_Nest"
+  },
+  {
+    "id": "game-the-game",
+    "title": "BIONICLE: The Game",
+    "issueNumber": "PS2 / Xbox / GameCube / PC / GBA",
+    "category": "games",
+    "year": 2003,
+    "imageUrl": "https://placehold.co/280x280?text=BIONICLE%3A+The+Game",
+    "sourceUrl": "https://biosector01.com/wiki/BIONICLE:_The_Game"
+  },
+  {
+    "id": "boardgame-mask-of-light",
+    "title": "BIONICLE: Mask of Light",
+    "issueNumber": "Board Game",
+    "category": "games",
+    "year": 2003,
+    "imageUrl": "https://placehold.co/280x280?text=Mask+of+Light+Board+Game",
+    "sourceUrl": "https://biosector01.com/wiki/BIONICLE:_Mask_of_Light_(Game)"
+  },
+  {
+    "id": "boardgame-challenge-toa-metru",
+    "title": "BIONICLE: Challenge of the Toa Metru!",
+    "issueNumber": "Magazine Board Game",
+    "category": "games",
+    "year": 2004,
+    "imageUrl": "https://placehold.co/280x280?text=Challenge+of+the+Toa+Metru",
+    "sourceUrl": "https://biosector01.com/wiki/BIONICLE:_Challenge_of_the_Toa_Metru!"
+  },
+  {
+    "id": "game-maze-of-shadows",
+    "title": "BIONICLE: Maze of Shadows",
+    "issueNumber": "Game Boy Advance",
+    "category": "games",
+    "year": 2005,
+    "imageUrl": "https://placehold.co/280x280?text=Maze+of+Shadows",
+    "sourceUrl": "https://biosector01.com/wiki/BIONICLE:_Maze_of_Shadows"
+  },
+  {
+    "id": "boardgame-quest-for-keetongu",
+    "title": "BIONICLE: Quest for Keetongu",
+    "issueNumber": "Magazine Board Game",
+    "category": "games",
+    "year": 2005,
+    "imageUrl": "https://placehold.co/280x280?text=Quest+for+Keetongu",
+    "sourceUrl": "https://biosector01.com/wiki/BIONICLE:_Quest_for_Keetongu"
+  },
+  {
+    "id": "game-heroes",
+    "title": "BIONICLE Heroes",
+    "issueNumber": "PS2 / Xbox 360 / Wii / PC / DS / GBA",
+    "category": "games",
+    "year": 2006,
+    "imageUrl": "https://placehold.co/280x280?text=BIONICLE+Heroes",
+    "sourceUrl": "https://biosector01.com/wiki/BIONICLE_Heroes"
+  },
+  {
+    "id": "boardgame-the-quest-game",
+    "title": "BIONICLE: The Quest Game",
+    "issueNumber": "Board Game",
+    "category": "games",
+    "year": 2006,
+    "imageUrl": "https://placehold.co/280x280?text=The+Quest+Game",
+    "sourceUrl": "https://biosector01.com/wiki/BIONICLE:_The_Quest_Game"
+  },
+  {
+    "id": "game-challenge",
+    "title": "BIONICLE Challenge",
+    "issueNumber": "Mobile",
+    "category": "games",
+    "year": 2007,
+    "imageUrl": "https://placehold.co/280x280?text=BIONICLE+Challenge",
+    "sourceUrl": "https://biosector01.com/wiki/BIONICLE_Challenge"
+  },
+  {
+    "id": "boardgame-hydraxons-hunt",
+    "title": "Hydraxon's Hunt Game!",
+    "issueNumber": "Magazine Board Game",
+    "category": "games",
+    "year": 2007,
+    "imageUrl": "https://placehold.co/280x280?text=Hydraxon%27s+Hunt",
+    "sourceUrl": "https://biosector01.com/wiki/Hydraxon%27s_Hunt_Game!"
+  },
+  {
+    "id": "game-defenders",
+    "title": "BIONICLE Defenders",
+    "issueNumber": "Mobile",
+    "category": "games",
+    "year": 2008,
+    "imageUrl": "https://placehold.co/280x280?text=BIONICLE+Defenders",
+    "sourceUrl": "https://biosector01.com/wiki/BIONICLE_Defenders"
+  },
+  {
+    "id": "game-mask-of-creation",
+    "title": "BIONICLE: Mask of Creation",
+    "issueNumber": "iOS / Android / PC",
     "category": "games",
     "year": 2015,
-    "imageUrl": "https://placehold.co/280x280?text=Games%202015",
-    "sourceUrl": "https://biosector01.com/wiki/"
+    "imageUrl": "https://placehold.co/280x280?text=Mask+of+Creation",
+    "sourceUrl": "https://biosector01.com/wiki/BIONICLE:_Mask_of_Creation"
   },
   {
-    "id": "cards-2015-1",
-    "title": "BIONICLE Cards (2015)",
+    "id": "game-mask-of-control",
+    "title": "BIONICLE: Mask of Control",
+    "issueNumber": "iOS / Android",
+    "category": "games",
+    "year": 2016,
+    "imageUrl": "https://placehold.co/280x280?text=Mask+of+Control",
+    "sourceUrl": "https://biosector01.com/wiki/BIONICLE:_Mask_of_Control"
+  },
+  {
+    "id": "card-quest-for-the-masks",
+    "title": "BIONICLE: Quest for the Masks",
+    "issueNumber": "Upper Deck",
     "category": "cards",
-    "year": 2015,
-    "imageUrl": "https://placehold.co/280x280?text=Cards%202015",
-    "sourceUrl": "https://biosector01.com/wiki/"
+    "year": 2001,
+    "imageUrl": "https://placehold.co/280x280?text=Quest+for+the+Masks",
+    "sourceUrl": "https://biosector01.com/wiki/BIONICLE:_Quest_for_the_Masks"
+  },
+  {
+    "id": "card-bohrok-awake-mcdonalds",
+    "title": "BIONICLE: The Bohrok Awake",
+    "issueNumber": "McDonald's Promo",
+    "category": "cards",
+    "year": 2002,
+    "imageUrl": "https://placehold.co/280x280?text=The+Bohrok+Awake+Cards",
+    "sourceUrl": "https://biosector01.com/wiki/BIONICLE:_The_Bohrok_Awake"
+  },
+  {
+    "id": "card-bohrok-swarm",
+    "title": "BIONICLE: Bohrok Swarm",
+    "issueNumber": "Upper Deck",
+    "category": "cards",
+    "year": 2002,
+    "imageUrl": "https://placehold.co/280x280?text=Bohrok+Swarm+Cards",
+    "sourceUrl": "https://biosector01.com/wiki/BIONICLE:_Bohrok_Swarm"
+  },
+  {
+    "id": "card-toa-nuva-reconstruct",
+    "title": "BIONICLE: Toa Nuva Reconstruct",
+    "issueNumber": "Upper Deck",
+    "category": "cards",
+    "year": 2002,
+    "imageUrl": "https://placehold.co/280x280?text=Toa+Nuva+Reconstruct",
+    "sourceUrl": "https://biosector01.com/wiki/BIONICLE:_Toa_Nuva_Reconstruct"
+  },
+  {
+    "id": "card-phantoka-battle-cards",
+    "title": "Phantoka Battle Cards",
+    "issueNumber": "Collectible Cards",
+    "category": "cards",
+    "year": 2008,
+    "imageUrl": "https://placehold.co/280x280?text=Phantoka+Battle+Cards",
+    "sourceUrl": "https://biosector01.com/wiki/Phantoka_Battle_Cards"
+  },
+  {
+    "id": "card-the-legend-reborn",
+    "title": "BIONICLE: The Legend Reborn",
+    "issueNumber": "Card Game",
+    "category": "cards",
+    "year": 2009,
+    "imageUrl": "https://placehold.co/280x280?text=The+Legend+Reborn+Cards",
+    "sourceUrl": "https://biosector01.com/wiki/Card_Games"
   }
 ]

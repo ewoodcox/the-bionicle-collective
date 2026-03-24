@@ -1,6 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { site } from '../../config/site';
+import { site, forumUrl } from '../../config/site';
+import SocialMediaIcons from '../../components/SocialMediaIcons.astro';
 ---
 <Layout title="Community | The Bionicle Collective" description="Contact the collector and suggest items to add to the site.">
   <div class="community-page">
@@ -9,37 +10,7 @@ import { site } from '../../config/site';
       Get in touch with the collector or suggest items you'd like to see added to The Bionicle Collective.
     </p>
 
-    <section class="community-section" aria-labelledby="contact-heading">
-      <h2 id="contact-heading">Contact</h2>
-      <p class="section-desc">Send me a private message! Your message will be forwarded via email.</p>
-      <form id="contact-form" class="community-form">
-        <div class="form-row">
-          <label for="contact-name">Name</label>
-          <input id="contact-name" name="name" type="text" required placeholder="Your name" autocomplete="name" />
-        </div>
-        <div class="form-row">
-          <label for="contact-email">Email</label>
-          <input id="contact-email" name="email" type="email" required placeholder="your@email.com" autocomplete="email" />
-        </div>
-        <div class="form-row">
-          <label for="contact-subject">Subject</label>
-          <select id="contact-subject" name="subject">
-            <option value="General inquiry">General inquiry</option>
-            <option value="Collection question">Collection question</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-        <div class="form-row">
-          <label for="contact-message">Message</label>
-          <textarea id="contact-message" name="message" required rows="5" placeholder="Your message..." maxlength="2000"></textarea>
-        </div>
-        <div class="form-actions">
-          <button type="submit" class="button-primary">Send message</button>
-          <span id="contact-status" class="form-status" aria-live="polite"></span>
-        </div>
-      </form>
-    </section>
-
+    <!-- Suggestions — primary section -->
     <section class="community-section" aria-labelledby="suggestions-heading">
       <h2 id="suggestions-heading">Suggestions</h2>
       <p class="section-desc">Recommend sets, masks, or other items to add to the site. Community members can upvote or downvote ideas.</p>
@@ -65,6 +36,54 @@ import { site } from '../../config/site';
 
       <div id="suggestions-list" class="suggestions-list">
         <p class="loading-msg">Loading suggestions...</p>
+      </div>
+    </section>
+
+    <!-- Contact — tabbed: Forum | Email -->
+    <section class="community-section" aria-labelledby="contact-heading">
+      <h2 id="contact-heading">Get in Touch</h2>
+
+      <div class="contact-tabs" role="tablist" aria-label="Contact methods">
+        <button class="contact-tab contact-tab--active" role="tab" aria-selected="true" aria-controls="contact-panel-forum" id="tab-forum" data-tab="forum">Forum</button>
+        <button class="contact-tab" role="tab" aria-selected="false" aria-controls="contact-panel-email" id="tab-email" data-tab="email">Email</button>
+      </div>
+
+      <div class="contact-panel" id="contact-panel-forum" role="tabpanel" aria-labelledby="tab-forum">
+        <p class="section-desc">Join the community — follow along, leave a comment, or start a conversation.</p>
+        <a href={forumUrl} target="_blank" rel="noopener noreferrer" class="button-primary forum-cta">Visit the community →</a>
+        <div class="forum-social">
+          <SocialMediaIcons variant="home" />
+        </div>
+      </div>
+
+      <div class="contact-panel contact-panel--hidden" id="contact-panel-email" role="tabpanel" aria-labelledby="tab-email">
+        <p class="section-desc">Send me a private message — your message will be forwarded via email.</p>
+        <form id="contact-form" class="community-form">
+          <div class="form-row">
+            <label for="contact-name">Name</label>
+            <input id="contact-name" name="name" type="text" required placeholder="Your name" autocomplete="name" />
+          </div>
+          <div class="form-row">
+            <label for="contact-email">Email</label>
+            <input id="contact-email" name="email" type="email" required placeholder="your@email.com" autocomplete="email" />
+          </div>
+          <div class="form-row">
+            <label for="contact-subject">Subject</label>
+            <select id="contact-subject" name="subject">
+              <option value="General inquiry">General inquiry</option>
+              <option value="Collection question">Collection question</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label for="contact-message">Message</label>
+            <textarea id="contact-message" name="message" required rows="5" placeholder="Your message..." maxlength="2000"></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="button-primary">Send message</button>
+            <span id="contact-status" class="form-status" aria-live="polite"></span>
+          </div>
+        </form>
       </div>
     </section>
   </div>
@@ -366,6 +385,20 @@ import { site } from '../../config/site';
       }
 
       loadSuggestions();
+
+      // Contact tab switcher
+      document.querySelectorAll<HTMLButtonElement>('.contact-tab').forEach((tab) => {
+        tab.addEventListener('click', () => {
+          const target = tab.dataset.tab!;
+          document.querySelectorAll('.contact-tab').forEach((t) => {
+            t.classList.toggle('contact-tab--active', t === tab);
+            t.setAttribute('aria-selected', t === tab ? 'true' : 'false');
+          });
+          document.querySelectorAll('.contact-panel').forEach((panel) => {
+            panel.classList.toggle('contact-panel--hidden', panel.id !== `contact-panel-${target}`);
+          });
+        });
+      });
     })();
   </script>
 </Layout>

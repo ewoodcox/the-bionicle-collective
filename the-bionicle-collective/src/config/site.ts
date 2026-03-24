@@ -32,6 +32,9 @@ export const colors = {
   textMuted: '#7a9194',
 } as const;
 
+/** Primary community/forum URL shown on the Community page. */
+export const forumUrl = 'https://facebook.com/bioniclecollective';
+
 /** Social links for the collection (YouTube, Facebook, Instagram, Bluesky). */
 export const social = {
   youtube: 'https://youtube.com/@bioniclecollective',
