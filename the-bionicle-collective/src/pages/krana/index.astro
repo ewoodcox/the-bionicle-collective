@@ -1,0 +1,372 @@
+---
+export const prerender = false;
+
+import Layout from '../../layouts/Layout.astro';
+import { getKrana, KRANA_TYPES, KRANA_VARIANTS, type Krana } from '../../data/krana';
+import { getKranaOwnedIds } from '../../utils/kranaStoreR2';
+import kranaCollectionStatic from '../../data/krana-collection.json';
+
+const bucket = (Astro.locals as any).runtime?.env?.BIONICLE_COLLECTION;
+let ownedIds: string[];
+try {
+  ownedIds = bucket ? await getKranaOwnedIds(bucket) : (kranaCollectionStatic as string[]);
+} catch {
+  ownedIds = kranaCollectionStatic as string[];
+}
+const ownedSet = new Set(ownedIds);
+
+const allKrana: Krana[] = getKrana().map(k => ({ ...k, owned: ownedSet.has(k.id) }));
+const ownedCount = allKrana.filter(k => k.owned).length;
+
+// Group by variant, then index by [variant][color][type] for grid rendering
+const byVariant = new Map<string, Map<string, Map<string, Krana>>>();
+for (const v of KRANA_VARIANTS) {
+  byVariant.set(v.id, new Map());
+}
+for (const k of allKrana) {
+  const variantMap = byVariant.get(k.variant);
+  if (!variantMap) continue;
+  if (!variantMap.has(k.color)) variantMap.set(k.color, new Map());
+  variantMap.get(k.color)!.set(k.type, k);
+}
+---
+<Layout title="Krana Collection | The Bionicle Collective" description="Every Krana in The Bionicle Collective.">
+  <div class="krana-page">
+    <div class="krana-header">
+      <a href="/" class="back-link">&larr; Home</a>
+      <h1>Krana <span class="krana-count">{ownedCount} / {allKrana.length}</span></h1>
+      <p class="krana-subtitle">Parasite creatures of the Bohrok swarms, 2002–2003.</p>
+    </div>
+
+    {KRANA_VARIANTS.map(variant => {
+      const variantMap = byVariant.get(variant.id) ?? new Map();
+      const variantKrana = allKrana.filter(k => k.variant === variant.id);
+      const variantOwned = variantKrana.filter(k => k.owned).length;
+
+      return (
+        <section class="krana-section">
+          <h2 class="krana-section__heading">
+            {variant.label}
+            <span class="krana-section__tally">{variantOwned}/{variantKrana.length}</span>
+          </h2>
+
+          <div class="krana-grid-wrap">
+            <!-- Type column headers -->
+            <div class="krana-grid" style={`--krana-cols: ${KRANA_TYPES.length + 1}`}>
+              <div class="krana-grid__corner"></div>
+              {KRANA_TYPES.map(type => (
+                <div class="krana-grid__type-header">{type.label}</div>
+              ))}
+
+              <!-- One row per color -->
+              {variant.colors.map(color => {
+                const colorMap = variantMap.get(color.id) ?? new Map();
+                return (
+                  <>
+                    <div class="krana-grid__color-label">{color.label}</div>
+                    {KRANA_TYPES.map(type => {
+                      const krana = colorMap.get(type.id);
+                      if (!krana) return <div class="krana-card krana-card--empty"></div>;
+                      return (
+                        <div
+                          class={`krana-card${krana.owned ? '' : ' krana-card--missing'}`}
+                          data-krana-id={krana.id}
+                          data-owned={krana.owned ? 'true' : 'false'}
+                          title={`${color.label} Krana-${type.label}${krana.owned ? ' (owned)' : ''}`}
+                        >
+                          <div class="krana-card__img-wrap">
+                            <img
+                              src={krana.imageUrl}
+                              data-fallback={`https://img.bricklink.com/ItemImage/PN/${krana.bricklinkColorId}/${krana.partId}.png`}
+                              alt={`${color.label} Krana-${type.label}`}
+                              width="48"
+                              height="48"
+                              loading="lazy"
+                              onerror="this.onerror=null;this.src=this.dataset.fallback"
+                            />
+                            <button class="krana-toggle" aria-label={krana.owned ? 'Mark as not owned' : 'Mark as owned'} hidden>
+                              <span class="krana-toggle__icon">{krana.owned ? '✓' : '+'}</span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      );
+    })}
+  </div>
+</Layout>
+
+<style>
+.krana-page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+}
+
+.krana-header {
+  margin-bottom: 2.5rem;
+}
+
+.back-link {
+  display: inline-block;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  margin-bottom: 1rem;
+  letter-spacing: 0.04em;
+  transition: color 0.15s;
+}
+.back-link:hover { color: var(--color-accent); }
+
+h1 {
+  font-size: 2rem;
+  margin: 0 0 0.4rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
+.krana-count {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+}
+
+.krana-subtitle {
+  color: var(--color-text-muted);
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+/* Sections */
+.krana-section {
+  margin-bottom: 3rem;
+}
+
+.krana-section__heading {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  border-bottom: 1px solid rgba(196, 137, 60, 0.25);
+  padding-bottom: 0.4rem;
+  margin: 0 0 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.krana-section__tally {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+/* Grid: first column is color label, remaining are type columns */
+.krana-grid-wrap {
+  overflow-x: auto;
+}
+
+.krana-grid {
+  display: grid;
+  grid-template-columns: 100px repeat(calc(var(--krana-cols) - 1), 1fr);
+  gap: 3px;
+  min-width: 520px;
+}
+
+.krana-grid__corner {
+  /* empty top-left cell */
+}
+
+.krana-grid__type-header {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  text-align: center;
+  padding: 0.25rem 0 0.5rem;
+}
+
+.krana-grid__color-label {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  padding-right: 0.5rem;
+  line-height: 1.2;
+}
+
+/* Cards */
+.krana-card {
+  aspect-ratio: 1;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+  position: relative;
+}
+
+.krana-card--missing {
+  opacity: 0.35;
+  filter: grayscale(0.6);
+}
+
+.krana-card--empty {
+  background: transparent;
+  border-color: transparent;
+}
+
+.krana-card__img-wrap {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.krana-card__img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* Toggle button */
+.krana-toggle {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.krana-toggle[hidden] { display: none; }
+
+.krana-toggle:hover {
+  background: rgba(0, 0, 0, 0.8);
+  border-color: var(--color-accent);
+}
+
+.krana-toggle--owned {
+  background: rgba(196, 137, 60, 0.75);
+  border-color: var(--color-accent);
+}
+
+.krana-toggle--saving {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.krana-toggle__icon {
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+}
+</style>
+
+<script>
+  (function () {
+    if (typeof window === 'undefined') return;
+    if (window.location.hostname !== 'edit.bioniclecollective.com') return;
+
+    // Show all toggle buttons
+    document.querySelectorAll<HTMLButtonElement>('.krana-toggle').forEach(btn => {
+      btn.hidden = false;
+      const card = btn.closest<HTMLElement>('.krana-card');
+      if (card?.dataset.owned === 'true') btn.classList.add('krana-toggle--owned');
+    });
+
+    // Update tally for a section
+    function updateTally(card: HTMLElement) {
+      const section = card.closest<HTMLElement>('.krana-section');
+      if (!section) return;
+      const tally = section.querySelector<HTMLElement>('.krana-section__tally');
+      if (!tally) return;
+      const total = section.querySelectorAll('.krana-card[data-krana-id]').length;
+      const owned = section.querySelectorAll('.krana-card[data-owned="true"]').length;
+      tally.textContent = `${owned}/${total}`;
+    }
+
+    function updateGlobalCount() {
+      const countEl = document.querySelector<HTMLElement>('.krana-count');
+      if (!countEl) return;
+      const total = document.querySelectorAll('.krana-card[data-krana-id]').length;
+      const owned = document.querySelectorAll('.krana-card[data-owned="true"]').length;
+      countEl.textContent = `${owned} / ${total}`;
+    }
+
+    document.querySelectorAll<HTMLElement>('.krana-card[data-krana-id]').forEach(card => {
+      const btn = card.querySelector<HTMLButtonElement>('.krana-toggle');
+      if (!btn) return;
+
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const kranaId = card.dataset.kranaId;
+        if (!kranaId) return;
+
+        const currentOwned = card.dataset.owned === 'true';
+        const newOwned = !currentOwned;
+
+        // Optimistic update
+        btn.classList.add('krana-toggle--saving');
+        card.dataset.owned = newOwned ? 'true' : 'false';
+        card.classList.toggle('krana-card--missing', !newOwned);
+        btn.classList.toggle('krana-toggle--owned', newOwned);
+        btn.querySelector('.krana-toggle__icon')!.textContent = newOwned ? '✓' : '+';
+        btn.setAttribute('aria-label', newOwned ? 'Mark as not owned' : 'Mark as owned');
+        updateTally(card);
+        updateGlobalCount();
+
+        try {
+          const res = await fetch('/api/krana/collection', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ kranaId, owned: newOwned }),
+          });
+
+          if (res.status === 401) {
+            window.location.href = '/';
+            return;
+          }
+
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        } catch {
+          // Revert on error
+          card.dataset.owned = currentOwned ? 'true' : 'false';
+          card.classList.toggle('krana-card--missing', !currentOwned);
+          btn.classList.toggle('krana-toggle--owned', currentOwned);
+          btn.querySelector('.krana-toggle__icon')!.textContent = currentOwned ? '✓' : '+';
+          btn.setAttribute('aria-label', currentOwned ? 'Mark as not owned' : 'Mark as owned');
+          updateTally(card);
+          updateGlobalCount();
+        } finally {
+          btn.classList.remove('krana-toggle--saving');
+        }
+      });
+    });
+  })();
+</script>

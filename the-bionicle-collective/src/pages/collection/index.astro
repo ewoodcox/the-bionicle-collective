@@ -5,6 +5,9 @@ import { sets } from '../../data/sets';
 import { getSetDisplayLabel, getSetNumber, getSetSortKey, getMissingSetEntries } from '../../data/setNamesByYear';
 import { YEAR_GROUPS, getYearGroup, getYearsForGroup } from '../../config/constants';
 import { getMasksByYear, getKanohiYears, sortMasks } from '../../data/kanohi';
+import { getKrana, KRANA_VARIANTS, KRANA_TYPES } from '../../data/krana';
+import { getKranaOwnedIds } from '../../utils/kranaStoreR2';
+import kranaCollectionStatic from '../../data/krana-collection.json';
 import { MEDIA_CATEGORIES, mediaItems, getMediaCardName, getMediaCoverSrc, type MediaCategoryId } from '../../data/media';
 import { getMediaEraLabel, sortMediaByEra } from '../../data/mediaEras';
 import type { SetRecord } from '../../data/sets';
@@ -29,6 +32,15 @@ if (bucket) {
   } catch { /* ignore */ }
 }
 
+let kranaOwnedIdSet = new Set<string>();
+try {
+  const kranaOwnedIds = bucket ? await getKranaOwnedIds(bucket) : (kranaCollectionStatic as string[]);
+  kranaOwnedIdSet = new Set(kranaOwnedIds);
+} catch { /* ignore */ }
+const allKrana = getKrana().map(k => ({ ...k, owned: kranaOwnedIdSet.has(k.id) }));
+const kranaOwnedCount = allKrana.filter(k => k.owned).length;
+const hasKrana = allKrana.length > 0;
+
 const byGroup = new Map<string, SetRecord[]>();
 for (const g of YEAR_GROUPS) byGroup.set(g.id, []);
 for (const s of sets) {
@@ -49,7 +61,7 @@ const groupsWithData = VISIBLE_GROUPS.filter((g) => {
       sets.some((s) => {
         const theme = s.theme ?? '';
         return theme === 'Combiner Models' || theme === 'Alternate Models';
-      }) || hasKanohi || hasUniqueBuilds
+      }) || hasKanohi || hasKrana || hasUniqueBuilds
     );
   if (g.id === 'media') return mediaItems.length > 0 || hasUniqueMedia;
   return (byGroup.get(g.id) ?? []).length > 0;
@@ -133,7 +145,7 @@ const defaultGroupId =
     const showUniqueBuilds = group.id === 'other' && hasUniqueBuilds;
     const showUniqueMedia = group.id === 'media' && hasUniqueMedia;
     const firstOtherTab =
-      group.id === 'other' ? (hasCombiner ? 'combiner' : hasAlternate ? 'alternate' : hasPromotional ? 'promotional' : showUniqueBuilds ? 'unique' : 'kanohi') : '';
+      group.id === 'other' ? (hasCombiner ? 'combiner' : hasAlternate ? 'alternate' : hasPromotional ? 'promotional' : hasKanohi ? 'kanohi' : hasKrana ? 'krana' : showUniqueBuilds ? 'unique' : '') : '';
 
     return (
       <section class="collection-section" id={group.id} data-group-id={group.id} data-active={group.id === defaultGroupId}>
@@ -197,6 +209,19 @@ const defaultGroupId =
                   data-group-id={group.id}
                 >
                   Kanohi
+                </button>
+              )}
+              {hasKrana && (
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={firstOtherTab === 'krana'}
+                  aria-controls={`${group.id}-year-krana`}
+                  id={`${group.id}-tab-krana`}
+                  data-year="krana"
+                  data-group-id={group.id}
+                >
+                  Krana
                 </button>
               )}
               {showUniqueBuilds && (
@@ -391,6 +416,37 @@ const defaultGroupId =
                 })}
                 <div class="kanohi-save-row" data-edit-only>
                   <button type="button" class="kanohi-save-btn">Save Kanohi ownership</button>
+                </div>
+              </div>
+            )}
+            {hasKrana && (
+              <div
+                class="year-pane"
+                id={`${group.id}-year-krana`}
+                role="tabpanel"
+                aria-labelledby={`${group.id}-tab-krana`}
+                data-year="krana"
+                data-group-id={group.id}
+                data-active={firstOtherTab === 'krana'}
+              >
+                <div class="krana-summary-panel">
+                  {KRANA_VARIANTS.map(variant => {
+                    const variantKrana = allKrana.filter(k => k.variant === variant.id);
+                    const variantOwned = variantKrana.filter(k => k.owned).length;
+                    return (
+                      <div class="krana-summary-row">
+                        <span class="krana-summary-label">{variant.label}</span>
+                        <span class="krana-summary-tally">{variantOwned} / {variantKrana.length}</span>
+                        <div class="krana-summary-bar">
+                          <div class="krana-summary-bar__fill" style={`width: ${variantKrana.length > 0 ? Math.round((variantOwned / variantKrana.length) * 100) : 0}%`}></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div class="krana-summary-total">
+                    <span>{kranaOwnedCount} / {allKrana.length} Krana owned</span>
+                    <a href="/krana/" class="krana-summary-link">View full Krana grid &rarr;</a>
+                  </div>
                 </div>
               </div>
             )}

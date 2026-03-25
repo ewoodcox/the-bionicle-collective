@@ -5,6 +5,8 @@ import Layout from '../../layouts/Layout.astro';
 import { sets } from '../../data/sets';
 import { getSetDisplayLabel } from '../../data/setNamesByYear';
 import { getMasks } from '../../data/kanohi';
+import { getKrana } from '../../data/krana';
+import { getKranaOwnedIds } from '../../utils/kranaStoreR2';
 import { mediaItems } from '../../data/media';
 import { getAllCollectionEntries } from '../../utils/collectionStoreR2';
 import { getKanohiOwnedIds } from '../../utils/kanohiStoreR2';
@@ -21,9 +23,10 @@ if (host !== 'edit.bioniclecollective.com') {
 const bucket = (Astro.locals as any).runtime?.env?.BIONICLE_COLLECTION;
 
 // Fetch all data in parallel
-const [collectionEntries, kanohiOwnedIds, mediaOwnedIds, suggestions, unownedSetIds] = await Promise.all([
+const [collectionEntries, kanohiOwnedIds, kranaOwnedIds, mediaOwnedIds, suggestions, unownedSetIds] = await Promise.all([
   bucket ? getAllCollectionEntries(bucket).catch(() => ({})) : Promise.resolve({}),
   bucket ? getKanohiOwnedIds(bucket).catch(() => []) : Promise.resolve([]),
+  bucket ? getKranaOwnedIds(bucket).catch(() => []) : Promise.resolve([]),
   bucket ? getMediaOwnedIds(bucket).catch(() => []) : Promise.resolve([]),
   bucket ? getSuggestions(bucket, true).catch(() => []) : Promise.resolve([]),
   bucket ? getUnownedSetIds(bucket).catch(() => []) : Promise.resolve([]),
@@ -61,6 +64,11 @@ const allMasks = getMasks();
 const kanohiOwnedSet = new Set(kanohiOwnedIds);
 const kanohiOwned = allMasks.filter((m) => kanohiOwnedSet.has(m.id)).length;
 
+// --- Krana stats ---
+const allKrana = getKrana();
+const kranaOwnedSet = new Set(kranaOwnedIds);
+const kranaOwned = allKrana.filter((k) => kranaOwnedSet.has(k.id)).length;
+
 // --- Media stats ---
 const mediaOwnedSet = new Set(mediaOwnedIds);
 const mediaOwned = mediaItems.filter((m) => mediaOwnedSet.has(m.id)).length;
@@ -89,6 +97,12 @@ const unansweredSuggestions = suggestions.filter((s) => !s.hidden && (!s.replies
         <div class="stat-card__label">Kanohi masks</div>
         <div class="stat-card__value">{kanohiOwned} <span class="stat-card__total">/ {allMasks.length}</span></div>
       </div>
+      {allKrana.length > 0 && (
+        <div class="stat-card">
+          <div class="stat-card__label">Krana</div>
+          <div class="stat-card__value">{kranaOwned} <span class="stat-card__total">/ {allKrana.length}</span></div>
+        </div>
+      )}
       <div class="stat-card">
         <div class="stat-card__label">Media items</div>
         <div class="stat-card__value">{mediaOwned} <span class="stat-card__total">/ {mediaItems.length}</span></div>
@@ -111,6 +125,10 @@ const unansweredSuggestions = suggestions.filter((s) => !s.hidden && (!s.replies
         <a href="/kanohi/" class="admin-link-card">
           <span class="admin-link-card__icon">🎭</span>
           <span class="admin-link-card__label">Manage Kanohi</span>
+        </a>
+        <a href="/krana/" class="admin-link-card">
+          <span class="admin-link-card__icon">🦀</span>
+          <span class="admin-link-card__label">Manage Krana</span>
         </a>
         <a href="/collection/?gen=media" class="admin-link-card">
           <span class="admin-link-card__icon">📚</span>

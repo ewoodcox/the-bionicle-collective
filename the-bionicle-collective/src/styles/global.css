@@ -1313,6 +1313,68 @@ body {
   font-size: 0.9rem;
 }
 
+/* Krana summary panel (Other tab) */
+.krana-summary-panel {
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.25rem 0;
+}
+
+.krana-summary-row {
+  display: grid;
+  grid-template-columns: 140px 60px 1fr;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.krana-summary-label {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
+.krana-summary-tally {
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.krana-summary-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.krana-summary-bar__fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--color-accent);
+  transition: width 0.3s;
+}
+
+.krana-summary-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.krana-summary-link {
+  color: var(--color-accent);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.82rem;
+  transition: opacity 0.15s;
+}
+.krana-summary-link:hover { opacity: 0.8; }
+
 /* Bulk edit mode */
 .bulk-edit-toggle-row {
   display: none;
