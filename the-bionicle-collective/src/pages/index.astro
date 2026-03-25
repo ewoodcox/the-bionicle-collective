@@ -5,11 +5,18 @@ import { site } from '../config/site';
 import { sets } from '../data/sets';
 import { getKanohiOwnedIds } from '../utils/kanohiStoreR2';
 import kanohiCollectionStatic from '../data/kanohi-collection.json';
+import { isAuthenticated } from '../utils/adminAuth';
 
+const EDIT_HOST = 'edit.bioniclecollective.com';
+const isEditHost = (Astro.request.headers.get('Host') ?? '') === EDIT_HOST;
+const env = (Astro.locals as any).runtime?.env;
+const isAuthed = isEditHost ? await isAuthenticated(Astro.request, env) : true;
+
+// Only load home page data when we're going to show it
 const years = [...new Set(sets.map(s => s.year))].sort((a, b) => a - b);
 const yearRange = `${years[0]}–${years[years.length - 1]}`;
 
-const bucket = (Astro.locals as any).runtime?.env?.BIONICLE_COLLECTION;
+const bucket = env?.BIONICLE_COLLECTION;
 let ownedKanohiCount: number;
 try {
   const ids = bucket ? await getKanohiOwnedIds(bucket) : (kanohiCollectionStatic as string[]);
@@ -17,85 +24,67 @@ try {
 } catch {
   ownedKanohiCount = (kanohiCollectionStatic as string[]).length;
 }
+
+// Preserve ?next= so login can redirect back to the intended page
+const nextParam = Astro.url.searchParams.get('next') ?? '/collection/';
+const next = nextParam.startsWith('/') ? nextParam : '/collection/';
 ---
 <Layout title={site.name} description={site.description}>
-  <div class="home-page" id="home-main">
-    <div class="home-hero">
-      <h1 class="site-title">{site.name}</h1>
-      <SocialMediaIcons variant="home" />
-      <hr class="home-about-divider" />
-      <p class="home-description">{site.description}</p>
-      <p class="home-cta">
-        <a href="/collection/" class="button-primary">View the collection</a>
-      </p>
-      <div class="hero-stats">
-        <a href="/stats/sets/" class="hero-stat hero-stat--link">
-          <span class="hero-stat__value">{sets.length}</span>
-          <span class="hero-stat__label">Sets</span>
-        </a>
-        <div class="hero-stat__sep"></div>
-        <div class="hero-stat">
-          <span class="hero-stat__value">{yearRange}</span>
-          <span class="hero-stat__label">Years</span>
-        </div>
-        <div class="hero-stat__sep"></div>
-        <a href="/kanohi/" class="hero-stat hero-stat--link">
-          <span class="hero-stat__value">{ownedKanohiCount}</span>
-          <span class="hero-stat__label">Kanohi</span>
-        </a>
+  {isEditHost && !isAuthed ? (
+    <!-- Login gate: server-rendered, no JS flash -->
+    <div class="edit-gate">
+      <div class="edit-gate-inner">
+        <h1 class="site-title">{site.name}</h1>
+        <p class="edit-gate-subtitle">Enter your key to unlock editing</p>
+        <p class="edit-gate-status" id="edit-gate-status" aria-live="polite"></p>
+        <form id="edit-gate-form" class="edit-gate-form">
+          <input type="password" id="edit-gate-key" class="edit-gate-input" name="key" placeholder="Edit key" autocomplete="off" required />
+          <button type="submit" class="button-primary">Unlock editing</button>
+        </form>
       </div>
     </div>
-  </div>
-
-  <!-- Edit subdomain: show login form until session is confirmed (filled by JS) -->
-  <div class="edit-gate" id="edit-gate" hidden>
-    <div class="edit-gate-inner">
-      <h1 class="site-title">{site.name}</h1>
-      <p class="edit-gate-subtitle">Enter your key to unlock editing</p>
-      <div id="edit-gate-status" class="edit-gate-status">Checking…</div>
-      <form id="edit-gate-form" class="edit-gate-form" hidden>
-        <input type="password" id="edit-gate-key" class="edit-gate-input" name="key" placeholder="Edit key" autocomplete="off" required />
-        <button type="submit" class="button-primary">Unlock editing</button>
-      </form>
+  ) : (
+    <div class="home-page">
+      <div class="home-hero">
+        <h1 class="site-title">{site.name}</h1>
+        <SocialMediaIcons variant="home" />
+        <hr class="home-about-divider" />
+        <p class="home-description">{site.description}</p>
+        <p class="home-cta">
+          <a href="/collection/" class="button-primary">View the collection</a>
+        </p>
+        <div class="hero-stats">
+          <a href="/stats/sets/" class="hero-stat hero-stat--link">
+            <span class="hero-stat__value">{sets.length}</span>
+            <span class="hero-stat__label">Sets</span>
+          </a>
+          <div class="hero-stat__sep"></div>
+          <div class="hero-stat">
+            <span class="hero-stat__value">{yearRange}</span>
+            <span class="hero-stat__label">Years</span>
+          </div>
+          <div class="hero-stat__sep"></div>
+          <a href="/kanohi/" class="hero-stat hero-stat--link">
+            <span class="hero-stat__value">{ownedKanohiCount}</span>
+            <span class="hero-stat__label">Kanohi</span>
+          </a>
+        </div>
+      </div>
     </div>
-  </div>
+  )}
 </Layout>
 
-<script>
-  (function () {
-    if (typeof window === 'undefined' || window.location.hostname !== 'edit.bioniclecollective.com') return;
-    const homeMain = document.getElementById('home-main');
-    const editGate = document.getElementById('edit-gate');
+{isEditHost && !isAuthed && (
+  <script define:vars={{ next }}>
     const statusEl = document.getElementById('edit-gate-status');
     const formEl = document.getElementById('edit-gate-form');
-    if (!homeMain || !editGate || !statusEl || !formEl) return;
-
-    homeMain.hidden = true;
-    editGate.hidden = false;
-
-    fetch('/api/admin/check', { credentials: 'include' })
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.ok) {
-          editGate.hidden = true;
-          homeMain.hidden = false;
-        } else {
-          statusEl.hidden = true;
-          formEl.hidden = false;
-        }
-      })
-      .catch(() => {
-        statusEl.textContent = 'Could not check session.';
-        formEl.hidden = false;
-      });
 
     formEl.addEventListener('submit', (e) => {
       e.preventDefault();
-      const input = document.getElementById('edit-gate-key');
-      const key = input && (input as HTMLInputElement).value ? (input as HTMLInputElement).value.trim() : '';
+      const key = document.getElementById('edit-gate-key').value.trim();
       if (!key) return;
-      const nextParam = new URLSearchParams(window.location.search).get('next');
-      const next = (nextParam && nextParam.startsWith('/')) ? nextParam : '/collection/';
+      statusEl.textContent = '';
+
       fetch(`/api/admin/login?next=${encodeURIComponent(next)}`, {
         method: 'POST',
         body: JSON.stringify({ key }),
@@ -109,17 +98,15 @@ try {
         res.json()
           .then((data) => {
             statusEl.textContent = data.error || 'Invalid key';
-            statusEl.hidden = false;
           })
           .catch(async () => {
-            const text = await res.text();
-            const statusMsg = res.status === 503
-              ? 'Admin login not configured. Check https://edit.bioniclecollective.com/api/admin/status and set ADMIN_SECRET in Cloudflare Pages env.'
-              : `Login failed (${res.status}). See Cloudflare: Workers & Pages → your project → Logs.`;
-            statusEl.textContent = text ? `Login failed (${res.status}).` : statusMsg;
-            statusEl.hidden = false;
+            statusEl.textContent = res.status === 503
+              ? 'Admin login not configured. Set ADMIN_SECRET in Cloudflare Pages env.'
+              : `Login failed (${res.status}).`;
           });
+      }).catch(() => {
+        statusEl.textContent = 'Network error. Please try again.';
       });
     });
-  })();
-</script>
+  </script>
+)}
