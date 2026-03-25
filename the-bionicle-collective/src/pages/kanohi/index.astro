@@ -1,6 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { getMasks, getKanohiYears, type KanohiMask } from '../../data/kanohi';
+import { getMasks, getKanohiYears, sortMasks, type KanohiMask } from '../../data/kanohi';
 import { getKanohiOwnedIds } from '../../utils/kanohiStoreR2';
 import kanohiCollectionStatic from '../../data/kanohi-collection.json';
 
@@ -31,9 +31,9 @@ for (const type of TYPE_ORDER) byType.set(type, []);
 for (const mask of allMasks) {
   byType.get(mask.type)?.push(mask);
 }
-// Within each type, sort by name then color
-for (const [, group] of byType) {
-  group.sort((a, b) => a.name.localeCompare(b.name) || a.colorLabel.localeCompare(b.colorLabel));
+// Sort each type group using its appropriate order
+for (const [type, group] of byType) {
+  byType.set(type, sortMasks(group));
 }
 ---
 <Layout title="Kanohi Collection | The Bionicle Collective" description="Every Kanohi mask in The Bionicle Collective.">

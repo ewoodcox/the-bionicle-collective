@@ -4,7 +4,7 @@ import SetCarouselStrip from '../../components/SetCarouselStrip.astro';
 import { sets } from '../../data/sets';
 import { getSetDisplayLabel, getSetNumber, getSetSortKey, getMissingSetEntries } from '../../data/setNamesByYear';
 import { YEAR_GROUPS, getYearGroup, getYearsForGroup } from '../../config/constants';
-import { getMasksByYear, getKanohiYears } from '../../data/kanohi';
+import { getMasksByYear, getKanohiYears, sortMasks } from '../../data/kanohi';
 import { MEDIA_CATEGORIES, mediaItems, getMediaCardName, getMediaCoverSrc, type MediaCategoryId } from '../../data/media';
 import { getMediaEraLabel, sortMediaByEra } from '../../data/mediaEras';
 import type { SetRecord } from '../../data/sets';
@@ -334,7 +334,7 @@ const defaultGroupId =
                   ))}
                 </div>
                 {kanohiYears.map((y) => {
-                  const yearMasks = getMasksByYear(y);
+                  const yearMasks = sortMasks(getMasksByYear(y));
                   return (
                     <div
                       class="year-pane"
