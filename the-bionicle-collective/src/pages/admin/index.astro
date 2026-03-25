@@ -91,7 +91,7 @@ const unansweredSuggestions = suggestions.filter((s) => !s.hidden && (!s.replies
       <div class="stat-card">
         <div class="stat-card__label">Sets owned</div>
         <div class="stat-card__value">{ownedSetCount} <span class="stat-card__total">/ {totalSets}</span></div>
-        <div class="stat-card__sub">Bios complete: {biosFilled} / {ownedSetCount}</div>
+        <div class="stat-card__sub">Bios complete: {biosFilled} / {ownedSetCount} · {totalSets - ownedSetCount} missing</div>
       </div>
       <div class="stat-card">
         <div class="stat-card__label">Kanohi masks</div>
