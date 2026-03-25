@@ -6,6 +6,7 @@ import { sets } from '../data/sets';
 import { getKanohiOwnedIds } from '../utils/kanohiStoreR2';
 import kanohiCollectionStatic from '../data/kanohi-collection.json';
 import { isAuthenticated } from '../utils/adminAuth';
+import { getUniqueItems } from '../utils/uniqueStoreR2';
 
 const EDIT_HOST = 'edit.bioniclecollective.com';
 const isEditHost = (Astro.request.headers.get('Host') ?? '') === EDIT_HOST;
@@ -24,6 +25,18 @@ try {
 } catch {
   ownedKanohiCount = (kanohiCollectionStatic as string[]).length;
 }
+
+let uniqueItemCount = 0;
+try {
+  if (bucket) {
+    const items = await getUniqueItems(bucket);
+    uniqueItemCount = items.length;
+  }
+} catch {
+  uniqueItemCount = 0;
+}
+
+const totalSetCount = sets.length + uniqueItemCount;
 
 // Preserve ?next= so login can redirect back to the intended page
 const nextParam = Astro.url.searchParams.get('next') ?? '/collection/';
@@ -55,7 +68,7 @@ const next = nextParam.startsWith('/') ? nextParam : '/collection/';
         </p>
         <div class="hero-stats">
           <a href="/stats/sets/" class="hero-stat hero-stat--link">
-            <span class="hero-stat__value">{sets.length}</span>
+            <span class="hero-stat__value">{totalSetCount}</span>
             <span class="hero-stat__label">Sets</span>
           </a>
           <div class="hero-stat__sep"></div>
