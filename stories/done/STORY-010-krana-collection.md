@@ -1,8 +1,9 @@
 # STORY-010 Krana collection
 
-**Status:** Todo
+**Status:** Done
 **Sprint:** Sprint 3
 **Created:** 2026-03-25
+**Completed:** 2026-03-25
 
 ---
 
