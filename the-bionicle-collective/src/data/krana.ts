@@ -10,7 +10,7 @@ import kranaCollection from './krana-collection.json';
 export interface Krana {
   id: string;
   type: string;
-  variant: 'active' | 'dormant' | 'kal';
+  variant: 'active' | 'dormant' | 'krana-kal';
   color: string;
   colorLabel: string;
   partId: string;
@@ -33,7 +33,7 @@ export const KRANA_TYPES: readonly { id: string; label: string }[] = [
 
 /** Krana variants, each with their color rows in display order. */
 export const KRANA_VARIANTS: readonly {
-  id: 'active' | 'dormant' | 'kal';
+  id: 'active' | 'dormant' | 'krana-kal';
   label: string;
   colors: readonly { id: string; label: string }[];
 }[] = [
@@ -62,7 +62,7 @@ export const KRANA_VARIANTS: readonly {
     ],
   },
   {
-    id: 'kal',
+    id: 'krana-kal',
     label: 'Krana-Kal',
     colors: [
       { id: 'metallic-green', label: 'Metallic Green' },
@@ -80,7 +80,7 @@ const OWNED_IDS = new Set(kranaCollection as string[]);
 function toKrana(raw: {
   id: string;
   type: string;
-  variant: 'active' | 'dormant' | 'kal';
+  variant: 'active' | 'dormant' | 'krana-kal';
   color: string;
   colorLabel: string;
   partId: string;
@@ -96,7 +96,7 @@ const krana: Krana[] = (kranaData.krana as unknown[]).map((raw) =>
   toKrana(raw as {
     id: string;
     type: string;
-    variant: 'active' | 'dormant' | 'kal';
+    variant: 'active' | 'dormant' | 'krana-kal';
     color: string;
     colorLabel: string;
     partId: string;
