@@ -9,6 +9,7 @@ import { MEDIA_CATEGORIES, mediaItems, getMediaCardName, getMediaCoverSrc, type 
 import { getMediaEraLabel, sortMediaByEra } from '../../data/mediaEras';
 import type { SetRecord } from '../../data/sets';
 import { getUniqueItems, type UniqueItem } from '../../utils/uniqueStoreR2';
+import { getUnownedSetIds } from '../../utils/setOwnershipR2';
 
 const bucket = (Astro.locals as any).runtime?.env?.BIONICLE_COLLECTION;
 let uniqueItems: UniqueItem[] = [];
@@ -19,6 +20,14 @@ const uniqueBuilds = uniqueItems.filter((u) => u.kind === 'build');
 const uniqueMedia = uniqueItems.filter((u) => u.kind === 'media');
 const hasUniqueBuilds = uniqueBuilds.length > 0;
 const hasUniqueMedia = uniqueMedia.length > 0;
+
+let unownedIdSet = new Set<string>();
+if (bucket) {
+  try {
+    const unownedIds = await getUnownedSetIds(bucket);
+    unownedIdSet = new Set(unownedIds);
+  } catch { /* ignore */ }
+}
 
 const byGroup = new Map<string, SetRecord[]>();
 for (const g of YEAR_GROUPS) byGroup.set(g.id, []);
@@ -776,7 +785,8 @@ const defaultGroupId =
                 )}
               </>
             ) : (
-              yearsWithData.map((y) => {
+              <>
+              {yearsWithData.map((y) => {
                 const yearKey = String(y);
                 const yearItems = items.filter((s) => Number(s.year) === y);
                 const ownedSetNumbers = new Set(yearItems.map((s) => getSetNumber(s)));
@@ -798,13 +808,17 @@ const defaultGroupId =
                       nextLabel={`Scroll ${y} sets right`}
                     >
                       {yearItems.map((set) => (
-                        <a href={`/collection/${set.id}/?gen=${group.id}&year=${y}`} class="set-card media-era-card" data-set-id={set.id}>
+                        <a href={`/collection/${set.id}/?gen=${group.id}&year=${y}`} class={`set-card media-era-card${unownedIdSet.has(set.id) ? ' set-card--missing' : ''}`} data-set-id={set.id}>
                           <img src={`/api/sets/photo/${set.id}`} alt={getSetDisplayLabel(set)} width="160" height="160" loading="lazy" />
                           <div class="info">
                             <div class="name">{getSetDisplayLabel(set)}</div>
                             <div class="meta">{set.year}</div>
                           </div>
                           <span class="bulk-select-box" aria-hidden="true"></span>
+                          <label class="set-ownership-checkbox-wrap" aria-label={`${getSetDisplayLabel(set)} - mark as owned`} data-edit-only onclick="event.stopPropagation();">
+                            <input type="checkbox" class="set-ownership-checkbox" data-set-id={set.id} checked={!unownedIdSet.has(set.id)} onclick="event.stopPropagation();" />
+                            <span class="set-ownership-checkbox-box" aria-hidden="true"></span>
+                          </label>
                         </a>
                       ))}
                     </SetCarouselStrip>
@@ -837,7 +851,11 @@ const defaultGroupId =
                     )}
                   </div>
                 );
-              })
+              })}
+              <div class="set-ownership-save-row" data-edit-only>
+                <button type="button" class="set-ownership-save-btn" data-group-id={group.id}>Save set ownership</button>
+              </div>
+              </>
             )}
           </>
         ) : (
@@ -1298,6 +1316,85 @@ const defaultGroupId =
             }
           });
         }
+      }
+    })();
+
+    (function () {
+      const setCards = document.querySelectorAll('a[data-set-id]');
+      if (setCards.length === 0) return;
+
+      const isEditHost = window.location.hostname === 'edit.bioniclecollective.com';
+
+      function applyUnownedState(unownedIds) {
+        const unowned = new Set(unownedIds || []);
+        setCards.forEach((card) => {
+          const id = card.getAttribute('data-set-id');
+          if (unowned.has(id)) {
+            card.classList.add('set-card--missing');
+          } else {
+            card.classList.remove('set-card--missing');
+          }
+          const cb = card.querySelector('.set-ownership-checkbox');
+          if (cb instanceof HTMLInputElement) cb.checked = !unowned.has(id);
+        });
+      }
+
+      fetch('/api/sets/ownership')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (data && Array.isArray(data.unownedIds)) applyUnownedState(data.unownedIds);
+        })
+        .catch(() => {});
+
+      if (isEditHost) {
+        setCards.forEach((card) => {
+          const cb = card.querySelector('.set-ownership-checkbox');
+          if (!(cb instanceof HTMLInputElement)) return;
+          cb.addEventListener('change', () => {
+            if (cb.checked) {
+              card.classList.remove('set-card--missing');
+            } else {
+              card.classList.add('set-card--missing');
+            }
+          });
+        });
+
+        document.querySelectorAll('.set-ownership-save-btn').forEach((btn) => {
+          if (!(btn instanceof HTMLButtonElement)) return;
+          btn.addEventListener('click', async () => {
+            if (btn.disabled) return;
+            btn.disabled = true;
+            try {
+              const checkboxes = document.querySelectorAll('.set-ownership-checkbox');
+              const unownedIds = Array.from(checkboxes)
+                .filter((cb) => cb instanceof HTMLInputElement && !cb.checked)
+                .map((cb) => cb.getAttribute('data-set-id'))
+                .filter((id) => typeof id === 'string');
+              const res = await fetch('/api/sets/ownership', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ unownedIds }),
+                credentials: 'include',
+              });
+              if (!res.ok) {
+                if (res.status === 401) {
+                  alert('Session expired. Please log in again.');
+                } else {
+                  const err = await res.text();
+                  alert('Save failed (' + res.status + '). Check the console.');
+                  console.error('Set ownership save failed:', res.status, err);
+                }
+                return;
+              }
+              const data = await res.json().catch(() => null);
+              if (data && Array.isArray(data.unownedIds)) {
+                applyUnownedState(data.unownedIds);
+              }
+            } finally {
+              btn.disabled = false;
+            }
+          });
+        });
       }
     })();
 

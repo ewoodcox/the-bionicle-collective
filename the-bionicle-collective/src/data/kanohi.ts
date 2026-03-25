@@ -73,13 +73,31 @@ function greatNuvaSort(a: KanohiMask, b: KanohiMask): number {
   return GREAT_NUVA_MASK_ORDER.indexOf(baseName(a)) - GREAT_NUVA_MASK_ORDER.indexOf(baseName(b));
 }
 
+/** Color order for Noble Kanohi. */
+const NOBLE_COLOR_ORDER: string[] = [
+  'lime', 'light-gray', 'medium-blue', 'orange', 'tan', 'dark-gray',
+];
+
+/** Mask name order for Noble Kanohi. */
+const NOBLE_MASK_ORDER: string[] = [
+  'Mahiki', 'Matatu', 'Rau', 'Huna', 'Komau', 'Ruru',
+];
+
+function nobleSort(a: KanohiMask, b: KanohiMask): number {
+  const ci = NOBLE_COLOR_ORDER.indexOf(a.color) - NOBLE_COLOR_ORDER.indexOf(b.color);
+  if (ci !== 0) return ci;
+  return NOBLE_MASK_ORDER.indexOf(a.name) - NOBLE_MASK_ORDER.indexOf(b.name);
+}
+
 /** Sort a group of masks using the appropriate order for their type. */
 export function sortMasks(group: KanohiMask[]): KanohiMask[] {
   const type = group[0]?.type;
   if (type === 'great' || type === 'nuva') {
     return [...group].sort(greatNuvaSort);
   }
-  // Noble/special: alphabetical by name then colorLabel (noble order TBD)
+  if (type === 'noble') {
+    return [...group].sort(nobleSort);
+  }
   return [...group].sort((a, b) => a.name.localeCompare(b.name) || a.colorLabel.localeCompare(b.colorLabel));
 }
 

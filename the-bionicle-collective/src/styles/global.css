@@ -1061,6 +1061,81 @@ body {
   content: '✓';
 }
 
+/* Set card ownership checkbox */
+.set-ownership-checkbox-wrap {
+  display: none;
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  cursor: pointer;
+  z-index: 2;
+  border-radius: 4px;
+  padding: 0.15rem;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+[data-host="edit"] .set-ownership-checkbox-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.set-ownership-checkbox {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.set-ownership-checkbox-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid #fff;
+  border-radius: 3px;
+  background: transparent;
+  transition: background 0.15s, border-color 0.15s;
+  font-size: 0.75rem;
+  color: #000;
+}
+
+.set-ownership-checkbox:checked + .set-ownership-checkbox-box {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.set-ownership-checkbox:checked + .set-ownership-checkbox-box::before {
+  content: '✓';
+}
+
+/* Set ownership save row */
+.set-ownership-save-row {
+  display: none;
+  justify-content: flex-end;
+  padding: 0.5rem 0;
+}
+
+[data-host="edit"] .set-ownership-save-row {
+  display: flex;
+}
+
+.set-ownership-save-btn {
+  padding: 0.4rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: var(--color-accent);
+  color: #000;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.set-ownership-save-btn:hover { opacity: 0.85; }
+.set-ownership-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
 /* Media card edit mode: ownership checkbox + view button */
 .media-card {
   position: relative;
