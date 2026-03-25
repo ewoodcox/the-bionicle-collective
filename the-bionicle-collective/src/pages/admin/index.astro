@@ -1,0 +1,366 @@
+---
+export const prerender = false;
+
+import Layout from '../../layouts/Layout.astro';
+import { sets } from '../../data/sets';
+import { getSetDisplayLabel } from '../../data/setNamesByYear';
+import { getMasks } from '../../data/kanohi';
+import { mediaItems } from '../../data/media';
+import { getAllCollectionEntries } from '../../utils/collectionStoreR2';
+import { getKanohiOwnedIds } from '../../utils/kanohiStoreR2';
+import { getMediaOwnedIds } from '../../utils/mediaStoreR2';
+import { getSuggestions } from '../../utils/suggestionsStoreR2';
+import { getUnownedSetIds } from '../../utils/setOwnershipR2';
+
+// Redirect to login if not on edit subdomain (belt-and-suspenders; middleware handles auth)
+const host = Astro.request.headers.get('Host') ?? '';
+if (host !== 'edit.bioniclecollective.com') {
+  return Astro.redirect('/');
+}
+
+const bucket = (Astro.locals as any).runtime?.env?.BIONICLE_COLLECTION;
+
+// Fetch all data in parallel
+const [collectionEntries, kanohiOwnedIds, mediaOwnedIds, suggestions, unownedSetIds] = await Promise.all([
+  bucket ? getAllCollectionEntries(bucket).catch(() => ({})) : Promise.resolve({}),
+  bucket ? getKanohiOwnedIds(bucket).catch(() => []) : Promise.resolve([]),
+  bucket ? getMediaOwnedIds(bucket).catch(() => []) : Promise.resolve([]),
+  bucket ? getSuggestions(bucket, true).catch(() => []) : Promise.resolve([]),
+  bucket ? getUnownedSetIds(bucket).catch(() => []) : Promise.resolve([]),
+]);
+
+// --- Sets stats ---
+const totalSets = sets.length;
+const unownedSetIdSet = new Set(unownedSetIds);
+const ownedSets = sets.filter((s) => !unownedSetIdSet.has(s.id));
+const ownedSetCount = ownedSets.length;
+
+// Needs attention: owned sets missing acquiredDate OR status (computed after entries is defined below)
+
+// Bios filled: owned sets with both acquiredDate and status set
+const entries = collectionEntries as Record<string, any>;
+const biosFilled = ownedSets.filter((s) => {
+  const entry = entries[s.id];
+  return entry?.acquiredDate?.trim() && entry?.status?.trim();
+}).length;
+
+const totalNeedsAttention = ownedSets.filter((s) => {
+  const entry = entries[s.id];
+  return !entry?.acquiredDate?.trim() || !entry?.status?.trim();
+}).length;
+
+const needsAttention = ownedSets
+  .filter((s) => {
+    const entry = entries[s.id];
+    return !entry?.acquiredDate?.trim() || !entry?.status?.trim();
+  })
+  .slice(0, 10);
+
+// --- Kanohi stats ---
+const allMasks = getMasks();
+const kanohiOwnedSet = new Set(kanohiOwnedIds);
+const kanohiOwned = allMasks.filter((m) => kanohiOwnedSet.has(m.id)).length;
+
+// --- Media stats ---
+const mediaOwnedSet = new Set(mediaOwnedIds);
+const mediaOwned = mediaItems.filter((m) => mediaOwnedSet.has(m.id)).length;
+
+// --- Suggestions stats ---
+const totalSuggestions = suggestions.length;
+const hiddenSuggestions = suggestions.filter((s) => s.hidden).length;
+const unansweredSuggestions = suggestions.filter((s) => !s.hidden && (!s.replies || s.replies.length === 0)).length;
+---
+
+<Layout title="Admin Dashboard | The Bionicle Collective" description="Admin dashboard for The Bionicle Collective.">
+  <div class="admin-page">
+    <div class="admin-header">
+      <h1>Admin Dashboard</h1>
+      <a href="/api/admin/logout" class="button-secondary admin-logout">Log out</a>
+    </div>
+
+    <!-- Stats grid -->
+    <div class="admin-stats-grid">
+      <div class="stat-card">
+        <div class="stat-card__label">Sets owned</div>
+        <div class="stat-card__value">{ownedSetCount} <span class="stat-card__total">/ {totalSets}</span></div>
+        <div class="stat-card__sub">Bios complete: {biosFilled} / {ownedSetCount}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card__label">Kanohi masks</div>
+        <div class="stat-card__value">{kanohiOwned} <span class="stat-card__total">/ {allMasks.length}</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card__label">Media items</div>
+        <div class="stat-card__value">{mediaOwned} <span class="stat-card__total">/ {mediaItems.length}</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card__label">Suggestions</div>
+        <div class="stat-card__value">{totalSuggestions}</div>
+        <div class="stat-card__sub">{unansweredSuggestions} unanswered · {hiddenSuggestions} hidden</div>
+      </div>
+    </div>
+
+    <!-- Quick actions -->
+    <section class="admin-section">
+      <h2>Quick actions</h2>
+      <div class="admin-links">
+        <a href="/collection/" class="admin-link-card">
+          <span class="admin-link-card__icon">🗂️</span>
+          <span class="admin-link-card__label">Edit Collection</span>
+        </a>
+        <a href="/kanohi/" class="admin-link-card">
+          <span class="admin-link-card__icon">🎭</span>
+          <span class="admin-link-card__label">Manage Kanohi</span>
+        </a>
+        <a href="/collection/?gen=media" class="admin-link-card">
+          <span class="admin-link-card__icon">📚</span>
+          <span class="admin-link-card__label">Manage Media</span>
+        </a>
+        <a href="/community/" class="admin-link-card">
+          <span class="admin-link-card__icon">💬</span>
+          <span class="admin-link-card__label">Suggestions</span>
+        </a>
+        <a href="/collection/?gen=other" class="admin-link-card">
+          <span class="admin-link-card__icon">⭐</span>
+          <span class="admin-link-card__label">Unique Items</span>
+        </a>
+        <a href="/unique/new" class="admin-link-card">
+          <span class="admin-link-card__icon">➕</span>
+          <span class="admin-link-card__label">Add Unique Item</span>
+        </a>
+        <a href="/admin/log" class="admin-link-card">
+          <span class="admin-link-card__icon">📋</span>
+          <span class="admin-link-card__label">Change Log</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Needs attention -->
+    {needsAttention.length > 0 && (
+      <section class="admin-section">
+        <h2>Needs attention <span class="attention-count">({totalNeedsAttention}{totalNeedsAttention > 10 ? ', showing 10' : ''})</span></h2>
+        <p class="admin-section__desc">Owned sets missing acquired date or status.</p>
+        <ul class="attention-list">
+          {needsAttention.map((s) => {
+            const entry = entries[s.id];
+            const hasDate = entry?.acquiredDate?.trim();
+            const hasStatus = entry?.status?.trim();
+            const missing = [!hasDate && 'date', !hasStatus && 'status'].filter(Boolean).join(', ');
+            return (
+              <li class="attention-item">
+                <a href={`/collection/${s.id}/`} class="attention-item__link">
+                  {getSetDisplayLabel(s)}
+                  <span class="attention-item__year">{s.year}</span>
+                </a>
+                <span class="attention-item__missing">missing {missing}</span>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    )}
+
+    {!bucket && (
+      <div class="admin-no-bucket">
+        R2 bucket not bound — stats are unavailable. Connect <code>BIONICLE_COLLECTION</code> in Cloudflare Pages settings.
+      </div>
+    )}
+  </div>
+</Layout>
+
+<style>
+.admin-page {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+}
+
+.admin-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.admin-header h1 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.admin-logout {
+  font-size: 0.8rem;
+  padding: 0.3rem 0.75rem;
+  white-space: nowrap;
+}
+
+/* Stats grid */
+.admin-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+@media (max-width: 640px) {
+  .admin-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+}
+
+.stat-card__label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  margin-bottom: 0.4rem;
+}
+
+.stat-card__value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 0.3rem;
+}
+
+.stat-card__total {
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+.stat-card__sub {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+/* Sections */
+.admin-section {
+  margin-bottom: 2.5rem;
+}
+
+.admin-section h2 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  border-bottom: 1px solid rgba(196, 137, 60, 0.25);
+  padding-bottom: 0.4rem;
+  margin: 0 0 1rem;
+}
+
+.admin-section__desc {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin: -0.5rem 0 0.75rem;
+}
+
+/* Quick links */
+.admin-links {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+@media (max-width: 500px) {
+  .admin-links {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.admin-link-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 1rem 0.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  text-decoration: none;
+  color: var(--color-text);
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.admin-link-card:hover {
+  background: rgba(196, 137, 60, 0.08);
+  border-color: rgba(196, 137, 60, 0.3);
+}
+
+.admin-link-card__icon {
+  font-size: 1.5rem;
+}
+
+/* Needs attention */
+.attention-count {
+  font-weight: 400;
+  color: var(--color-text-muted);
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 0.8rem;
+}
+
+.attention-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.attention-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.attention-item__link {
+  color: var(--color-text);
+  text-decoration: none;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.attention-item__link:hover {
+  color: var(--color-accent);
+}
+
+.attention-item__year {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+.attention-item__missing {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.admin-no-bucket {
+  padding: 0.75rem 1rem;
+  background: rgba(224, 112, 112, 0.08);
+  border: 1px solid rgba(224, 112, 112, 0.25);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #e07070;
+}
+</style>

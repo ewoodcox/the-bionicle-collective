@@ -1,0 +1,373 @@
+---
+export const prerender = false;
+
+import Layout from '../../layouts/Layout.astro';
+import { getLog } from '../../utils/changeLogR2';
+import { getSetById } from '../../data/sets';
+import { getSetDisplayLabel } from '../../data/setNamesByYear';
+
+const host = Astro.request.headers.get('Host') ?? '';
+if (host !== 'edit.bioniclecollective.com') {
+  return Astro.redirect('/');
+}
+
+const bucket = (Astro.locals as any).runtime?.env?.BIONICLE_COLLECTION;
+const entries = bucket ? await getLog(bucket) : [];
+const displayed = entries.slice(0, 50);
+
+function actionLabel(action: string): string {
+  const map: Record<string, string> = {
+    'collection.upsert': 'Set bio updated',
+    'collection.bulk': 'Bulk set bio update',
+    'kanohi.ownership': 'Kanohi ownership changed',
+    'media.ownership': 'Media ownership changed',
+    'suggestion.hide': 'Suggestion hidden',
+    'suggestion.unhide': 'Suggestion unhidden',
+    'suggestion.delete': 'Suggestion deleted',
+    'suggestion.pin_reply': 'Reply pinned',
+    'unique.create': 'Unique item created',
+    'unique.update': 'Unique item updated',
+    'unique.delete': 'Unique item deleted',
+  };
+  return map[action] ?? action;
+}
+
+function entityLabel(action: string, entityId: string): string {
+  if (action === 'collection.upsert' || action === 'collection.bulk') {
+    // For bulk, entityId is comma-separated IDs
+    const ids = entityId.split(',').slice(0, 3);
+    const labels = ids.map((id) => {
+      const s = getSetById(id.trim());
+      return s ? getSetDisplayLabel(s) : id.trim();
+    });
+    const rest = entityId.split(',').length - 3;
+    return labels.join(', ') + (rest > 0 ? ` +${rest} more` : '');
+  }
+  return entityId;
+}
+
+function formatTime(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric',
+      hour: 'numeric', minute: '2-digit', hour12: true,
+    });
+  } catch {
+    return iso;
+  }
+}
+---
+
+<Layout title="Change Log | The Bionicle Collective" description="Admin change log.">
+  <div class="log-page">
+    <div class="log-header">
+      <a href="/admin" class="button-secondary log-back">← Dashboard</a>
+      <h1>Change Log</h1>
+      <span class="log-count">{entries.length} entries</span>
+    </div>
+
+    {!bucket && (
+      <p class="log-no-bucket">R2 bucket not configured — no log available.</p>
+    )}
+
+    {bucket && entries.length === 0 && (
+      <p class="log-empty">No changes recorded yet. Changes will appear here after edits are made.</p>
+    )}
+
+    {displayed.length > 0 && (
+      <ul class="log-list">
+        {displayed.map((entry) => {
+          const isRestorable = entry.action === 'collection.upsert';
+          const before = entry.before as any;
+          const after = entry.after as any;
+          return (
+            <li class="log-entry" data-entry-id={entry.id} data-action={entry.action} data-entity-id={entry.entityId}>
+              <div class="log-entry__header">
+                <span class="log-entry__action">{actionLabel(entry.action)}</span>
+                <span class="log-entry__entity">{entityLabel(entry.action, entry.entityId)}</span>
+                <time class="log-entry__time" datetime={entry.timestamp}>{formatTime(entry.timestamp)}</time>
+              </div>
+
+              {entry.action === 'collection.upsert' && (
+                <div class="log-entry__diff">
+                  {(['acquiredDate', 'acquiredFrom', 'status', 'notes'] as const).map((field) => {
+                    const bVal = before?.[field] ?? '';
+                    const aVal = after?.[field] ?? '';
+                    if (bVal === aVal) return null;
+                    return (
+                      <div class="diff-row">
+                        <span class="diff-field">{field}</span>
+                        <span class="diff-before">{bVal || '—'}</span>
+                        <span class="diff-arrow">→</span>
+                        <span class="diff-after">{aVal || '—'}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {entry.action === 'collection.bulk' && (() => {
+                const setCount = before?.ids?.length ?? 0;
+                const fields = after?.fields ? Object.entries(after.fields).filter(([,v]) => v !== undefined) : [];
+                return (
+                  <div class="log-entry__diff">
+                    <span class="diff-field">Sets:</span>
+                    <span class="diff-after">{setCount} updated</span>
+                    {fields.map(([k, v]) => (
+                      <div class="diff-row">
+                        <span class="diff-field">{k}</span>
+                        <span class="diff-after">{String(v) || '—'}</span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+
+              {(entry.action === 'kanohi.ownership' || entry.action === 'media.ownership') && (
+                <div class="log-entry__diff" data-before={JSON.stringify(before)} data-after={JSON.stringify(after)}>
+                  <span class="diff-ownership-summary">
+                    {Array.isArray(before) && Array.isArray(after) ? (
+                      `${before.length} → ${after.length} owned`
+                    ) : ''}
+                  </span>
+                </div>
+              )}
+
+              {entry.action === 'suggestion.delete' && before?.title && (
+                <div class="log-entry__diff">
+                  <span class="diff-field">Title:</span>
+                  <span class="diff-before">{before.title}</span>
+                </div>
+              )}
+
+              {isRestorable && (
+                <div class="log-entry__actions">
+                  <button
+                    type="button"
+                    class="restore-btn"
+                    data-entity-id={entry.entityId}
+                    data-before={JSON.stringify(entry.before)}
+                  >
+                    Restore
+                  </button>
+                  <span class="restore-status" aria-live="polite"></span>
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    )}
+
+    {entries.length > 50 && (
+      <p class="log-truncated">Showing 50 of {entries.length} entries.</p>
+    )}
+  </div>
+</Layout>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('.restore-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const entityId = btn.dataset.entityId;
+      const beforeRaw = btn.dataset.before;
+      if (!entityId || !beforeRaw) return;
+
+      let before: any;
+      try { before = JSON.parse(beforeRaw); } catch { return; }
+
+      const statusEl = btn.nextElementSibling as HTMLElement | null;
+
+      if (!confirm(`Restore "${entityId}" to its previous values?`)) return;
+
+      btn.disabled = true;
+      if (statusEl) statusEl.textContent = 'Restoring…';
+
+      try {
+        const res = await fetch(`/api/collection/${encodeURIComponent(entityId)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            acquiredDate: before.acquiredDate ?? '',
+            acquiredFrom: before.acquiredFrom ?? '',
+            status: before.status ?? '',
+            notes: before.notes ?? '',
+          }),
+        });
+
+        if (res.status === 401) {
+          if (statusEl) statusEl.textContent = 'Session expired.';
+          return;
+        }
+
+        if (!res.ok) {
+          if (statusEl) statusEl.textContent = `Failed (${res.status})`;
+          return;
+        }
+
+        if (statusEl) statusEl.textContent = 'Restored!';
+        btn.remove();
+      } catch {
+        if (statusEl) statusEl.textContent = 'Network error.';
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+</script>
+
+<style>
+.log-page {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+}
+
+.log-header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.log-header h1 {
+  margin: 0;
+  font-size: 1.8rem;
+  flex: 1;
+}
+
+.log-back {
+  font-size: 0.8rem;
+  padding: 0.3rem 0.75rem;
+}
+
+.log-count {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.log-empty,
+.log-no-bucket,
+.log-truncated {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+.log-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.log-entry {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+}
+
+.log-entry__header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.35rem;
+}
+
+.log-entry__action {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--color-accent);
+  text-transform: uppercase;
+}
+
+.log-entry__entity {
+  font-size: 0.85rem;
+  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.log-entry__time {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.log-entry__diff {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.diff-row {
+  display: contents;
+}
+
+.diff-field {
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.diff-before {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.diff-arrow {
+  opacity: 0.4;
+}
+
+.diff-after {
+  color: var(--color-text);
+}
+
+.diff-ownership-summary {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.log-entry__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.restore-btn {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.6rem;
+  background: rgba(196, 137, 60, 0.12);
+  border: 1px solid rgba(196, 137, 60, 0.3);
+  border-radius: 4px;
+  color: var(--color-accent);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.restore-btn:hover {
+  background: rgba(196, 137, 60, 0.22);
+}
+
+.restore-btn:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.restore-status {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+</style>
