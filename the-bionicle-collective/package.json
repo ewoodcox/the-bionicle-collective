@@ -9,14 +9,14 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "deploy": "node scripts/sync-set-photos-to-r2.mjs && astro build && wrangler pages deploy",
+    "deploy": "node --env-file=.env scripts/sync-set-photos-to-r2.mjs && astro build && node --env-file=.env node_modules/.bin/wrangler pages deploy",
     "preview": "astro preview",
     "verify:r2": "node scripts/verify-r2-collection-format.mjs",
-    "sync:set-photos-r2": "node scripts/sync-set-photos-to-r2.mjs",
-    "sync:media-covers-r2": "node scripts/sync-public-media-covers-to-r2.mjs",
-    "fetch:kanohi": "node scripts/fetch-kanohi-bricklink.mjs",
-    "warm:kanohi-images": "node scripts/warm-kanohi-image-cache.mjs",
-    "warm:krana-images": "node scripts/warm-krana-image-cache.mjs"
+    "sync:set-photos-r2": "node --env-file=.env scripts/sync-set-photos-to-r2.mjs",
+    "sync:media-covers-r2": "node --env-file=.env scripts/sync-public-media-covers-to-r2.mjs",
+    "fetch:kanohi": "node --env-file=.env scripts/fetch-kanohi-bricklink.mjs",
+    "warm:kanohi-images": "node --env-file=.env scripts/warm-kanohi-image-cache.mjs",
+    "warm:krana-images": "node --env-file=.env scripts/warm-krana-image-cache.mjs"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^12.6.12",
