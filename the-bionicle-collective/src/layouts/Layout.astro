@@ -49,6 +49,7 @@ const webManifest = new URL('/site.webmanifest', iconOrigin).href;
         <a href="/" aria-current={isActive('/') ? 'page' : undefined}>Home</a>
         <a href="/collection/" aria-current={isActive('/collection/') ? 'page' : undefined}>Collection</a>
         <a href="/community/" aria-current={isActive('/community/') ? 'page' : undefined}>Community</a>
+        <a href="/admin" class="nav-admin" id="nav-admin" aria-current={isActive('/admin') ? 'page' : undefined} hidden>Admin</a>
         <a href="/api/admin/logout" class="nav-logout" id="nav-logout" hidden>Log out</a>
       </nav>
     </header>
@@ -66,11 +67,15 @@ const webManifest = new URL('/site.webmanifest', iconOrigin).href;
           });
         }
 
-        if (window.location.hostname === 'edit.bioniclecollective.com' && logoutLink) {
+        if (window.location.hostname === 'edit.bioniclecollective.com') {
+          const adminLink = document.getElementById('nav-admin');
           fetch('/api/admin/check', { credentials: 'include' })
             .then((r) => r.json())
             .then((data) => {
-              if (data.ok) logoutLink.hidden = false;
+              if (data.ok) {
+                if (logoutLink) logoutLink.hidden = false;
+                if (adminLink) adminLink.hidden = false;
+              }
             })
             .catch(() => {});
         }

@@ -34,6 +34,10 @@ import SocialMediaIcons from '../../components/SocialMediaIcons.astro';
         </div>
       </form>
 
+      <div id="admin-stats-bar" class="admin-stats-bar" hidden>
+        <span id="admin-stats-text"></span>
+      </div>
+
       <div id="suggestions-list" class="suggestions-list">
         <p class="loading-msg">Loading suggestions...</p>
       </div>
@@ -321,6 +325,15 @@ import SocialMediaIcons from '../../components/SocialMediaIcons.astro';
         return div.innerHTML;
       }
 
+      const isEditHost = typeof window !== 'undefined' && window.location.hostname === 'edit.bioniclecollective.com';
+      const adminStatsBar = document.getElementById('admin-stats-bar') as HTMLElement | null;
+      const adminStatsText = document.getElementById('admin-stats-text');
+
+      // Hide the submission form on the edit subdomain — admins don't need to submit public suggestions
+      if (isEditHost && suggestionForm) {
+        (suggestionForm as HTMLElement).hidden = true;
+      }
+
       async function loadSuggestions() {
         if (!suggestionsList) return;
         try {
@@ -331,6 +344,14 @@ import SocialMediaIcons from '../../components/SocialMediaIcons.astro';
           const data = await res.json();
           if (res.ok && Array.isArray(data.suggestions)) {
             suggestionsList.innerHTML = '';
+
+            if (isAdmin && adminStatsBar && adminStatsText) {
+              const total = data.suggestions.length;
+              const hidden = data.suggestions.filter((s: SuggestionItem) => s.hidden).length;
+              adminStatsText.textContent = `${total} suggestion${total !== 1 ? 's' : ''} · ${hidden} hidden`;
+              adminStatsBar.hidden = false;
+            }
+
             if (data.suggestions.length === 0) {
               const p = document.createElement('p');
               p.className = 'suggestions-empty';
@@ -402,3 +423,20 @@ import SocialMediaIcons from '../../components/SocialMediaIcons.astro';
     })();
   </script>
 </Layout>
+
+<style>
+.admin-stats-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 1rem;
+  background: rgba(196, 137, 60, 0.08);
+  border: 1px solid rgba(196, 137, 60, 0.2);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-accent);
+}
+</style>

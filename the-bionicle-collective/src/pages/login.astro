@@ -33,7 +33,7 @@ import Layout from '../layouts/Layout.astro';
         errorEl.hidden = false;
         return;
       }
-      const next = new URLSearchParams(window.location.search).get('next') || '/collection/';
+      const next = new URLSearchParams(window.location.search).get('next') || '/admin';
       window.location.href = next;
     });
   </script>

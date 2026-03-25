@@ -6,6 +6,8 @@
  * Migration: If collection-store.json is missing but collection.json (legacy) exists, we read from
  * legacy and write to the new key so future reads use the canonical location.
  */
+import { appendLog } from './changeLogR2';
+
 const R2_KEY = 'collection-store.json';
 const LEGACY_KEY = 'collection.json';
 
@@ -76,6 +78,11 @@ async function getStoreRaw(bucket: any): Promise<string | null> {
   return raw;
 }
 
+export async function getAllCollectionEntries(bucket: any): Promise<StoreShape> {
+  const raw = await getStoreRaw(bucket);
+  return parseStore(raw);
+}
+
 export async function getCollectionEntry(bucket: any, setId: string): Promise<CollectionEntry | null> {
   const raw = await getStoreRaw(bucket);
   const store = parseStore(raw);
@@ -89,13 +96,14 @@ export async function bulkPatchCollectionEntries(
 ): Promise<void> {
   const raw = await getStoreRaw(bucket);
   const store = parseStore(raw);
+  const before: Record<string, CollectionEntry> = {};
   for (const id of ids) {
-    const existing = store[id] ?? {};
+    before[id] = { ...(store[id] ?? {}) };
     store[id] = {
-      acquiredDate: 'acquiredDate' in fields ? (fields.acquiredDate ?? '') : (existing.acquiredDate ?? ''),
-      acquiredFrom: 'acquiredFrom' in fields ? (fields.acquiredFrom ?? '') : (existing.acquiredFrom ?? ''),
-      status: 'status' in fields ? (fields.status ?? '') : (existing.status ?? ''),
-      notes: 'notes' in fields ? (fields.notes ?? '') : (existing.notes ?? ''),
+      acquiredDate: 'acquiredDate' in fields ? (fields.acquiredDate ?? '') : (store[id]?.acquiredDate ?? ''),
+      acquiredFrom: 'acquiredFrom' in fields ? (fields.acquiredFrom ?? '') : (store[id]?.acquiredFrom ?? ''),
+      status: 'status' in fields ? (fields.status ?? '') : (store[id]?.status ?? ''),
+      notes: 'notes' in fields ? (fields.notes ?? '') : (store[id]?.notes ?? ''),
     };
   }
   try {
@@ -106,6 +114,7 @@ export async function bulkPatchCollectionEntries(
     const message = err instanceof Error ? err.message : String(err);
     throw new Error(`R2 put failed for key "${R2_KEY}": ${message}`);
   }
+  await appendLog(bucket, { action: 'collection.bulk', entityId: ids.join(','), before: { ids, before }, after: { ids, fields } });
 }
 
 export async function upsertCollectionEntry(
@@ -131,5 +140,6 @@ export async function upsertCollectionEntry(
     const message = err instanceof Error ? err.message : String(err);
     throw new Error(`R2 put failed for key "${R2_KEY}": ${message}`);
   }
+  await appendLog(bucket, { action: 'collection.upsert', entityId: setId, before: existing, after: merged });
   return merged;
 }

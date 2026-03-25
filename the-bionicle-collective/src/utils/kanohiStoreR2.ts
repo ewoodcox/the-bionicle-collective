@@ -3,6 +3,8 @@
  * Reads/writes kanohi-collection.json in the bound R2 bucket.
  */
 
+import { appendLog } from './changeLogR2';
+
 const R2_KEY = 'kanohi-collection.json';
 
 /** Minimal R2 bucket interface (matches Cloudflare Workers R2Bucket binding) */
@@ -29,9 +31,11 @@ export async function getKanohiOwnedIds(bucket: R2BucketLike): Promise<string[]>
 }
 
 export async function setKanohiOwnedIds(bucket: R2BucketLike, ids: string[]): Promise<string[]> {
+  const before = await getKanohiOwnedIds(bucket);
   const deduped = [...new Set(ids)].filter(Boolean);
   await bucket.put(R2_KEY, JSON.stringify(deduped), {
     httpMetadata: { contentType: 'application/json' },
   });
+  await appendLog(bucket, { action: 'kanohi.ownership', entityId: 'kanohi-collection', before, after: deduped });
   return deduped;
 }

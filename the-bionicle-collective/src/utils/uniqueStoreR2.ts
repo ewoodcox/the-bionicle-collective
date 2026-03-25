@@ -4,6 +4,8 @@
  * Saved under `unique-store.json` in the bound R2 bucket.
  */
 
+import { appendLog } from './changeLogR2';
+
 const R2_KEY = 'unique-store.json';
 
 export interface UniqueItem {
@@ -69,6 +71,7 @@ export async function createUniqueItem(bucket: R2BucketLike, item: UniqueItem): 
   await bucket.put(R2_KEY, JSON.stringify(items), {
     httpMetadata: { contentType: 'application/json' },
   });
+  await appendLog(bucket, { action: 'unique.create', entityId: item.id, before: null, after: item });
   return item;
 }
 
@@ -80,18 +83,23 @@ export async function updateUniqueItem(
   const items = await getUniqueItems(bucket);
   const idx = items.findIndex((i) => i.id === id);
   if (idx === -1) throw new Error(`Unique item "${id}" not found`);
+  const before = { ...items[idx] };
   items[idx] = { ...items[idx], ...patch };
   await bucket.put(R2_KEY, JSON.stringify(items), {
     httpMetadata: { contentType: 'application/json' },
   });
+  await appendLog(bucket, { action: 'unique.update', entityId: id, before, after: items[idx] });
   return items[idx];
 }
 
 export async function deleteUniqueItem(bucket: R2BucketLike, id: string): Promise<void> {
   const items = await getUniqueItems(bucket);
+  const idx = items.findIndex((i) => i.id === id);
+  if (idx === -1) throw new Error(`Unique item "${id}" not found`);
+  const deleted = items[idx];
   const filtered = items.filter((i) => i.id !== id);
-  if (filtered.length === items.length) throw new Error(`Unique item "${id}" not found`);
   await bucket.put(R2_KEY, JSON.stringify(filtered), {
     httpMetadata: { contentType: 'application/json' },
   });
+  await appendLog(bucket, { action: 'unique.delete', entityId: id, before: deleted, after: null });
 }

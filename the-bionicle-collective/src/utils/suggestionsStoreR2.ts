@@ -3,6 +3,8 @@
  * Reads/writes suggestions.json in the bound R2 bucket.
  */
 
+import { appendLog } from './changeLogR2';
+
 const R2_KEY = 'suggestions.json';
 const VOTES_R2_KEY = 'suggestion-votes.json';
 
@@ -195,10 +197,12 @@ export async function hideSuggestion(bucket: R2Bucket, suggestionId: string): Pr
   const suggestions = parseStore(raw);
   const idx = suggestions.findIndex((s) => s.id === suggestionId);
   if (idx < 0) return null;
+  const before = { hidden: suggestions[idx].hidden ?? false };
   suggestions[idx].hidden = true;
   await bucket.put(R2_KEY, JSON.stringify({ suggestions }), {
     httpMetadata: { contentType: 'application/json' },
   });
+  await appendLog(bucket, { action: 'suggestion.hide', entityId: suggestionId, before, after: { hidden: true } });
   return suggestions[idx];
 }
 
@@ -209,10 +213,12 @@ export async function unhideSuggestion(bucket: R2Bucket, suggestionId: string): 
   const suggestions = parseStore(raw);
   const idx = suggestions.findIndex((s) => s.id === suggestionId);
   if (idx < 0) return null;
+  const before = { hidden: suggestions[idx].hidden ?? false };
   suggestions[idx].hidden = false;
   await bucket.put(R2_KEY, JSON.stringify({ suggestions }), {
     httpMetadata: { contentType: 'application/json' },
   });
+  await appendLog(bucket, { action: 'suggestion.unhide', entityId: suggestionId, before, after: { hidden: false } });
   return suggestions[idx];
 }
 
@@ -255,11 +261,13 @@ export async function pinReply(
   const idx = suggestions.findIndex((s) => s.id === suggestionId);
   if (idx < 0) return null;
   const replies = suggestions[idx].replies ?? [];
+  const prevPinned = replies.find((r) => r.pinned)?.id ?? null;
   for (const r of replies) r.pinned = r.id === replyId;
   suggestions[idx].replies = replies;
   await bucket.put(R2_KEY, JSON.stringify({ suggestions }), {
     httpMetadata: { contentType: 'application/json' },
   });
+  await appendLog(bucket, { action: 'suggestion.pin_reply', entityId: suggestionId, before: { pinnedReplyId: prevPinned }, after: { pinnedReplyId: replyId } });
   return suggestions[idx];
 }
 
@@ -270,9 +278,11 @@ export async function deleteSuggestion(bucket: R2Bucket, suggestionId: string): 
   const suggestions = parseStore(raw);
   const idx = suggestions.findIndex((s) => s.id === suggestionId);
   if (idx < 0) return false;
+  const deleted = suggestions[idx];
   suggestions.splice(idx, 1);
   await bucket.put(R2_KEY, JSON.stringify({ suggestions }), {
     httpMetadata: { contentType: 'application/json' },
   });
+  await appendLog(bucket, { action: 'suggestion.delete', entityId: suggestionId, before: deleted, after: null });
   return true;
 }

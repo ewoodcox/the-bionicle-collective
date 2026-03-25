@@ -4,6 +4,7 @@
  */
 import { getMediaById, type MediaRecord } from '../../../../data/media';
 import { env as cfEnv } from 'cloudflare:workers';
+import { isAuthConfigured, isAuthenticated } from '../../../../utils/adminAuth';
 
 export const prerender = false;
 
@@ -20,6 +21,7 @@ type R2ObjectForResponse = {
 /** Minimal R2 binding surface for this route. */
 interface R2BucketLike {
   get(key: string): Promise<R2ObjectForResponse | null>;
+  put(key: string, value: ArrayBuffer | ReadableStream | string, options?: { httpMetadata?: { contentType?: string } }): Promise<unknown>;
 }
 
 type Env = {
@@ -166,5 +168,71 @@ export const GET = async ({ params, url, locals }: { params: { id?: string }; ur
       'Cache-Control': 'public, max-age=86400',
       ...(obj.etag ? { ETag: obj.etag } : {}),
     },
+  });
+};
+
+const ALLOWED_TYPES: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+};
+const MAX_BYTES = 2 * 1024 * 1024; // 2 MB
+
+export const POST = async ({ params, request, locals }: { params: { id?: string }; request: Request; locals: any }) => {
+  const env = (locals as { runtime?: { env?: Env } }).runtime?.env;
+  if (isAuthConfigured(env)) {
+    const ok = await isAuthenticated(request, env);
+    if (!ok) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  }
+
+  const rawId = params.id;
+  const id = rawId ? decodeURIComponent(rawId) : '';
+  if (!id) return new Response(JSON.stringify({ error: 'Missing id' }), { status: 400 });
+
+  const media = getMediaById(id);
+  if (!media) return new Response(JSON.stringify({ error: 'Media not found' }), { status: 404 });
+
+  let formData: FormData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return new Response(JSON.stringify({ error: 'Invalid form data' }), { status: 400 });
+  }
+
+  const file = formData.get('file');
+  const variantRaw = formData.get('variant');
+  const variant = variantRaw === 'alt' ? 'alt' : 'main';
+
+  if (!(file instanceof File)) {
+    return new Response(JSON.stringify({ error: 'No file provided' }), { status: 400 });
+  }
+
+  const ext = ALLOWED_TYPES[file.type];
+  if (!ext) {
+    return new Response(JSON.stringify({ error: 'File must be jpg, png, webp, or gif' }), { status: 400 });
+  }
+
+  if (file.size > MAX_BYTES) {
+    return new Response(JSON.stringify({ error: 'File too large (max 2 MB)' }), { status: 400 });
+  }
+
+  const bucket = getBucket(locals);
+  if (!bucket) {
+    return new Response(JSON.stringify({ error: 'Storage not configured' }), { status: 503 });
+  }
+
+  const key = `media-covers/${id}/${variant}.${ext}`;
+  const buffer = await file.arrayBuffer();
+  await bucket.put(key, buffer, { httpMetadata: { contentType: file.type } });
+
+  return new Response(JSON.stringify({ ok: true, key }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
   });
 };

@@ -6,6 +6,8 @@
  * - Saved under `media-collection.json` in the bound R2 bucket.
  */
 
+import { appendLog } from './changeLogR2';
+
 const R2_KEY = 'media-collection.json';
 
 /** Minimal R2 bucket interface (matches Cloudflare Workers R2Bucket binding). */
@@ -36,10 +38,12 @@ export async function getMediaOwnedIds(bucket: R2BucketLike): Promise<string[]> 
 }
 
 export async function setMediaOwnedIds(bucket: R2BucketLike, ids: string[]): Promise<string[]> {
+  const before = await getMediaOwnedIds(bucket);
   const deduped = [...new Set(ids)].filter((x) => typeof x === 'string' && x.trim() !== '');
   await bucket.put(R2_KEY, JSON.stringify(deduped), {
     httpMetadata: { contentType: 'application/json' },
   });
+  await appendLog(bucket, { action: 'media.ownership', entityId: 'media-collection', before, after: deduped });
   return deduped;
 }
 

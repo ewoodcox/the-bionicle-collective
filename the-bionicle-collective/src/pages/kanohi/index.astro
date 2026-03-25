@@ -56,7 +56,7 @@ for (const [type, group] of byType) {
           </h2>
           <div class="kanohi-grid">
             {group.map(mask => (
-              <div class={`kanohi-card${mask.owned ? '' : ' kanohi-card--missing'}`}>
+              <div class={`kanohi-card${mask.owned ? '' : ' kanohi-card--missing'}`} data-mask-id={mask.id} data-owned={mask.owned ? 'true' : 'false'}>
                 <div class="kanohi-card__img-wrap">
                   <img
                     src={mask.imageUrl}
@@ -67,6 +67,9 @@ for (const [type, group] of byType) {
                     loading="lazy"
                     onerror="this.onerror=null;this.src=this.dataset.fallback"
                   />
+                  <button class="kanohi-toggle" aria-label={mask.owned ? 'Mark as not owned' : 'Mark as owned'} hidden>
+                    <span class="kanohi-toggle__icon">{mask.owned ? '✓' : '+'}</span>
+                  </button>
                 </div>
                 <div class="kanohi-card__info">
                   <span class="kanohi-card__name">{mask.name}</span>
@@ -230,4 +233,136 @@ h1 {
   text-transform: uppercase;
   color: var(--color-accent);
 }
+
+/* Edit-mode toggle */
+.kanohi-card__img-wrap {
+  position: relative;
+}
+
+.kanohi-toggle {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.kanohi-toggle:hover {
+  background: rgba(0, 0, 0, 0.8);
+  border-color: var(--color-accent);
+}
+
+.kanohi-toggle--owned {
+  background: rgba(196, 137, 60, 0.75);
+  border-color: var(--color-accent);
+}
+
+.kanohi-toggle--saving {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.kanohi-toggle__icon {
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+}
 </style>
+
+<script>
+  (function () {
+    if (typeof window === 'undefined') return;
+    if (window.location.hostname !== 'edit.bioniclecollective.com') return;
+
+    // Show all toggle buttons
+    document.querySelectorAll<HTMLButtonElement>('.kanohi-toggle').forEach(btn => {
+      btn.hidden = false;
+      const card = btn.closest<HTMLElement>('.kanohi-card');
+      if (card?.dataset.owned === 'true') btn.classList.add('kanohi-toggle--owned');
+    });
+
+    // Update tally text for a section heading
+    function updateTally(card: HTMLElement) {
+      const section = card.closest<HTMLElement>('.kanohi-section');
+      if (!section) return;
+      const tally = section.querySelector<HTMLElement>('.kanohi-section__tally');
+      if (!tally) return;
+      const total = section.querySelectorAll('.kanohi-card').length;
+      const owned = section.querySelectorAll('.kanohi-card[data-owned="true"]').length;
+      tally.textContent = `${owned}/${total}`;
+    }
+
+    // Update the global count in the h1
+    function updateGlobalCount() {
+      const countEl = document.querySelector<HTMLElement>('.kanohi-count');
+      if (!countEl) return;
+      const total = document.querySelectorAll('.kanohi-card').length;
+      const owned = document.querySelectorAll('.kanohi-card[data-owned="true"]').length;
+      countEl.textContent = `${owned} / ${total}`;
+    }
+
+    document.querySelectorAll<HTMLElement>('.kanohi-card').forEach(card => {
+      const btn = card.querySelector<HTMLButtonElement>('.kanohi-toggle');
+      if (!btn) return;
+
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const maskId = card.dataset.maskId;
+        if (!maskId) return;
+
+        const currentOwned = card.dataset.owned === 'true';
+        const newOwned = !currentOwned;
+
+        // Optimistic update
+        btn.classList.add('kanohi-toggle--saving');
+        card.dataset.owned = newOwned ? 'true' : 'false';
+        card.classList.toggle('kanohi-card--missing', !newOwned);
+        btn.classList.toggle('kanohi-toggle--owned', newOwned);
+        btn.querySelector('.kanohi-toggle__icon')!.textContent = newOwned ? '✓' : '+';
+        btn.setAttribute('aria-label', newOwned ? 'Mark as not owned' : 'Mark as owned');
+        updateTally(card);
+        updateGlobalCount();
+
+        try {
+          const res = await fetch('/api/kanohi/collection', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ maskId, owned: newOwned }),
+          });
+
+          if (res.status === 401) {
+            window.location.href = '/';
+            return;
+          }
+
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+          }
+        } catch {
+          // Revert on error
+          card.dataset.owned = currentOwned ? 'true' : 'false';
+          card.classList.toggle('kanohi-card--missing', !currentOwned);
+          btn.classList.toggle('kanohi-toggle--owned', currentOwned);
+          btn.querySelector('.kanohi-toggle__icon')!.textContent = currentOwned ? '✓' : '+';
+          btn.setAttribute('aria-label', currentOwned ? 'Mark as not owned' : 'Mark as owned');
+          updateTally(card);
+          updateGlobalCount();
+        } finally {
+          btn.classList.remove('kanohi-toggle--saving');
+        }
+      });
+    });
+  })();
+</script>

@@ -11,6 +11,7 @@
  */
 import { getSetById } from '../../../../data/sets';
 import { env as cfEnv } from 'cloudflare:workers';
+import { isAuthConfigured, isAuthenticated } from '../../../../utils/adminAuth';
 
 export const prerender = false;
 
@@ -21,6 +22,7 @@ const EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp'];
 
 interface R2BucketLike {
   get(key: string): Promise<{ body: ReadableStream; httpMetadata?: { contentType?: string }; etag?: string } | null>;
+  put(key: string, value: ArrayBuffer | ReadableStream | string, options?: { httpMetadata?: { contentType?: string } }): Promise<unknown>;
 }
 
 type Env = {
@@ -87,4 +89,65 @@ export const GET = async ({ params, url, locals }: { params: { id?: string }; ur
   }
 
   return new Response('Not found', { status: 404 });
+};
+
+const ALLOWED_TYPES: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+};
+const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+
+export const POST = async ({ params, request, locals }: { params: { id?: string }; request: Request; locals: any }) => {
+  const env = (locals as { runtime?: { env?: Env } }).runtime?.env;
+  if (isAuthConfigured(env)) {
+    const ok = await isAuthenticated(request, env);
+    if (!ok) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  }
+
+  const id = params.id ? decodeURIComponent(params.id) : '';
+  if (!id) return new Response(JSON.stringify({ error: 'Missing id' }), { status: 400 });
+
+  const set = getSetById(id);
+  if (!set) return new Response(JSON.stringify({ error: 'Set not found' }), { status: 404 });
+
+  let formData: FormData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return new Response(JSON.stringify({ error: 'Invalid form data' }), { status: 400 });
+  }
+
+  const file = formData.get('file');
+  if (!(file instanceof File)) {
+    return new Response(JSON.stringify({ error: 'No file provided' }), { status: 400 });
+  }
+
+  const ext = ALLOWED_TYPES[file.type];
+  if (!ext) {
+    return new Response(JSON.stringify({ error: 'File must be jpg, png, or webp' }), { status: 400 });
+  }
+
+  if (file.size > MAX_BYTES) {
+    return new Response(JSON.stringify({ error: 'File too large (max 5 MB)' }), { status: 400 });
+  }
+
+  const bucket = getBucket(locals);
+  if (!bucket) {
+    return new Response(JSON.stringify({ error: 'Storage not configured' }), { status: 503 });
+  }
+
+  const key = `set-photos/${set.year}/${id}/built.${ext}`;
+  const buffer = await file.arrayBuffer();
+  await bucket.put(key, buffer, { httpMetadata: { contentType: file.type } });
+
+  return new Response(JSON.stringify({ ok: true, key }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
 };

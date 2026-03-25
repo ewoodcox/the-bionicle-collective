@@ -43,6 +43,7 @@ function formatAcquiredDate(acquiredDate: string | undefined): string {
         <div class="media-cover-stack">
           <img
             class="media-cover-main"
+            id="media-cover-img-main"
             src={getMediaCoverSrc(media, 'main')}
             alt={media.title}
             width="280"
@@ -52,6 +53,7 @@ function formatAcquiredDate(acquiredDate: string | undefined): string {
           {media.imageUrlAlt ? (
             <img
               class="media-cover-alt"
+              id="media-cover-img-alt"
               src={getMediaCoverSrc(media, 'alt')}
               alt=""
               width="280"
@@ -60,6 +62,21 @@ function formatAcquiredDate(acquiredDate: string | undefined): string {
               aria-hidden="true"
             />
           ) : null}
+        </div>
+        <div class="cover-upload-controls" id="cover-upload-controls" hidden>
+          <input type="file" id="cover-file-main" accept="image/jpeg,image/png,image/webp" hidden />
+          <button type="button" class="button-secondary cover-upload-btn" id="cover-upload-btn-main" data-variant="main">
+            Upload cover
+          </button>
+          {media.imageUrlAlt ? (
+            <>
+              <input type="file" id="cover-file-alt" accept="image/jpeg,image/png,image/webp" hidden />
+              <button type="button" class="button-secondary cover-upload-btn" id="cover-upload-btn-alt" data-variant="alt">
+                Upload alt cover
+              </button>
+            </>
+          ) : null}
+          <span class="cover-upload-status" id="cover-upload-status" aria-live="polite"></span>
         </div>
       </div>
       <div>
@@ -295,4 +312,107 @@ function formatAcquiredDate(acquiredDate: string | undefined): string {
     applyToView(data);
   });
 </script>
+
+<script define:vars={{ mediaId: media.id }}>
+  (function () {
+    if (typeof window === 'undefined') return;
+    if (window.location.hostname !== 'edit.bioniclecollective.com') return;
+
+    const controls = document.getElementById('cover-upload-controls');
+    if (controls) controls.hidden = false;
+
+    const statusEl = document.getElementById('cover-upload-status');
+
+    function setStatus(msg, isError) {
+      if (!statusEl) return;
+      statusEl.textContent = msg;
+      statusEl.className = 'cover-upload-status' + (isError ? ' cover-upload-status--error' : '');
+    }
+
+    document.querySelectorAll('.cover-upload-btn').forEach((btn) => {
+      const variant = btn.getAttribute('data-variant');
+      const fileInput = document.getElementById(`cover-file-${variant}`);
+      if (!fileInput) return;
+
+      btn.addEventListener('click', () => fileInput.click());
+
+      fileInput.addEventListener('change', async () => {
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+
+        if (file.size > 2 * 1024 * 1024) {
+          setStatus('File too large (max 2 MB)', true);
+          fileInput.value = '';
+          return;
+        }
+
+        setStatus('Uploading…', false);
+        btn.disabled = true;
+
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('variant', variant);
+
+        try {
+          const res = await fetch(`/api/media/cover/${encodeURIComponent(mediaId)}`, {
+            method: 'POST',
+            credentials: 'include',
+            body: fd,
+          });
+
+          if (res.status === 401) {
+            setStatus('Session expired. Please log in again.', true);
+            return;
+          }
+
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            setStatus(data.error || `Upload failed (${res.status})`, true);
+            return;
+          }
+
+          // Refresh the displayed image with cache-busting
+          const imgId = variant === 'alt' ? 'media-cover-img-alt' : 'media-cover-img-main';
+          const imgEl = document.getElementById(imgId);
+          if (imgEl) {
+            const base = `/api/media/cover/${encodeURIComponent(mediaId)}${variant === 'alt' ? '?variant=alt' : ''}`;
+            imgEl.src = base + (base.includes('?') ? '&' : '?') + 'v=' + Date.now();
+          }
+
+          setStatus('Uploaded!', false);
+          setTimeout(() => setStatus('', false), 3000);
+        } catch {
+          setStatus('Network error. Try again.', true);
+        } finally {
+          btn.disabled = false;
+          fileInput.value = '';
+        }
+      });
+    });
+  })();
+</script>
+
+<style>
+.cover-upload-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+
+.cover-upload-btn {
+  font-size: 0.78rem;
+  padding: 0.35rem 0.75rem;
+}
+
+.cover-upload-status {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.cover-upload-status--error {
+  color: #e07070;
+}
+</style>
 

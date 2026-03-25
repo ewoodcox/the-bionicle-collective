@@ -106,7 +106,12 @@ function formatAcquiredDate(acquiredDate: string | undefined): string {
 
     <article class="set-detail">
       <div class="image-wrap">
-        <img src={`/api/sets/photo/${set.id}`} alt={displayLabel} width="280" height="280" />
+        <img src={`/api/sets/photo/${set.id}`} alt={displayLabel} width="280" height="280" id="set-photo-img" />
+        <div class="photo-upload-controls" id="photo-upload-controls" hidden>
+          <input type="file" id="photo-file-input" accept="image/jpeg,image/png,image/webp" hidden />
+          <button type="button" class="button-secondary photo-upload-btn" id="photo-upload-btn">Upload photo</button>
+          <span class="photo-upload-status" id="photo-upload-status" aria-live="polite"></span>
+        </div>
       </div>
       <div>
         <h1>{displayLabel}</h1>
@@ -329,3 +334,101 @@ function formatAcquiredDate(acquiredDate: string | undefined): string {
     applyToView(data);
   });
 </script>
+
+<script define:vars={{ setId: set.id }}>
+  (function () {
+    if (typeof window === 'undefined') return;
+    if (window.location.hostname !== 'edit.bioniclecollective.com') return;
+
+    const controls = document.getElementById('photo-upload-controls');
+    if (controls) controls.hidden = false;
+
+    const fileInput = document.getElementById('photo-file-input');
+    const uploadBtn = document.getElementById('photo-upload-btn');
+    const statusEl = document.getElementById('photo-upload-status');
+    const imgEl = document.getElementById('set-photo-img');
+
+    function setStatus(msg, isError) {
+      if (!statusEl) return;
+      statusEl.textContent = msg;
+      statusEl.className = 'photo-upload-status' + (isError ? ' photo-upload-status--error' : '');
+    }
+
+    if (uploadBtn && fileInput) {
+      uploadBtn.addEventListener('click', () => fileInput.click());
+
+      fileInput.addEventListener('change', async () => {
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+          setStatus('File too large (max 5 MB)', true);
+          fileInput.value = '';
+          return;
+        }
+
+        setStatus('Uploading…', false);
+        uploadBtn.disabled = true;
+
+        const fd = new FormData();
+        fd.append('file', file);
+
+        try {
+          const res = await fetch(`/api/sets/photo/${encodeURIComponent(setId)}`, {
+            method: 'POST',
+            credentials: 'include',
+            body: fd,
+          });
+
+          if (res.status === 401) {
+            setStatus('Session expired. Please log in again.', true);
+            return;
+          }
+
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            setStatus(data.error || `Upload failed (${res.status})`, true);
+            return;
+          }
+
+          if (imgEl) {
+            imgEl.src = `/api/sets/photo/${encodeURIComponent(setId)}?v=` + Date.now();
+          }
+
+          setStatus('Uploaded!', false);
+          setTimeout(() => setStatus('', false), 3000);
+        } catch {
+          setStatus('Network error. Try again.', true);
+        } finally {
+          uploadBtn.disabled = false;
+          fileInput.value = '';
+        }
+      });
+    }
+  })();
+</script>
+
+<style>
+.photo-upload-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.75rem;
+  justify-content: center;
+}
+
+.photo-upload-btn {
+  font-size: 0.78rem;
+  padding: 0.35rem 0.75rem;
+}
+
+.photo-upload-status {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.photo-upload-status--error {
+  color: #e07070;
+}
+</style>
