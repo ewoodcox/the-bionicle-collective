@@ -888,7 +888,7 @@ const defaultGroupId =
                           nextLabel={`Scroll missing ${y} right`}
                         >
                           {missingEntries.map((entry) => (
-                            <div class="set-card set-card--missing media-era-card">
+                            <div class="set-card set-card--missing media-era-card" data-catalog-key={`${y}:${entry.setNumber}`}>
                               <img
                                 src={`https://placehold.co/160x160?text=${encodeURIComponent(entry.setNumber)}`}
                                 alt={`${entry.setNumber} - ${entry.name}`}
@@ -900,6 +900,11 @@ const defaultGroupId =
                                 <div class="name">{entry.setNumber} - {entry.name}</div>
                                 <div class="meta">{y}</div>
                               </div>
+                              <label class="catalog-owned-label" data-edit-only title="Mark as owned">
+                                <input type="checkbox" class="catalog-owned-checkbox" data-catalog-key={`${y}:${entry.setNumber}`} onclick="event.stopPropagation();" />
+                                <span class="catalog-owned-checkbox-box" aria-hidden="true"></span>
+                                <span class="catalog-owned-label-text">Owned</span>
+                              </label>
                             </div>
                           ))}
                         </SetCarouselStrip>
@@ -1449,6 +1454,72 @@ const defaultGroupId =
             } finally {
               btn.disabled = false;
             }
+          });
+        });
+      }
+    })();
+
+    (function () {
+      // Catalog-owned: lets admin mark "Missing" catalog sets as owned (removes from missing section).
+      const isEditHost = window.location.hostname === 'edit.bioniclecollective.com';
+      const catalogCards = document.querySelectorAll('[data-catalog-key]');
+      if (catalogCards.length === 0) return;
+
+      // Track all owned keys in memory so checkbox changes accumulate before save.
+      let ownedKeys: Set<string> = new Set();
+      let saveTimer: ReturnType<typeof setTimeout> | null = null;
+
+      function applyOwnedKeys(keys: string[]) {
+        ownedKeys = new Set(keys);
+        catalogCards.forEach((card) => {
+          const key = card.getAttribute('data-catalog-key');
+          if (!key) return;
+          const cb = card.querySelector('.catalog-owned-checkbox');
+          if (cb instanceof HTMLInputElement) cb.checked = ownedKeys.has(key);
+          if (ownedKeys.has(key)) {
+            (card as HTMLElement).style.display = 'none';
+          }
+        });
+      }
+
+      fetch('/api/sets/catalog-owned')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (data && Array.isArray(data.ownedKeys)) applyOwnedKeys(data.ownedKeys);
+        })
+        .catch(() => {});
+
+      if (isEditHost) {
+        catalogCards.forEach((card) => {
+          const cb = card.querySelector('.catalog-owned-checkbox');
+          if (!(cb instanceof HTMLInputElement)) return;
+          cb.addEventListener('change', () => {
+            const key = cb.getAttribute('data-catalog-key');
+            if (!key) return;
+            if (cb.checked) {
+              ownedKeys.add(key);
+              (card as HTMLElement).style.display = 'none';
+            } else {
+              ownedKeys.delete(key);
+              (card as HTMLElement).style.display = '';
+            }
+            // Debounce save so rapid toggles only send one request.
+            if (saveTimer) clearTimeout(saveTimer);
+            saveTimer = setTimeout(async () => {
+              try {
+                const res = await fetch('/api/sets/catalog-owned', {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ ownedKeys: [...ownedKeys] }),
+                  credentials: 'include',
+                });
+                if (!res.ok && res.status === 401) {
+                  alert('Session expired. Please log in again.');
+                }
+              } catch (e) {
+                console.error('Catalog-owned save error:', e);
+              }
+            }, 400);
           });
         });
       }

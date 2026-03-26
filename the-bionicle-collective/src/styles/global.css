@@ -1111,6 +1111,64 @@ body {
   content: '✓';
 }
 
+/* Catalog-owned checkbox (missing section, edit host only) */
+.catalog-owned-label {
+  display: none;
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  cursor: pointer;
+  z-index: 2;
+  border-radius: 4px;
+  padding: 0.15rem 0.35rem 0.15rem 0.25rem;
+  background: rgba(0, 0, 0, 0.55);
+  gap: 0.3rem;
+  align-items: center;
+}
+
+[data-host="edit"] .catalog-owned-label {
+  display: flex;
+}
+
+.catalog-owned-label-text {
+  font-size: 0.7rem;
+  color: #fff;
+  line-height: 1;
+  user-select: none;
+}
+
+.catalog-owned-checkbox {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.catalog-owned-checkbox-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid #fff;
+  border-radius: 3px;
+  background: transparent;
+  transition: background 0.15s, border-color 0.15s;
+  font-size: 0.75rem;
+  color: #000;
+  flex-shrink: 0;
+}
+
+.catalog-owned-checkbox:checked + .catalog-owned-checkbox-box {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.catalog-owned-checkbox:checked + .catalog-owned-checkbox-box::before {
+  content: '✓';
+}
+
 /* Set ownership save row */
 .set-ownership-save-row {
   display: none;
