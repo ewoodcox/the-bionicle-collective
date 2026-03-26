@@ -33,7 +33,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const bucket = env?.BIONICLE_COLLECTION;
   if (!bucket) return json({ error: 'Storage not configured' }, 503);
 
-  let body: { username?: string; password?: string; role?: string };
+  let body: { username?: string; password?: string; role?: string; googleEmail?: string };
   try {
     body = await request.json();
   } catch {
@@ -43,16 +43,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const username = (body.username ?? '').trim();
   const password = (body.password ?? '').trim();
   const role: UserRole = body.role === 'superadmin' ? 'superadmin' : 'admin';
+  const googleEmail = body.googleEmail?.trim().toLowerCase() || undefined;
 
   if (!username || !password) return json({ error: 'username and password required' }, 400);
   if (!/^[a-zA-Z0-9_-]{1,32}$/.test(username)) {
     return json({ error: 'Invalid username — letters, numbers, _ and - only, max 32 chars' }, 400);
   }
   if (password.length < 8) return json({ error: 'Password must be at least 8 characters' }, 400);
+  if (googleEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(googleEmail)) {
+    return json({ error: 'Invalid Google email address' }, 400);
+  }
 
   try {
-    await createUser(bucket, username, password, role);
-    return json({ ok: true, username, role });
+    await createUser(bucket, username, password, role, googleEmail);
+    return json({ ok: true, username, role, ...(googleEmail ? { googleEmail } : {}) });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : 'Failed' }, 409);
   }

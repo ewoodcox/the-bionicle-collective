@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getSessionInfo } from '../../../../utils/adminAuth';
-import { deleteUser, changePassword, setRole, countSuperAdmins, listUsers } from '../../../../utils/adminUsersR2';
+import { deleteUser, changePassword, setRole, setGoogleEmail, countSuperAdmins, listUsers } from '../../../../utils/adminUsersR2';
 import type { UserRole } from '../../../../utils/adminUsersR2';
 
 export const prerender = false;
@@ -54,7 +54,7 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
   const bucket = env?.BIONICLE_COLLECTION;
   if (!bucket) return json({ error: 'Storage not configured' }, 503);
 
-  let body: { password?: string; role?: string };
+  let body: { password?: string; role?: string; googleEmail?: string | null };
   try {
     body = await request.json();
   } catch {
@@ -93,6 +93,18 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
     const changed = await changePassword(bucket, target, password);
     if (!changed) return json({ error: 'User not found' }, 404);
     return json({ ok: true });
+  }
+
+  // Google email link/unlink — superadmin only
+  if ('googleEmail' in body) {
+    if (session.role !== 'superadmin') return json({ error: 'Forbidden' }, 403);
+    const email = body.googleEmail?.trim().toLowerCase() || null;
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return json({ error: 'Invalid Google email address' }, 400);
+    }
+    const changed = await setGoogleEmail(bucket, target, email);
+    if (!changed) return json({ error: 'User not found' }, 404);
+    return json({ ok: true, googleEmail: email });
   }
 
   return json({ error: 'No changes provided' }, 400);

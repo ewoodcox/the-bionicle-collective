@@ -20,7 +20,7 @@ if (!isSuperAdmin) {
   return Astro.redirect('/admin/');
 }
 
-let users: { username: string; role: string }[] = [];
+let users: { username: string; role: string; googleEmail?: string }[] = [];
 let loadError = '';
 if (bucket) {
   try {
@@ -50,22 +50,31 @@ if (bucket) {
       ) : (
         <ul class="user-list" id="user-list">
           {users.map((u) => (
-            <li class="user-row" data-username={u.username} data-role={u.role}>
+            <li class="user-row" data-username={u.username} data-role={u.role} data-google-email={u.googleEmail ?? ''}>
               <div class="user-info">
                 <span class="user-name">{u.username}</span>
                 <span class={`role-badge role-badge--${u.role}`}>{u.role === 'superadmin' ? 'super admin' : 'admin'}</span>
                 {u.username === session?.username && <span class="you-badge">you</span>}
               </div>
+              <div class="user-google">
+                {u.googleEmail
+                  ? <span class="google-linked" title="Google sign-in enabled">G · {u.googleEmail}</span>
+                  : <span class="google-unlinked">No Google account</span>
+                }
+                <button class="button-ghost btn-edit-google" data-username={u.username} data-current={u.googleEmail ?? ''}>
+                  {u.googleEmail ? 'Edit' : 'Link'}
+                </button>
+              </div>
               <div class="user-actions">
                 {u.role !== 'superadmin' && (
                   <>
-                    <button class="button-secondary btn-promote" data-username={u.username}>Promote to super admin</button>
-                    <button class="button-secondary btn-change-pw" data-username={u.username}>Change password</button>
+                    <button class="button-secondary btn-promote" data-username={u.username}>Promote</button>
+                    <button class="button-secondary btn-change-pw" data-username={u.username}>Password</button>
                     <button class="button-danger btn-delete" data-username={u.username}>Delete</button>
                   </>
                 )}
                 {u.role === 'superadmin' && u.username === session?.username && (
-                  <button class="button-secondary btn-change-pw" data-username={u.username}>Change password</button>
+                  <button class="button-secondary btn-change-pw" data-username={u.username}>Password</button>
                 )}
               </div>
             </li>
@@ -81,6 +90,7 @@ if (bucket) {
         <input type="text" name="username" placeholder="Username" autocomplete="off" required
           pattern="[a-zA-Z0-9_\-]{1,32}" title="Letters, numbers, _ and - only, max 32 chars" />
         <input type="password" name="password" placeholder="Password (min 8 chars)" autocomplete="new-password" required minlength="8" />
+        <input type="email" name="googleEmail" placeholder="Google email (optional)" autocomplete="off" />
         <label class="role-select-label">
           Role:
           <select name="role" class="role-select">
@@ -91,6 +101,21 @@ if (bucket) {
         <button type="submit" class="button-primary">Add user</button>
       </form>
     </section>
+
+    <!-- Google email dialog -->
+    <div id="google-dialog" class="dialog-backdrop" hidden>
+      <div class="dialog">
+        <h3 id="google-dialog-title">Link Google account</h3>
+        <p class="status-msg" id="google-status" aria-live="polite"></p>
+        <form id="google-form" class="user-form">
+          <input type="email" name="googleEmail" placeholder="user@gmail.com (leave blank to unlink)" autocomplete="off" />
+          <div class="dialog-buttons">
+            <button type="submit" class="button-primary">Save</button>
+            <button type="button" id="google-cancel" class="button-secondary">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <!-- Change password dialog -->
     <div id="pw-dialog" class="dialog-backdrop" hidden>
@@ -115,6 +140,13 @@ if (bucket) {
   const addStatus = document.getElementById('add-status')!;
   const userList = document.getElementById('user-list');
 
+  const googleDialog = document.getElementById('google-dialog') as HTMLElement;
+  const googleForm = document.getElementById('google-form') as HTMLFormElement;
+  const googleStatus = document.getElementById('google-status')!;
+  const googleTitle = document.getElementById('google-dialog-title')!;
+  const googleCancel = document.getElementById('google-cancel')!;
+  let googleTarget = '';
+
   const pwDialog = document.getElementById('pw-dialog') as HTMLElement;
   const pwForm = document.getElementById('pw-form') as HTMLFormElement;
   const pwStatus = document.getElementById('pw-status')!;
@@ -127,21 +159,30 @@ if (bucket) {
     el.style.color = isError ? 'var(--color-error, #e07070)' : 'var(--color-accent)';
   }
 
-  function makeRow(username: string, role: string): HTMLLIElement {
+  function makeRow(username: string, role: string, googleEmail = ''): HTMLLIElement {
     const li = document.createElement('li');
     li.className = 'user-row';
     li.dataset.username = username;
     li.dataset.role = role;
+    li.dataset.googleEmail = googleEmail;
     const isAdmin = role === 'admin';
     li.innerHTML = `
       <div class="user-info">
         <span class="user-name">${username}</span>
         <span class="role-badge role-badge--${role}">${role === 'superadmin' ? 'super admin' : 'admin'}</span>
       </div>
+      <div class="user-google">
+        ${googleEmail
+          ? `<span class="google-linked" title="Google sign-in enabled">G · ${googleEmail}</span>`
+          : `<span class="google-unlinked">No Google account</span>`}
+        <button class="button-ghost btn-edit-google" data-username="${username}" data-current="${googleEmail}">
+          ${googleEmail ? 'Edit' : 'Link'}
+        </button>
+      </div>
       <div class="user-actions">
         ${isAdmin ? `
-          <button class="button-secondary btn-promote" data-username="${username}">Promote to super admin</button>
-          <button class="button-secondary btn-change-pw" data-username="${username}">Change password</button>
+          <button class="button-secondary btn-promote" data-username="${username}">Promote</button>
+          <button class="button-secondary btn-change-pw" data-username="${username}">Password</button>
           <button class="button-danger btn-delete" data-username="${username}">Delete</button>
         ` : ''}
       </div>`;
@@ -149,6 +190,15 @@ if (bucket) {
   }
 
   function bindRowButtons(row: HTMLElement) {
+    row.querySelector('.btn-edit-google')?.addEventListener('click', (e) => {
+      googleTarget = (e.currentTarget as HTMLElement).dataset.username!;
+      const current = (e.currentTarget as HTMLElement).dataset.current ?? '';
+      googleTitle.textContent = current ? `Edit Google account for "${googleTarget}"` : `Link Google account to "${googleTarget}"`;
+      googleStatus.textContent = '';
+      (googleForm.elements.namedItem('googleEmail') as HTMLInputElement).value = current;
+      googleDialog.hidden = false;
+    });
+
     row.querySelector('.btn-delete')?.addEventListener('click', async (e) => {
       const username = (e.currentTarget as HTMLElement).dataset.username!;
       if (!confirm(`Delete user "${username}"? This cannot be undone.`)) return;
@@ -179,8 +229,8 @@ if (bucket) {
       });
       const body = await res.json();
       if (res.ok) {
-        // Re-render the row to reflect the new role (no management buttons for superadmins)
-        const newRow = makeRow(username, 'superadmin');
+        const googleEmail = row.dataset.googleEmail ?? '';
+        const newRow = makeRow(username, 'superadmin', googleEmail);
         bindRowButtons(newRow);
         row.replaceWith(newRow);
       } else {
@@ -198,10 +248,11 @@ if (bucket) {
     const username = (data.get('username') as string).trim();
     const password = data.get('password') as string;
     const role = data.get('role') as string;
+    const googleEmail = (data.get('googleEmail') as string).trim() || undefined;
     showStatus(addStatus, 'Adding…');
     const res = await fetch('/api/admin/users', {
       method: 'POST',
-      body: JSON.stringify({ username, password, role }),
+      body: JSON.stringify({ username, password, role, googleEmail }),
       headers: { 'Content-Type': 'application/json' },
     });
     const body = await res.json();
@@ -209,12 +260,56 @@ if (bucket) {
       showStatus(addStatus, `User "${username}" added as ${role === 'superadmin' ? 'super admin' : 'admin'}.`);
       addForm.reset();
       if (userList) {
-        const newRow = makeRow(username, body.role ?? role);
+        const newRow = makeRow(username, body.role ?? role, body.googleEmail ?? '');
         bindRowButtons(newRow);
         userList.appendChild(newRow);
       }
     } else {
       showStatus(addStatus, body.error || 'Failed', true);
+    }
+  });
+
+  // Google email dialog
+  googleCancel?.addEventListener('click', () => { googleDialog.hidden = false; googleDialog.hidden = true; });
+  googleDialog?.addEventListener('click', (e) => { if (e.target === googleDialog) googleDialog.hidden = true; });
+
+  googleForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const emailVal = ((googleForm.elements.namedItem('googleEmail') as HTMLInputElement).value ?? '').trim();
+    const googleEmail = emailVal || null;
+    showStatus(googleStatus, 'Saving…');
+    const res = await fetch(`/api/admin/users/${encodeURIComponent(googleTarget)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ googleEmail }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const body = await res.json();
+    if (res.ok) {
+      showStatus(googleStatus, googleEmail ? `Linked to ${googleEmail}.` : 'Google account unlinked.');
+      // Update the row's displayed email
+      const row = document.querySelector<HTMLElement>(`.user-row[data-username="${googleTarget}"]`);
+      if (row) {
+        row.dataset.googleEmail = googleEmail ?? '';
+        const googleDiv = row.querySelector('.user-google')!;
+        googleDiv.innerHTML = `
+          ${googleEmail
+            ? `<span class="google-linked" title="Google sign-in enabled">G · ${googleEmail}</span>`
+            : `<span class="google-unlinked">No Google account</span>`}
+          <button class="button-ghost btn-edit-google" data-username="${googleTarget}" data-current="${googleEmail ?? ''}">
+            ${googleEmail ? 'Edit' : 'Link'}
+          </button>`;
+        googleDiv.querySelector('.btn-edit-google')?.addEventListener('click', () => {
+          googleTarget = googleTarget;
+          const cur = googleEmail ?? '';
+          googleTitle.textContent = cur ? `Edit Google account for "${googleTarget}"` : `Link Google account to "${googleTarget}"`;
+          googleStatus.textContent = '';
+          (googleForm.elements.namedItem('googleEmail') as HTMLInputElement).value = cur;
+          googleDialog.hidden = false;
+        });
+      }
+      setTimeout(() => { googleDialog.hidden = true; }, 1000);
+    } else {
+      showStatus(googleStatus, body.error || 'Failed', true);
     }
   });
 
@@ -346,6 +441,42 @@ if (bucket) {
   border-radius: 4px;
   padding: 0.1rem 0.4rem;
 }
+
+.user-google {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  flex: 1;
+  min-width: 180px;
+}
+
+.google-linked {
+  color: #7ab5f0;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 220px;
+}
+
+.google-unlinked {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.button-ghost {
+  background: transparent;
+  border: none;
+  color: var(--color-accent);
+  font-size: 0.72rem;
+  cursor: pointer;
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.button-ghost:hover { background: rgba(196,137,60,0.1); }
 
 .user-actions {
   display: flex;

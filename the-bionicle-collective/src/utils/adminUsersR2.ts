@@ -11,6 +11,7 @@ interface AdminUser {
   passwordHash: string; // hex-encoded PBKDF2 output
   salt: string;         // hex-encoded random 16-byte salt
   role: UserRole;
+  googleEmail?: string; // authorized Google account email, if any
 }
 
 const R2_KEY = 'admin-users.json';
@@ -77,7 +78,8 @@ export async function createUser(
   bucket: R2Bucket,
   username: string,
   password: string,
-  role: UserRole = 'admin'
+  role: UserRole = 'admin',
+  googleEmail?: string
 ): Promise<void> {
   const users = await getAdminUsers(bucket);
   if (users.some((u) => u.username === username)) {
@@ -85,7 +87,9 @@ export async function createUser(
   }
   const salt = randomSaltHex();
   const passwordHash = await deriveKey(password, salt);
-  users.push({ username, passwordHash, salt, role });
+  const entry: AdminUser = { username, passwordHash, salt, role };
+  if (googleEmail) entry.googleEmail = googleEmail.toLowerCase();
+  users.push(entry);
   await saveAdminUsers(bucket, users);
 }
 
@@ -101,10 +105,12 @@ export async function deleteUser(bucket: R2Bucket, username: string): Promise<bo
   return true;
 }
 
-/** List all users with their roles. */
-export async function listUsers(bucket: R2Bucket): Promise<{ username: string; role: UserRole }[]> {
+/** List all users with their roles and linked Google emails. */
+export async function listUsers(
+  bucket: R2Bucket
+): Promise<{ username: string; role: UserRole; googleEmail?: string }[]> {
   const users = await getAdminUsers(bucket);
-  return users.map(({ username, role }) => ({ username, role }));
+  return users.map(({ username, role, googleEmail }) => ({ username, role, ...(googleEmail ? { googleEmail } : {}) }));
 }
 
 /** Change a user's password. Returns false if not found. */
@@ -140,4 +146,35 @@ export async function setRole(bucket: R2Bucket, username: string, role: UserRole
 export async function countSuperAdmins(bucket: R2Bucket): Promise<number> {
   const users = await getAdminUsers(bucket);
   return users.filter((u) => u.role === 'superadmin').length;
+}
+
+/**
+ * Find a user by their linked Google email. Returns { username, role } or null.
+ * Used in the OAuth callback to map a verified Google identity to an admin user.
+ */
+export async function findUserByGoogleEmail(
+  bucket: R2Bucket,
+  email: string
+): Promise<{ username: string; role: UserRole } | null> {
+  const users = await getAdminUsers(bucket);
+  const user = users.find((u) => u.googleEmail?.toLowerCase() === email.toLowerCase());
+  return user ? { username: user.username, role: user.role } : null;
+}
+
+/** Set (or clear) the linked Google email for a user. Returns false if user not found. */
+export async function setGoogleEmail(
+  bucket: R2Bucket,
+  username: string,
+  email: string | null
+): Promise<boolean> {
+  const users = await getAdminUsers(bucket);
+  const user = users.find((u) => u.username === username);
+  if (!user) return false;
+  if (email) {
+    user.googleEmail = email.toLowerCase();
+  } else {
+    delete user.googleEmail;
+  }
+  await saveAdminUsers(bucket, users);
+  return true;
 }
