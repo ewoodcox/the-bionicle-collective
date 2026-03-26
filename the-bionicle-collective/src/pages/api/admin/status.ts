@@ -17,8 +17,8 @@ export const GET: APIRoute = async ({ locals }) => {
     JSON.stringify({
       authConfigured: configured,
       hint: configured
-        ? 'Login should work. If it still fails, the key you enter may not match ADMIN_SECRET.'
-        : 'Set ADMIN_SECRET in Cloudflare Pages: Project → Settings → Environment variables (Production), then redeploy.',
+        ? 'Auth configured. Log in with a username+password from /admin/users, or any username + ADMIN_SECRET as password.'
+        : 'Set ADMIN_SECRET in Cloudflare Pages: Project → Settings → Environment variables (Production), then redeploy. Or add users via /admin/users after initial login.',
     }),
     {
       status: 200,

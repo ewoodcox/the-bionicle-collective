@@ -1,76 +1,92 @@
 /**
- * Admin auth: one-time secret key grants a signed cookie for 2 hours.
- * Used on edit.bioniclecollective.com so the key is entered on the home page only.
+ * Admin auth: session tokens stored in Cloudflare KV (SESSION binding).
+ * Login validates credentials via adminUsersR2 or the legacy ADMIN_SECRET bypass.
+ * Each session token is a 48-char hex string stored under `session:{token}` in KV.
  */
 
 const COOKIE_NAME = 'admin_auth';
+const SESSION_PREFIX = 'session:';
 const MAX_AGE_SEC = 2 * 60 * 60; // 2 hours
 
-function getSecret(env: Record<string, unknown> | undefined): string | undefined {
-  return (env?.ADMIN_SECRET as string) ?? (env?.COLLECTION_EDIT_SECRET as string);
+type Env = Record<string, unknown> | undefined;
+
+function getKV(env: Env): KVNamespace | undefined {
+  return env?.SESSION as KVNamespace | undefined;
 }
 
-/** Build cookie value: base64(expiry) + '.' + hex(signature). Signature = HMAC-SHA256(expiry, secret). */
-export async function buildAuthCookie(env: Record<string, unknown> | undefined): Promise<string | null> {
-  const secret = getSecret(env);
-  if (!secret) return null;
-  const expiry = Math.floor(Date.now() / 1000) + MAX_AGE_SEC;
-  const payload = String(expiry);
-  const enc = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    'raw',
-    enc.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(payload));
-  const sigHex = Array.from(new Uint8Array(sig))
+function getSessionToken(request: Request): string | null {
+  const cookie = request.headers.get('Cookie') ?? '';
+  const match = cookie.match(new RegExp(`${COOKIE_NAME}=([A-Za-z0-9]+)`));
+  return match?.[1] ?? null;
+}
+
+/** Generate a session token, store it in KV, and return the Set-Cookie header. */
+export async function createSession(env: Env, username: string): Promise<string | null> {
+  const kv = getKV(env);
+  if (!kv) return null;
+  const bytes = crypto.getRandomValues(new Uint8Array(24));
+  const token = Array.from(bytes)
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
-  const payloadB64 = btoa(payload);
-  return `${COOKIE_NAME}=${payloadB64}.${sigHex}; Path=/; Max-Age=${MAX_AGE_SEC}; HttpOnly; SameSite=Lax`;
+  const expiresAt = Math.floor(Date.now() / 1000) + MAX_AGE_SEC;
+  await kv.put(SESSION_PREFIX + token, JSON.stringify({ username, expiresAt }), {
+    expirationTtl: MAX_AGE_SEC,
+  });
+  return `${COOKIE_NAME}=${token}; Path=/; Max-Age=${MAX_AGE_SEC}; HttpOnly; SameSite=Lax`;
 }
 
-/** Verify cookie from request; returns true if valid. */
+/** Verify session cookie against KV; returns true if valid. */
 export async function isAuthenticated(
   request: Request,
-  env: Record<string, unknown> | undefined
+  env: Env
 ): Promise<boolean> {
-  const secret = getSecret(env);
-  if (!secret) return false;
-  const cookieHeader = request.headers.get('Cookie');
-  if (!cookieHeader) return false;
-  const match = cookieHeader.match(new RegExp(`${COOKIE_NAME}=([^;]+)`));
-  const value = match?.[1];
-  if (!value) return false;
-  const [payloadB64, sigHex] = value.split('.');
-  if (!payloadB64 || !sigHex) return false;
-  let payload: string;
+  const token = getSessionToken(request);
+  if (!token) return false;
+  const kv = getKV(env);
+  if (!kv) return false;
+  const raw = await kv.get(SESSION_PREFIX + token);
+  if (!raw) return false;
   try {
-    payload = atob(payloadB64);
+    const { expiresAt } = JSON.parse(raw) as { expiresAt: number };
+    return expiresAt > Math.floor(Date.now() / 1000);
   } catch {
     return false;
   }
-  const expiry = parseInt(payload, 10);
-  if (Number.isNaN(expiry) || expiry < Math.floor(Date.now() / 1000)) return false;
-  const enc = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    'raw',
-    enc.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(payload));
-  const expectedHex = Array.from(new Uint8Array(sig))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-  return sigHex === expectedHex;
 }
 
-export function isAuthConfigured(env: Record<string, unknown> | undefined): boolean {
-  return !!getSecret(env);
+/** Get the logged-in username from the session, or null. */
+export async function getSessionUser(request: Request, env: Env): Promise<string | null> {
+  const token = getSessionToken(request);
+  if (!token) return null;
+  const kv = getKV(env);
+  if (!kv) return null;
+  const raw = await kv.get(SESSION_PREFIX + token);
+  if (!raw) return null;
+  try {
+    const { username, expiresAt } = JSON.parse(raw) as { username: string; expiresAt: number };
+    return expiresAt > Math.floor(Date.now() / 1000) ? username : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Delete the session from KV (used on logout). */
+export async function deleteSession(request: Request, env: Env): Promise<void> {
+  const token = getSessionToken(request);
+  if (!token) return;
+  const kv = getKV(env);
+  if (!kv) return;
+  await kv.delete(SESSION_PREFIX + token);
+}
+
+/** Returns true if auth is configured (KV available or legacy secret set). */
+export function isAuthConfigured(env: Env): boolean {
+  return !!(getKV(env) || (env?.ADMIN_SECRET as string) || (env?.COLLECTION_EDIT_SECRET as string));
+}
+
+/** Returns the legacy ADMIN_SECRET bypass key, if set. */
+export function getLegacySecret(env: Env): string | undefined {
+  return (env?.ADMIN_SECRET as string) ?? (env?.COLLECTION_EDIT_SECRET as string);
 }
 
 export { COOKIE_NAME };

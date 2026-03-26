@@ -1,0 +1,350 @@
+---
+export const prerender = false;
+
+import Layout from '../../layouts/Layout.astro';
+import { listUsers } from '../../utils/adminUsersR2';
+import { getSessionUser } from '../../utils/adminAuth';
+
+const host = Astro.request.headers.get('Host') ?? '';
+if (host !== 'edit.bioniclecollective.com') {
+  return Astro.redirect('/');
+}
+
+const env = (Astro.locals as any).runtime?.env;
+const bucket = env?.BIONICLE_COLLECTION;
+const currentUser = await getSessionUser(Astro.request, env);
+
+let users: string[] = [];
+let loadError = '';
+if (bucket) {
+  try {
+    users = await listUsers(bucket);
+  } catch (e) {
+    loadError = e instanceof Error ? e.message : 'Failed to load users';
+  }
+}
+---
+
+<Layout title="Manage Users | Admin" description="Admin user management">
+  <div class="users-page">
+    <div class="users-header">
+      <div>
+        <a href="/admin/" class="back-link">← Dashboard</a>
+        <h1>Admin Users</h1>
+      </div>
+    </div>
+
+    {loadError && <p class="error-msg">{loadError}</p>}
+    {!bucket && <p class="error-msg">R2 bucket not bound — cannot manage users.</p>}
+
+    <section class="users-section">
+      <h2>Current users</h2>
+      {users.length === 0 ? (
+        <p class="empty-msg">No users yet. Add one below, or use ADMIN_SECRET to log in.</p>
+      ) : (
+        <ul class="user-list" id="user-list">
+          {users.map((u) => (
+            <li class="user-row" data-username={u}>
+              <span class="user-name">{u}{u === currentUser ? <span class="you-badge">you</span> : ''}</span>
+              <div class="user-actions">
+                <button class="button-secondary btn-change-pw" data-username={u}>Change password</button>
+                {u !== currentUser && (
+                  <button class="button-danger btn-delete" data-username={u}>Delete</button>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+
+    <section class="users-section">
+      <h2>Add user</h2>
+      <p class="status-msg" id="add-status" aria-live="polite"></p>
+      <form id="add-user-form" class="user-form">
+        <input type="text" name="username" placeholder="Username" autocomplete="off" required
+          pattern="[a-zA-Z0-9_\-]{1,32}" title="Letters, numbers, _ and - only, max 32 chars" />
+        <input type="password" name="password" placeholder="Password (min 8 chars)" autocomplete="new-password" required minlength="8" />
+        <button type="submit" class="button-primary">Add user</button>
+      </form>
+    </section>
+
+    <!-- Change password dialog -->
+    <div id="pw-dialog" class="dialog-backdrop" hidden>
+      <div class="dialog">
+        <h3 id="pw-dialog-title">Change password</h3>
+        <p class="status-msg" id="pw-status" aria-live="polite"></p>
+        <form id="pw-form" class="user-form">
+          <input type="password" name="password" placeholder="New password (min 8 chars)" autocomplete="new-password" required minlength="8" />
+          <div class="dialog-buttons">
+            <button type="submit" class="button-primary">Save</button>
+            <button type="button" id="pw-cancel" class="button-secondary">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  const addForm = document.getElementById('add-user-form') as HTMLFormElement;
+  const addStatus = document.getElementById('add-status')!;
+  const userList = document.getElementById('user-list');
+
+  const pwDialog = document.getElementById('pw-dialog') as HTMLElement;
+  const pwForm = document.getElementById('pw-form') as HTMLFormElement;
+  const pwStatus = document.getElementById('pw-status')!;
+  const pwTitle = document.getElementById('pw-dialog-title')!;
+  const pwCancel = document.getElementById('pw-cancel')!;
+  let pwTarget = '';
+
+  function showStatus(el: HTMLElement, msg: string, isError = false) {
+    el.textContent = msg;
+    el.style.color = isError ? 'var(--color-error, #e07070)' : 'var(--color-accent)';
+  }
+
+  // Add user
+  addForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = new FormData(addForm);
+    const username = (data.get('username') as string).trim();
+    const password = data.get('password') as string;
+    showStatus(addStatus, 'Adding…');
+    const res = await fetch('/api/admin/users', {
+      method: 'POST',
+      body: JSON.stringify({ username, password }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const body = await res.json();
+    if (res.ok) {
+      showStatus(addStatus, `User "${username}" added.`);
+      addForm.reset();
+      // Append to list without reload
+      if (userList) {
+        const li = document.createElement('li');
+        li.className = 'user-row';
+        li.dataset.username = username;
+        li.innerHTML = `
+          <span class="user-name">${username}</span>
+          <div class="user-actions">
+            <button class="button-secondary btn-change-pw" data-username="${username}">Change password</button>
+            <button class="button-danger btn-delete" data-username="${username}">Delete</button>
+          </div>`;
+        userList.appendChild(li);
+        bindRowButtons(li);
+      }
+    } else {
+      showStatus(addStatus, body.error || 'Failed', true);
+    }
+  });
+
+  // Delete user
+  function bindRowButtons(row: HTMLElement) {
+    row.querySelector('.btn-delete')?.addEventListener('click', async (e) => {
+      const username = (e.currentTarget as HTMLElement).dataset.username!;
+      if (!confirm(`Delete user "${username}"?`)) return;
+      const res = await fetch(`/api/admin/users/${encodeURIComponent(username)}`, { method: 'DELETE' });
+      const body = await res.json();
+      if (res.ok) {
+        row.remove();
+      } else {
+        alert(body.error || 'Delete failed');
+      }
+    });
+
+    row.querySelector('.btn-change-pw')?.addEventListener('click', (e) => {
+      pwTarget = (e.currentTarget as HTMLElement).dataset.username!;
+      pwTitle.textContent = `Change password for "${pwTarget}"`;
+      pwStatus.textContent = '';
+      pwForm.reset();
+      pwDialog.hidden = false;
+    });
+  }
+
+  document.querySelectorAll<HTMLElement>('.user-row').forEach(bindRowButtons);
+
+  // Change password dialog
+  pwCancel?.addEventListener('click', () => { pwDialog.hidden = true; });
+  pwDialog?.addEventListener('click', (e) => { if (e.target === pwDialog) pwDialog.hidden = true; });
+
+  pwForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const password = (new FormData(pwForm).get('password') as string);
+    showStatus(pwStatus, 'Saving…');
+    const res = await fetch(`/api/admin/users/${encodeURIComponent(pwTarget)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ password }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const body = await res.json();
+    if (res.ok) {
+      showStatus(pwStatus, 'Password updated.');
+      pwForm.reset();
+      setTimeout(() => { pwDialog.hidden = true; }, 1000);
+    } else {
+      showStatus(pwStatus, body.error || 'Failed', true);
+    }
+  });
+</script>
+
+<style>
+.users-page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+}
+
+.users-header {
+  margin-bottom: 2rem;
+}
+
+.back-link {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+.back-link:hover { color: var(--color-accent); }
+
+.users-header h1 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.users-section {
+  margin-bottom: 2.5rem;
+}
+
+.users-section h2 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  border-bottom: 1px solid rgba(196, 137, 60, 0.25);
+  padding-bottom: 0.4rem;
+  margin: 0 0 1rem;
+}
+
+.user-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.user-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 0.9rem;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 8px;
+}
+
+.user-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.you-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  background: rgba(196,137,60,0.12);
+  border: 1px solid rgba(196,137,60,0.3);
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+}
+
+.user-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.user-actions button {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.6rem;
+}
+
+.button-danger {
+  background: transparent;
+  border: 1px solid rgba(224,112,112,0.4);
+  color: #e07070;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.button-danger:hover {
+  background: rgba(224,112,112,0.1);
+  border-color: #e07070;
+}
+
+.user-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-width: 360px;
+}
+
+.user-form input {
+  padding: 0.5rem 0.75rem;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  color: var(--color-text);
+  font-size: 0.9rem;
+}
+
+.empty-msg, .error-msg {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+.error-msg { color: #e07070; }
+
+.status-msg {
+  font-size: 0.82rem;
+  min-height: 1.2em;
+  margin-bottom: 0.25rem;
+}
+
+/* Dialog */
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.dialog-backdrop[hidden] { display: none; }
+
+.dialog {
+  background: var(--color-bg, #1a1a1a);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  padding: 1.5rem;
+  width: min(400px, 90vw);
+}
+
+.dialog h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.dialog-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+</style>

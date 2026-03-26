@@ -1,12 +1,18 @@
 import type { APIRoute } from 'astro';
-import { buildAuthCookie, isAuthConfigured } from '../../../utils/adminAuth';
+import { createSession, isAuthConfigured, getLegacySecret } from '../../../utils/adminAuth';
+import { verifyUser } from '../../../utils/adminUsersR2';
 
 export const prerender = false;
 
-type Env = { ADMIN_SECRET?: string; COLLECTION_EDIT_SECRET?: string };
+type Env = {
+  ADMIN_SECRET?: string;
+  COLLECTION_EDIT_SECRET?: string;
+  BIONICLE_COLLECTION?: R2Bucket;
+  SESSION?: KVNamespace;
+};
 
-function jsonResponse(body: { error: string }, status: number) {
-  return new Response(JSON.stringify(body), {
+function jsonError(error: string, status: number) {
+  return new Response(JSON.stringify({ error }), {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
@@ -16,13 +22,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const env = (locals as { runtime?: { env?: Env } }).runtime?.env;
     if (!isAuthConfigured(env)) {
-      return jsonResponse(
-        { error: 'Admin login not configured. Set ADMIN_SECRET in Cloudflare Pages → Settings → Environment variables (Production), then redeploy. Check /api/admin/status to verify.' },
+      return jsonError(
+        'Admin login not configured. Set ADMIN_SECRET in Cloudflare Pages → Settings → Environment variables (Production), then redeploy. Check /api/admin/status to verify.',
         503
       );
     }
-    const secret = (env?.ADMIN_SECRET ?? env?.COLLECTION_EDIT_SECRET) as string;
-    let body: { key?: string };
+
+    let body: { key?: string; username?: string; password?: string };
     try {
       body = await request.json();
     } catch {
@@ -30,19 +36,44 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (contentType.includes('application/x-www-form-urlencoded')) {
         const text = await request.text();
         const params = new URLSearchParams(text);
-        body = { key: params.get('key') ?? undefined };
+        body = {
+          key: params.get('key') ?? undefined,
+          username: params.get('username') ?? undefined,
+          password: params.get('password') ?? undefined,
+        };
       } else {
-        return jsonResponse({ error: 'Invalid body' }, 400);
+        return jsonError('Invalid body', 400);
       }
     }
-    const key = (body.key ?? '').trim();
-    if (key !== secret) {
-      return jsonResponse({ error: 'Invalid key' }, 401);
+
+    const legacySecret = getLegacySecret(env);
+    let authed = false;
+    let username = (body.username ?? '').trim() || 'admin';
+
+    // Legacy path: { key } field, or password matching ADMIN_SECRET
+    const submittedKey = (body.key ?? body.password ?? '').trim();
+    if (legacySecret && submittedKey === legacySecret) {
+      authed = true;
     }
-    const cookieHeader = await buildAuthCookie(env);
+
+    // R2 user path (only if not already authed via legacy secret)
+    if (!authed && body.username && body.password) {
+      const bucket = env?.BIONICLE_COLLECTION;
+      if (bucket) {
+        authed = await verifyUser(bucket, body.username.trim(), body.password);
+        if (authed) username = body.username.trim();
+      }
+    }
+
+    if (!authed) {
+      return jsonError('Invalid credentials', 401);
+    }
+
+    const cookieHeader = await createSession(env, username);
     if (!cookieHeader) {
-      return jsonResponse({ error: 'Could not set session' }, 500);
+      return jsonError('Could not create session — SESSION KV namespace not bound', 500);
     }
+
     const url = new URL(request.url);
     const next = url.searchParams.get('next') || '/collection/';
     const redirectUrl = next.startsWith('/') ? new URL(next, url.origin).toString() : `${url.origin}/collection/`;
@@ -55,6 +86,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
-    return jsonResponse({ error: `Login failed: ${message}` }, 500);
+    return jsonError(`Login failed: ${message}`, 500);
   }
 };
