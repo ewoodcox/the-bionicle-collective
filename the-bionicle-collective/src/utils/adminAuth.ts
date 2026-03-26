@@ -2,7 +2,17 @@
  * Admin auth: session tokens stored in Cloudflare KV (SESSION binding).
  * Login validates credentials via adminUsersR2 or the legacy ADMIN_SECRET bypass.
  * Each session token is a 48-char hex string stored under `session:{token}` in KV.
+ * The user's role is embedded in the session so every request knows it without an R2 read.
  */
+
+import type { UserRole } from './adminUsersR2';
+
+export type { UserRole };
+
+export interface SessionInfo {
+  username: string;
+  role: UserRole;
+}
 
 const COOKIE_NAME = 'admin_auth';
 const SESSION_PREFIX = 'session:';
@@ -20,8 +30,12 @@ function getSessionToken(request: Request): string | null {
   return match?.[1] ?? null;
 }
 
-/** Generate a session token, store it in KV, and return the Set-Cookie header. */
-export async function createSession(env: Env, username: string): Promise<string | null> {
+/** Generate a session token, store it in KV with the user's role, and return the Set-Cookie header. */
+export async function createSession(
+  env: Env,
+  username: string,
+  role: UserRole
+): Promise<string | null> {
   const kv = getKV(env);
   if (!kv) return null;
   const bytes = crypto.getRandomValues(new Uint8Array(24));
@@ -29,33 +43,22 @@ export async function createSession(env: Env, username: string): Promise<string 
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
   const expiresAt = Math.floor(Date.now() / 1000) + MAX_AGE_SEC;
-  await kv.put(SESSION_PREFIX + token, JSON.stringify({ username, expiresAt }), {
+  await kv.put(SESSION_PREFIX + token, JSON.stringify({ username, role, expiresAt }), {
     expirationTtl: MAX_AGE_SEC,
   });
   return `${COOKIE_NAME}=${token}; Path=/; Max-Age=${MAX_AGE_SEC}; HttpOnly; SameSite=Lax`;
 }
 
-/** Verify session cookie against KV; returns true if valid. */
-export async function isAuthenticated(
-  request: Request,
-  env: Env
-): Promise<boolean> {
-  const token = getSessionToken(request);
-  if (!token) return false;
-  const kv = getKV(env);
-  if (!kv) return false;
-  const raw = await kv.get(SESSION_PREFIX + token);
-  if (!raw) return false;
-  try {
-    const { expiresAt } = JSON.parse(raw) as { expiresAt: number };
-    return expiresAt > Math.floor(Date.now() / 1000);
-  } catch {
-    return false;
-  }
+/** Verify session cookie against KV; returns true if valid and not expired. */
+export async function isAuthenticated(request: Request, env: Env): Promise<boolean> {
+  return (await getSessionInfo(request, env)) !== null;
 }
 
-/** Get the logged-in username from the session, or null. */
-export async function getSessionUser(request: Request, env: Env): Promise<string | null> {
+/**
+ * Get full session info (username + role) from the cookie, or null if invalid/expired.
+ * Use this instead of separate username/role lookups.
+ */
+export async function getSessionInfo(request: Request, env: Env): Promise<SessionInfo | null> {
   const token = getSessionToken(request);
   if (!token) return null;
   const kv = getKV(env);
@@ -63,11 +66,24 @@ export async function getSessionUser(request: Request, env: Env): Promise<string
   const raw = await kv.get(SESSION_PREFIX + token);
   if (!raw) return null;
   try {
-    const { username, expiresAt } = JSON.parse(raw) as { username: string; expiresAt: number };
-    return expiresAt > Math.floor(Date.now() / 1000) ? username : null;
+    const { username, role, expiresAt } = JSON.parse(raw) as {
+      username: string;
+      role: UserRole;
+      expiresAt: number;
+    };
+    if (expiresAt <= Math.floor(Date.now() / 1000)) return null;
+    return { username, role: role ?? 'admin' }; // default for sessions created before roles
   } catch {
     return null;
   }
+}
+
+/**
+ * @deprecated Use getSessionInfo instead — returns both username and role in one call.
+ * Kept for compatibility with existing callers.
+ */
+export async function getSessionUser(request: Request, env: Env): Promise<string | null> {
+  return (await getSessionInfo(request, env))?.username ?? null;
 }
 
 /** Delete the session from KV (used on logout). */

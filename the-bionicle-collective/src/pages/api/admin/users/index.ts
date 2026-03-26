@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
-import { isAuthenticated } from '../../../../utils/adminAuth';
+import { getSessionInfo } from '../../../../utils/adminAuth';
 import { listUsers, createUser } from '../../../../utils/adminUsersR2';
+import type { UserRole } from '../../../../utils/adminUsersR2';
 
 export const prerender = false;
 
@@ -15,7 +16,9 @@ function json(body: unknown, status = 200) {
 
 export const GET: APIRoute = async ({ request, locals }) => {
   const env = (locals as { runtime?: { env?: Env } }).runtime?.env;
-  if (!(await isAuthenticated(request, env))) return json({ error: 'Unauthorized' }, 401);
+  const session = await getSessionInfo(request, env);
+  if (!session) return json({ error: 'Unauthorized' }, 401);
+  if (session.role !== 'superadmin') return json({ error: 'Forbidden' }, 403);
   const bucket = env?.BIONICLE_COLLECTION;
   if (!bucket) return json({ error: 'Storage not configured' }, 503);
   const users = await listUsers(bucket);
@@ -24,11 +27,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const env = (locals as { runtime?: { env?: Env } }).runtime?.env;
-  if (!(await isAuthenticated(request, env))) return json({ error: 'Unauthorized' }, 401);
+  const session = await getSessionInfo(request, env);
+  if (!session) return json({ error: 'Unauthorized' }, 401);
+  if (session.role !== 'superadmin') return json({ error: 'Forbidden' }, 403);
   const bucket = env?.BIONICLE_COLLECTION;
   if (!bucket) return json({ error: 'Storage not configured' }, 503);
 
-  let body: { username?: string; password?: string };
+  let body: { username?: string; password?: string; role?: string };
   try {
     body = await request.json();
   } catch {
@@ -37,6 +42,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const username = (body.username ?? '').trim();
   const password = (body.password ?? '').trim();
+  const role: UserRole = body.role === 'superadmin' ? 'superadmin' : 'admin';
+
   if (!username || !password) return json({ error: 'username and password required' }, 400);
   if (!/^[a-zA-Z0-9_-]{1,32}$/.test(username)) {
     return json({ error: 'Invalid username — letters, numbers, _ and - only, max 32 chars' }, 400);
@@ -44,8 +51,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (password.length < 8) return json({ error: 'Password must be at least 8 characters' }, 400);
 
   try {
-    await createUser(bucket, username, password);
-    return json({ ok: true, username });
+    await createUser(bucket, username, password, role);
+    return json({ ok: true, username, role });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : 'Failed' }, 409);
   }

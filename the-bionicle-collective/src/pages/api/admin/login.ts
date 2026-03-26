@@ -47,29 +47,32 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const legacySecret = getLegacySecret(env);
-    let authed = false;
     let username = (body.username ?? '').trim() || 'admin';
+    let role: 'superadmin' | 'admin' | null = null;
 
-    // Legacy path: { key } field, or password matching ADMIN_SECRET
+    // Legacy path: { key } field, or password matching ADMIN_SECRET — always grants superadmin
     const submittedKey = (body.key ?? body.password ?? '').trim();
     if (legacySecret && submittedKey === legacySecret) {
-      authed = true;
+      role = 'superadmin';
     }
 
-    // R2 user path (only if not already authed via legacy secret)
-    if (!authed && body.username && body.password) {
+    // R2 user path — verifyUser returns the stored role, or null on failure
+    if (role === null && body.username && body.password) {
       const bucket = env?.BIONICLE_COLLECTION;
       if (bucket) {
-        authed = await verifyUser(bucket, body.username.trim(), body.password);
-        if (authed) username = body.username.trim();
+        const verified = await verifyUser(bucket, body.username.trim(), body.password);
+        if (verified !== null) {
+          username = body.username.trim();
+          role = verified;
+        }
       }
     }
 
-    if (!authed) {
+    if (role === null) {
       return jsonError('Invalid credentials', 401);
     }
 
-    const cookieHeader = await createSession(env, username);
+    const cookieHeader = await createSession(env, username, role);
     if (!cookieHeader) {
       return jsonError('Could not create session — SESSION KV namespace not bound', 500);
     }

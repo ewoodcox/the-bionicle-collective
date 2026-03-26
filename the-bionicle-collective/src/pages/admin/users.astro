@@ -3,7 +3,7 @@ export const prerender = false;
 
 import Layout from '../../layouts/Layout.astro';
 import { listUsers } from '../../utils/adminUsersR2';
-import { getSessionUser } from '../../utils/adminAuth';
+import { getSessionInfo } from '../../utils/adminAuth';
 
 const host = Astro.request.headers.get('Host') ?? '';
 if (host !== 'edit.bioniclecollective.com') {
@@ -12,9 +12,15 @@ if (host !== 'edit.bioniclecollective.com') {
 
 const env = (Astro.locals as any).runtime?.env;
 const bucket = env?.BIONICLE_COLLECTION;
-const currentUser = await getSessionUser(Astro.request, env);
+const session = await getSessionInfo(Astro.request, env);
+const isSuperAdmin = session?.role === 'superadmin';
 
-let users: string[] = [];
+// Only superadmins can see this page at all
+if (!isSuperAdmin) {
+  return Astro.redirect('/admin/');
+}
+
+let users: { username: string; role: string }[] = [];
 let loadError = '';
 if (bucket) {
   try {
@@ -44,12 +50,22 @@ if (bucket) {
       ) : (
         <ul class="user-list" id="user-list">
           {users.map((u) => (
-            <li class="user-row" data-username={u}>
-              <span class="user-name">{u}{u === currentUser ? <span class="you-badge">you</span> : ''}</span>
+            <li class="user-row" data-username={u.username} data-role={u.role}>
+              <div class="user-info">
+                <span class="user-name">{u.username}</span>
+                <span class={`role-badge role-badge--${u.role}`}>{u.role === 'superadmin' ? 'super admin' : 'admin'}</span>
+                {u.username === session?.username && <span class="you-badge">you</span>}
+              </div>
               <div class="user-actions">
-                <button class="button-secondary btn-change-pw" data-username={u}>Change password</button>
-                {u !== currentUser && (
-                  <button class="button-danger btn-delete" data-username={u}>Delete</button>
+                {u.role !== 'superadmin' && (
+                  <>
+                    <button class="button-secondary btn-promote" data-username={u.username}>Promote to super admin</button>
+                    <button class="button-secondary btn-change-pw" data-username={u.username}>Change password</button>
+                    <button class="button-danger btn-delete" data-username={u.username}>Delete</button>
+                  </>
+                )}
+                {u.role === 'superadmin' && u.username === session?.username && (
+                  <button class="button-secondary btn-change-pw" data-username={u.username}>Change password</button>
                 )}
               </div>
             </li>
@@ -65,6 +81,13 @@ if (bucket) {
         <input type="text" name="username" placeholder="Username" autocomplete="off" required
           pattern="[a-zA-Z0-9_\-]{1,32}" title="Letters, numbers, _ and - only, max 32 chars" />
         <input type="password" name="password" placeholder="Password (min 8 chars)" autocomplete="new-password" required minlength="8" />
+        <label class="role-select-label">
+          Role:
+          <select name="role" class="role-select">
+            <option value="admin">Admin</option>
+            <option value="superadmin">Super admin</option>
+          </select>
+        </label>
         <button type="submit" class="button-primary">Add user</button>
       </form>
     </section>
@@ -75,7 +98,8 @@ if (bucket) {
         <h3 id="pw-dialog-title">Change password</h3>
         <p class="status-msg" id="pw-status" aria-live="polite"></p>
         <form id="pw-form" class="user-form">
-          <input type="password" name="password" placeholder="New password (min 8 chars)" autocomplete="new-password" required minlength="8" />
+          <input type="password" name="password" placeholder="New password (min 8 chars)"
+            autocomplete="new-password" required minlength="8" />
           <div class="dialog-buttons">
             <button type="submit" class="button-primary">Save</button>
             <button type="button" id="pw-cancel" class="button-secondary">Cancel</button>
@@ -103,46 +127,31 @@ if (bucket) {
     el.style.color = isError ? 'var(--color-error, #e07070)' : 'var(--color-accent)';
   }
 
-  // Add user
-  addForm?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const data = new FormData(addForm);
-    const username = (data.get('username') as string).trim();
-    const password = data.get('password') as string;
-    showStatus(addStatus, 'Adding…');
-    const res = await fetch('/api/admin/users', {
-      method: 'POST',
-      body: JSON.stringify({ username, password }),
-      headers: { 'Content-Type': 'application/json' },
-    });
-    const body = await res.json();
-    if (res.ok) {
-      showStatus(addStatus, `User "${username}" added.`);
-      addForm.reset();
-      // Append to list without reload
-      if (userList) {
-        const li = document.createElement('li');
-        li.className = 'user-row';
-        li.dataset.username = username;
-        li.innerHTML = `
-          <span class="user-name">${username}</span>
-          <div class="user-actions">
-            <button class="button-secondary btn-change-pw" data-username="${username}">Change password</button>
-            <button class="button-danger btn-delete" data-username="${username}">Delete</button>
-          </div>`;
-        userList.appendChild(li);
-        bindRowButtons(li);
-      }
-    } else {
-      showStatus(addStatus, body.error || 'Failed', true);
-    }
-  });
+  function makeRow(username: string, role: string): HTMLLIElement {
+    const li = document.createElement('li');
+    li.className = 'user-row';
+    li.dataset.username = username;
+    li.dataset.role = role;
+    const isAdmin = role === 'admin';
+    li.innerHTML = `
+      <div class="user-info">
+        <span class="user-name">${username}</span>
+        <span class="role-badge role-badge--${role}">${role === 'superadmin' ? 'super admin' : 'admin'}</span>
+      </div>
+      <div class="user-actions">
+        ${isAdmin ? `
+          <button class="button-secondary btn-promote" data-username="${username}">Promote to super admin</button>
+          <button class="button-secondary btn-change-pw" data-username="${username}">Change password</button>
+          <button class="button-danger btn-delete" data-username="${username}">Delete</button>
+        ` : ''}
+      </div>`;
+    return li;
+  }
 
-  // Delete user
   function bindRowButtons(row: HTMLElement) {
     row.querySelector('.btn-delete')?.addEventListener('click', async (e) => {
       const username = (e.currentTarget as HTMLElement).dataset.username!;
-      if (!confirm(`Delete user "${username}"?`)) return;
+      if (!confirm(`Delete user "${username}"? This cannot be undone.`)) return;
       const res = await fetch(`/api/admin/users/${encodeURIComponent(username)}`, { method: 'DELETE' });
       const body = await res.json();
       if (res.ok) {
@@ -159,9 +168,55 @@ if (bucket) {
       pwForm.reset();
       pwDialog.hidden = false;
     });
+
+    row.querySelector('.btn-promote')?.addEventListener('click', async (e) => {
+      const username = (e.currentTarget as HTMLElement).dataset.username!;
+      if (!confirm(`Promote "${username}" to super admin? Super admins cannot be deleted.`)) return;
+      const res = await fetch(`/api/admin/users/${encodeURIComponent(username)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ role: 'superadmin' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const body = await res.json();
+      if (res.ok) {
+        // Re-render the row to reflect the new role (no management buttons for superadmins)
+        const newRow = makeRow(username, 'superadmin');
+        bindRowButtons(newRow);
+        row.replaceWith(newRow);
+      } else {
+        alert(body.error || 'Promotion failed');
+      }
+    });
   }
 
   document.querySelectorAll<HTMLElement>('.user-row').forEach(bindRowButtons);
+
+  // Add user
+  addForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = new FormData(addForm);
+    const username = (data.get('username') as string).trim();
+    const password = data.get('password') as string;
+    const role = data.get('role') as string;
+    showStatus(addStatus, 'Adding…');
+    const res = await fetch('/api/admin/users', {
+      method: 'POST',
+      body: JSON.stringify({ username, password, role }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const body = await res.json();
+    if (res.ok) {
+      showStatus(addStatus, `User "${username}" added as ${role === 'superadmin' ? 'super admin' : 'admin'}.`);
+      addForm.reset();
+      if (userList) {
+        const newRow = makeRow(username, body.role ?? role);
+        bindRowButtons(newRow);
+        userList.appendChild(newRow);
+      }
+    } else {
+      showStatus(addStatus, body.error || 'Failed', true);
+    }
+  });
 
   // Change password dialog
   pwCancel?.addEventListener('click', () => { pwDialog.hidden = true; });
@@ -169,7 +224,7 @@ if (bucket) {
 
   pwForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const password = (new FormData(pwForm).get('password') as string);
+    const password = new FormData(pwForm).get('password') as string;
     showStatus(pwStatus, 'Saving…');
     const res = await fetch(`/api/admin/users/${encodeURIComponent(pwTarget)}`, {
       method: 'PATCH',
@@ -245,14 +300,39 @@ if (bucket) {
   background: rgba(255,255,255,0.03);
   border: 1px solid rgba(255,255,255,0.07);
   border-radius: 8px;
+  flex-wrap: wrap;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .user-name {
   font-size: 0.9rem;
   font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+}
+
+.role-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+}
+
+.role-badge--superadmin {
+  color: #f0c060;
+  background: rgba(240, 192, 96, 0.12);
+  border: 1px solid rgba(240, 192, 96, 0.35);
+}
+
+.role-badge--admin {
+  color: var(--color-text-muted);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
 }
 
 .you-badge {
@@ -270,6 +350,7 @@ if (bucket) {
 .user-actions {
   display: flex;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .user-actions button {
@@ -297,13 +378,25 @@ if (bucket) {
   max-width: 360px;
 }
 
-.user-form input {
+.user-form input, .role-select {
   padding: 0.5rem 0.75rem;
   background: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.15);
   border-radius: 6px;
   color: var(--color-text);
   font-size: 0.9rem;
+}
+
+.role-select-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.role-select {
+  flex: 1;
 }
 
 .empty-msg, .error-msg {

@@ -4,10 +4,13 @@
  * Passwords hashed with PBKDF2-SHA-256 (100k iterations, 32-byte output).
  */
 
+export type UserRole = 'superadmin' | 'admin';
+
 interface AdminUser {
   username: string;
   passwordHash: string; // hex-encoded PBKDF2 output
   salt: string;         // hex-encoded random 16-byte salt
+  role: UserRole;
 }
 
 const R2_KEY = 'admin-users.json';
@@ -19,7 +22,9 @@ async function getAdminUsers(bucket: R2Bucket): Promise<AdminUser[]> {
   if (!obj) return [];
   try {
     const parsed = JSON.parse(await obj.text());
-    return Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(parsed)
+      ? parsed.map((u) => ({ ...u, role: u.role ?? 'admin' })) // migrate pre-role records
+      : [];
   } catch {
     return [];
   }
@@ -51,25 +56,43 @@ function randomSaltHex(): string {
     .join('');
 }
 
-export async function verifyUser(bucket: R2Bucket, username: string, password: string): Promise<boolean> {
+/**
+ * Verify credentials. Returns the user's role on success, null on failure.
+ * Returning the role avoids a second R2 read in the login flow.
+ */
+export async function verifyUser(
+  bucket: R2Bucket,
+  username: string,
+  password: string
+): Promise<UserRole | null> {
   const users = await getAdminUsers(bucket);
   const user = users.find((u) => u.username === username);
-  if (!user) return false;
+  if (!user) return null;
   const hash = await deriveKey(password, user.salt);
-  return hash === user.passwordHash;
+  return hash === user.passwordHash ? user.role : null;
 }
 
-export async function createUser(bucket: R2Bucket, username: string, password: string): Promise<void> {
+/** Create a new user. Defaults to role 'admin'. Throws if username already exists. */
+export async function createUser(
+  bucket: R2Bucket,
+  username: string,
+  password: string,
+  role: UserRole = 'admin'
+): Promise<void> {
   const users = await getAdminUsers(bucket);
   if (users.some((u) => u.username === username)) {
     throw new Error(`User "${username}" already exists`);
   }
   const salt = randomSaltHex();
   const passwordHash = await deriveKey(password, salt);
-  users.push({ username, passwordHash, salt });
+  users.push({ username, passwordHash, salt, role });
   await saveAdminUsers(bucket, users);
 }
 
+/**
+ * Delete a user. Returns false if not found.
+ * Does NOT enforce hierarchy — callers must verify permissions before calling.
+ */
 export async function deleteUser(bucket: R2Bucket, username: string): Promise<boolean> {
   const users = await getAdminUsers(bucket);
   const filtered = users.filter((u) => u.username !== username);
@@ -78,12 +101,18 @@ export async function deleteUser(bucket: R2Bucket, username: string): Promise<bo
   return true;
 }
 
-export async function listUsers(bucket: R2Bucket): Promise<string[]> {
+/** List all users with their roles. */
+export async function listUsers(bucket: R2Bucket): Promise<{ username: string; role: UserRole }[]> {
   const users = await getAdminUsers(bucket);
-  return users.map((u) => u.username);
+  return users.map(({ username, role }) => ({ username, role }));
 }
 
-export async function changePassword(bucket: R2Bucket, username: string, newPassword: string): Promise<boolean> {
+/** Change a user's password. Returns false if not found. */
+export async function changePassword(
+  bucket: R2Bucket,
+  username: string,
+  newPassword: string
+): Promise<boolean> {
   const users = await getAdminUsers(bucket);
   const user = users.find((u) => u.username === username);
   if (!user) return false;
@@ -92,4 +121,23 @@ export async function changePassword(bucket: R2Bucket, username: string, newPass
   user.salt = salt;
   await saveAdminUsers(bucket, users);
   return true;
+}
+
+/**
+ * Set a user's role. Returns false if user not found.
+ * Callers must ensure this won't remove the last superadmin.
+ */
+export async function setRole(bucket: R2Bucket, username: string, role: UserRole): Promise<boolean> {
+  const users = await getAdminUsers(bucket);
+  const user = users.find((u) => u.username === username);
+  if (!user) return false;
+  user.role = role;
+  await saveAdminUsers(bucket, users);
+  return true;
+}
+
+/** Count how many superadmins exist (used to prevent removing the last one). */
+export async function countSuperAdmins(bucket: R2Bucket): Promise<number> {
+  const users = await getAdminUsers(bucket);
+  return users.filter((u) => u.role === 'superadmin').length;
 }
