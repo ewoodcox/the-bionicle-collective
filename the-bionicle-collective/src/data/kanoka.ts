@@ -23,17 +23,6 @@ export const METRU_LIST = [
   { id: 6, label: 'Onu-Metru', element: 'Earth', color: '#555555' },
 ] as const;
 
-export const POWER_NAMES: Record<number, string> = {
-  1: 'Reconstitute at Random',
-  2: 'Weaken',
-  3: 'Remove Poison',
-  4: 'Regenerate',
-  5: 'Teleport',
-  6: 'Freeze',
-  7: 'Increase Weight',
-  8: 'Enlarge',
-};
-
 export const POWER_ABBREV: Record<number, string> = {
   1: 'Reconstitute',
   2: 'Weaken',

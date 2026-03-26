@@ -1,10 +1,6 @@
 /**
  * Serve and upload photos for unique items.
- *
  * R2 key: `unique-items/{id}/main.{ext}`
- *
- * GET  /api/unique/photo/{id}  → serves from R2, falls back to external imageUrl
- * POST /api/unique/photo/{id}  → upload file, store in R2, update item's imageUrl
  */
 import type { APIRoute } from 'astro';
 import { getUniqueItem, updateUniqueItem } from '../../../utils/uniqueStoreR2';
@@ -12,7 +8,7 @@ import { isAuthConfigured, isAuthenticated } from '../../../utils/adminAuth';
 
 export const prerender = false;
 
-const EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp'];
+const EXTENSIONS = ['jpg', 'png', 'webp'];
 const ALLOWED_TYPES: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
@@ -39,21 +35,22 @@ export const GET: APIRoute = async ({ params, locals }) => {
   const bucket = getBucket(locals);
   if (!bucket) return new Response('Not found', { status: 404 });
 
-  for (const ext of EXTENSIONS) {
-    const obj = await bucket.get(`unique-items/${id}/main.${ext}`);
-    if (obj) {
-      return new Response(obj.body, {
-        status: 200,
-        headers: {
-          'Content-Type': contentType(ext),
-          'Cache-Control': 'public, max-age=86400',
-          ...(obj.etag ? { ETag: obj.etag } : {}),
-        },
-      });
-    }
+  const results = await Promise.all(
+    EXTENSIONS.map((ext) => bucket.get(`unique-items/${id}/main.${ext}`).then((obj) => ({ ext, obj })))
+  );
+  const found = results.find((r) => r.obj != null);
+  if (found?.obj) {
+    const { ext, obj } = found;
+    return new Response(obj!.body, {
+      status: 200,
+      headers: {
+        'Content-Type': contentType(ext),
+        'Cache-Control': 'public, max-age=86400',
+        ...(obj!.etag ? { ETag: obj!.etag } : {}),
+      },
+    });
   }
 
-  // Fall back to external imageUrl for items with a URL-based image
   const item = await getUniqueItem(bucket, id);
   if (item?.imageUrl && item.imageUrl.startsWith('http')) {
     return Response.redirect(item.imageUrl, 302);

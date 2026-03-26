@@ -21,7 +21,7 @@ export async function getKanokaOwnedIds(bucket: R2BucketLike): Promise<string[]>
   const raw = await object.text();
   try {
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) return parsed.filter((x): x is string => typeof x === 'string');
+    if (Array.isArray(parsed)) return [...new Set(parsed.filter((x): x is string => typeof x === 'string'))];
   } catch {
     // ignore
   }
