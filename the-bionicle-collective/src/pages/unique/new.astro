@@ -20,8 +20,16 @@ import Layout from '../../layouts/Layout.astro';
       <label class="collection-label" for="new-year">Year</label>
       <input type="number" id="new-year" name="year" class="collection-input" min="2001" max="2030" placeholder="e.g. 2003" />
 
-      <label class="collection-label" for="new-imageUrl">Image URL</label>
-      <input type="url" id="new-imageUrl" name="imageUrl" class="collection-input" placeholder="https://..." />
+      <label class="collection-label" for="new-imageUrl">Image</label>
+      <div class="image-input-group">
+        <div class="image-upload-row">
+          <input type="file" id="new-photo-file" accept="image/jpeg,image/png,image/webp" hidden />
+          <button type="button" class="button-secondary image-upload-btn" id="new-photo-btn">Upload from computer</button>
+          <span class="image-upload-filename" id="new-photo-name"></span>
+        </div>
+        <div class="image-input-sep">or enter URL</div>
+        <input type="url" id="new-imageUrl" name="imageUrl" class="collection-input" placeholder="https://..." />
+      </div>
 
       <label class="collection-label" for="new-description">Description</label>
       <textarea id="new-description" name="description" class="collection-input collection-textarea" rows="3" placeholder="Brief description of the item"></textarea>
@@ -63,6 +71,18 @@ import Layout from '../../layouts/Layout.astro';
 
     const form = document.getElementById('unique-new-form') as HTMLFormElement | null;
     const status = document.getElementById('unique-save-status');
+    const photoFileInput = document.getElementById('new-photo-file') as HTMLInputElement | null;
+    const photoBtn = document.getElementById('new-photo-btn') as HTMLButtonElement | null;
+    const photoName = document.getElementById('new-photo-name');
+
+    if (photoBtn && photoFileInput) {
+      photoBtn.addEventListener('click', () => photoFileInput.click());
+      photoFileInput.addEventListener('change', () => {
+        const f = photoFileInput.files?.[0];
+        if (photoName) photoName.textContent = f ? f.name : '';
+        if (photoBtn) photoBtn.textContent = f ? 'Change file' : 'Upload from computer';
+      });
+    }
 
     if (!form) return;
 
@@ -76,6 +96,10 @@ import Layout from '../../layouts/Layout.astro';
         data.year = parseInt(data.year as string, 10);
       }
 
+      // If a file is selected, imageUrl will be set after upload — don't send URL field
+      const selectedFile = photoFileInput?.files?.[0] ?? null;
+      if (selectedFile) delete data.imageUrl;
+
       ['imageUrl', 'description', 'builder', 'signedBy', 'mediaRef', 'acquiredDate', 'acquiredFrom', 'notes'].forEach((k) => {
         if (data[k] === '') delete data[k];
       });
@@ -88,13 +112,33 @@ import Layout from '../../layouts/Layout.astro';
           credentials: 'include',
           body: JSON.stringify(data),
         });
-        if (res.ok || res.status === 201) {
-          const created = await res.json();
-          window.location.href = `/unique/${created.id}/`;
-        } else {
+        if (!res.ok && res.status !== 201) {
           const err = await res.json().catch(() => ({ error: 'Unknown error' }));
           if (status) status.textContent = `Error: ${err.error}`;
+          return;
         }
+        const created = await res.json();
+
+        // Upload photo if one was selected
+        if (selectedFile) {
+          if (status) status.textContent = 'Uploading photo…';
+          const fd = new FormData();
+          fd.append('file', selectedFile);
+          const photoRes = await fetch(`/api/unique/photo/${created.id}`, {
+            method: 'POST',
+            credentials: 'include',
+            body: fd,
+          });
+          if (!photoRes.ok) {
+            const err = await photoRes.json().catch(() => ({ error: 'Unknown error' }));
+            // Item was created; just warn about photo and proceed
+            if (status) status.textContent = `Item created but photo upload failed: ${err.error}`;
+            setTimeout(() => { window.location.href = `/unique/${created.id}/`; }, 2000);
+            return;
+          }
+        }
+
+        window.location.href = `/unique/${created.id}/`;
       } catch (err: any) {
         if (status) status.textContent = `Error: ${err.message}`;
       }
@@ -133,5 +177,36 @@ h1 {
   color: var(--color-text-muted);
   min-height: 1.2em;
   margin: 0.25rem 0 0;
+}
+
+.image-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.image-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.image-upload-btn {
+  font-size: 0.8rem;
+  padding: 0.35rem 0.75rem;
+  white-space: nowrap;
+}
+
+.image-upload-filename {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  word-break: break-all;
+}
+
+.image-input-sep {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  text-align: center;
 }
 </style>
