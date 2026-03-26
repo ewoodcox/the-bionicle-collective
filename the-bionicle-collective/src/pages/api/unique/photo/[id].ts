@@ -3,8 +3,8 @@
  * R2 key: `unique-items/{id}/main.{ext}`
  */
 import type { APIRoute } from 'astro';
-import { getUniqueItem, updateUniqueItem } from '../../../utils/uniqueStoreR2';
-import { isAuthConfigured, isAuthenticated } from '../../../utils/adminAuth';
+import { getUniqueItem, updateUniqueItem } from '../../../../utils/uniqueStoreR2';
+import { isAuthConfigured, isAuthenticated } from '../../../../utils/adminAuth';
 
 export const prerender = false;
 
