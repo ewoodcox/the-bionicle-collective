@@ -54,36 +54,57 @@ for (const k of kanokaList) {
 
 console.log(`Pre-warming ${pairs.length} Kanoka images to R2 (kanoka-images/)...\n`);
 
+/** Strip pb suffix to get the base mold part ID (e.g. "32533pb117" → "32533"). */
+function baseMold(partId) {
+  return partId.replace(/pb\d+$/i, '');
+}
+
+async function fetchImage(colorId, partId) {
+  const path = `PN/${colorId}/${partId}.png`;
+  const url = `${BRICKLINK_IMG_BASE}/${path}`;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const buf = await res.arrayBuffer();
+  return buf;
+}
+
 async function run() {
   let ok = 0;
   let fail = 0;
 
   for (let i = 0; i < pairs.length; i++) {
     const { colorId, partId, id } = pairs[i];
-    const path = `PN/${colorId}/${partId}.png`;
-    const r2Key = `${R2_PREFIX}/${path}`;
-    const url = `${BRICKLINK_IMG_BASE}/${path}`;
+    const r2Key = `${R2_PREFIX}/PN/${colorId}/${partId}.png`;
     const tempPath = join(projectRoot, `.warm-temp-kanoka-${id}.png`);
 
     try {
-      const res = await fetch(url);
-      if (!res.ok) {
-        console.warn(`  [${i + 1}/${pairs.length}] ${id} (${path}) -> ${res.status} (skipped)`);
+      let buf = await fetchImage(colorId, partId);
+      let source = partId;
+
+      if (!buf) {
+        const mold = baseMold(partId);
+        if (mold !== partId) {
+          buf = await fetchImage(colorId, mold);
+          if (buf) source = `${mold} (fallback)`;
+        }
+      }
+
+      if (!buf) {
+        console.warn(`  [${i + 1}/${pairs.length}] ${id} (${partId}) -> 404, no fallback (skipped)`);
         fail++;
+        await sleep(DELAY_MS);
         continue;
       }
-      const buf = await res.arrayBuffer();
-      writeFileSync(tempPath, Buffer.from(buf));
 
+      writeFileSync(tempPath, Buffer.from(buf));
       execSync(
         `npx wrangler r2 object put "${R2_BUCKET}/${r2Key}" --file="${tempPath.replace(/\\/g, '/')}"`,
         { cwd: projectRoot, stdio: 'pipe' }
       );
-
       unlinkSync(tempPath);
       ok++;
       if ((i + 1) % 10 === 0 || i === pairs.length - 1) {
-        console.log(`  [${i + 1}/${pairs.length}] ${ok} uploaded, ${fail} failed`);
+        console.log(`  [${i + 1}/${pairs.length}] ${ok} uploaded, ${fail} failed  (last: ${id} via ${source})`);
       }
     } catch (e) {
       try { unlinkSync(tempPath); } catch {}
@@ -98,7 +119,7 @@ async function run() {
 
   console.log(`\nDone. ${ok} cached, ${fail} failed.`);
   if (fail > 0) {
-    console.log('Failed images may have unconfirmed BrickLink part numbers — check kanoka.json partId fields.');
+    console.log('Remaining failures have no BrickLink image for the part or its base mold.');
   }
 }
 
