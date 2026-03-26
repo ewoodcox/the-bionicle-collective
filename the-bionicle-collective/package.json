@@ -16,7 +16,8 @@
     "sync:media-covers-r2": "node --env-file=.env scripts/sync-public-media-covers-to-r2.mjs",
     "fetch:kanohi": "node --env-file=.env scripts/fetch-kanohi-bricklink.mjs",
     "warm:kanohi-images": "node --env-file=.env scripts/warm-kanohi-image-cache.mjs",
-    "warm:krana-images": "node --env-file=.env scripts/warm-krana-image-cache.mjs"
+    "warm:krana-images": "node --env-file=.env scripts/warm-krana-image-cache.mjs",
+    "warm:kanoka-images": "node --env-file=.env scripts/warm-kanoka-image-cache.mjs"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^12.6.12",

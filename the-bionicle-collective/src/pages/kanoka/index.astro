@@ -1,0 +1,466 @@
+---
+export const prerender = false;
+
+import Layout from '../../layouts/Layout.astro';
+import { getKanoka, getKanokaByMetru, getKanokaSpecials, METRU_LIST, POWER_ABBREV, type Kanoka } from '../../data/kanoka';
+import { getKanokaOwnedIds } from '../../utils/kanokaStoreR2';
+import kanokaCollectionStatic from '../../data/kanoka-collection.json';
+
+const bucket = (Astro.locals as any).runtime?.env?.BIONICLE_COLLECTION;
+let ownedIds: string[];
+try {
+  ownedIds = bucket ? await getKanokaOwnedIds(bucket) : (kanokaCollectionStatic as string[]);
+} catch {
+  ownedIds = kanokaCollectionStatic as string[];
+}
+const ownedSet = new Set(ownedIds);
+
+const allKanoka = getKanoka().map(k => ({ ...k, owned: ownedSet.has(k.id) }));
+const ownedCount = allKanoka.filter(k => k.owned).length;
+const specials = getKanokaSpecials().map(k => ({ ...k, owned: ownedSet.has(k.id) }));
+---
+<Layout title="Kanoka Disks | The Bionicle Collective" description="All 53 Kanoka disks in The Bionicle Collective.">
+  <div class="kanoka-page">
+    <div class="kanoka-header">
+      <a href="/" class="back-link">&larr; Home</a>
+      <h1>Kanoka Disks <span class="kanoka-count">{ownedCount} / {allKanoka.length}</span></h1>
+      <p class="kanoka-subtitle">Metru Nui's disk-based tools and weapons, 2004. Each disk is identified by a 3-digit code: Metru of origin · Power type · Power level.</p>
+      <div class="kanoka-code-key">
+        <div class="kanoka-code-key__row">
+          <span class="kanoka-code-key__digit">X</span>
+          <span class="kanoka-code-key__sep">·</span>
+          <span class="kanoka-code-key__digit">Y</span>
+          <span class="kanoka-code-key__sep">·</span>
+          <span class="kanoka-code-key__digit">Z</span>
+          <span class="kanoka-code-key__label">= Metru · Power · Level (9 = Great Disk)</span>
+        </div>
+      </div>
+    </div>
+
+    {METRU_LIST.map(metru => {
+      const disks = getKanokaByMetru(metru.id).map(k => ({ ...k, owned: ownedSet.has(k.id) }));
+      const metruOwned = disks.filter(k => k.owned).length;
+      return (
+        <section class="kanoka-section" data-metru={metru.id}>
+          <h2 class="kanoka-section__heading" style={`--metru-color: ${metru.color}`}>
+            <span class="kanoka-section__name">{metru.label}</span>
+            <span class="kanoka-section__element">{metru.element}</span>
+            <span class="kanoka-section__tally">{metruOwned}/{disks.length}</span>
+          </h2>
+          <div class="kanoka-disk-grid">
+            {disks.sort((a, b) => Number(a.code) - Number(b.code)).map(disk => (
+              <div
+                class={`kanoka-card${disk.owned ? '' : ' kanoka-card--missing'}`}
+                data-kanoka-id={disk.id}
+                data-owned={disk.owned ? 'true' : 'false'}
+                title={`${disk.code} · ${POWER_ABBREV[disk.power!]} · Level ${disk.level}${disk.isGreatDisk ? ' (Great Disk)' : ''}${disk.owned ? ' · owned' : ''}`}
+                style={`--metru-color: ${metru.color}`}
+              >
+                <div class="kanoka-card__img-wrap">
+                  <img
+                    src={`/api/kanoka/image/PN/${disk.colorId}/${disk.partId}.png`}
+                    alt={`Kanoka ${disk.code}`}
+                    width="64"
+                    height="64"
+                    loading="lazy"
+                    onerror="this.style.display='none'"
+                  />
+                </div>
+                <div class="kanoka-card__code">{disk.code}</div>
+                <div class="kanoka-card__power">{POWER_ABBREV[disk.power!]}</div>
+                <div class="kanoka-card__level">
+                  {disk.isGreatDisk
+                    ? <span class="kanoka-card__great-badge">Great</span>
+                    : <span class="kanoka-card__level-num">Lv {disk.level}</span>
+                  }
+                </div>
+                <button class="kanoka-toggle" aria-label={disk.owned ? 'Mark as not owned' : 'Mark as owned'} hidden>
+                  <span class="kanoka-toggle__icon">{disk.owned ? '✓' : '+'}</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      );
+    })}
+
+    {specials.length > 0 && (
+      <section class="kanoka-section kanoka-section--special">
+        <h2 class="kanoka-section__heading">
+          <span class="kanoka-section__name">Special</span>
+          <span class="kanoka-section__tally">{specials.filter(k => k.owned).length}/{specials.length}</span>
+        </h2>
+        <div class="kanoka-disk-grid">
+          {specials.map(disk => (
+            <div
+              class={`kanoka-card kanoka-card--special${disk.owned ? '' : ' kanoka-card--missing'}`}
+              data-kanoka-id={disk.id}
+              data-owned={disk.owned ? 'true' : 'false'}
+              title={`${disk.specialName}${disk.owned ? ' · owned' : ''}`}
+            >
+              <div class="kanoka-card__img-wrap">
+                <img
+                  src={`/api/kanoka/image/PN/${disk.colorId}/${disk.partId}.png`}
+                  alt={disk.specialName}
+                  width="64"
+                  height="64"
+                  loading="lazy"
+                  onerror="this.style.display='none'"
+                />
+              </div>
+              <div class="kanoka-card__code">{disk.code ?? '—'}</div>
+              <div class="kanoka-card__power kanoka-card__power--special">{disk.specialName}</div>
+              <div class="kanoka-card__level"></div>
+              <button class="kanoka-toggle" aria-label={disk.owned ? 'Mark as not owned' : 'Mark as owned'} hidden>
+                <span class="kanoka-toggle__icon">{disk.owned ? '✓' : '+'}</span>
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
+    )}
+  </div>
+</Layout>
+
+<style>
+.kanoka-page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+}
+
+.kanoka-header {
+  margin-bottom: 2.5rem;
+}
+
+.back-link {
+  display: inline-block;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  margin-bottom: 1rem;
+  letter-spacing: 0.04em;
+  transition: color 0.15s;
+}
+.back-link:hover { color: var(--color-accent); }
+
+h1 {
+  font-size: 2rem;
+  margin: 0 0 0.4rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.kanoka-count {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+}
+
+.kanoka-subtitle {
+  color: var(--color-text-muted);
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  max-width: 600px;
+}
+
+.kanoka-code-key {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+.kanoka-code-key__row {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.kanoka-code-key__digit {
+  font-weight: 700;
+  color: var(--color-accent);
+  font-family: monospace;
+  font-size: 1em;
+}
+
+.kanoka-code-key__sep {
+  color: var(--color-text-muted);
+}
+
+.kanoka-code-key__label {
+  color: var(--color-text-muted);
+  margin-left: 0.4rem;
+}
+
+/* Sections */
+.kanoka-section {
+  margin-bottom: 2.5rem;
+}
+
+.kanoka-section__heading {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  padding-bottom: 0.4rem;
+  margin: 0 0 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--metru-color, var(--color-accent));
+}
+
+.kanoka-section--special .kanoka-section__heading {
+  color: var(--color-accent);
+}
+
+.kanoka-section__name {
+  /* primary heading text */
+}
+
+.kanoka-section__element {
+  font-size: 0.7rem;
+  font-weight: 500;
+  opacity: 0.7;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.kanoka-section__tally {
+  margin-left: auto;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-transform: none;
+  letter-spacing: 0.04em;
+}
+
+/* Disk grid */
+.kanoka-disk-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Disk card */
+.kanoka-card {
+  position: relative;
+  width: 88px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem 0.3rem 0.4rem;
+  gap: 2px;
+  transition: border-color 0.15s, background 0.15s;
+  border-top: 2px solid var(--metru-color, var(--color-accent));
+}
+
+.kanoka-card--missing {
+  opacity: 0.38;
+  filter: grayscale(0.5);
+}
+
+.kanoka-card--special {
+  border-top-color: var(--color-accent);
+}
+
+.kanoka-card__img-wrap {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.kanoka-card__img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.kanoka-card__code {
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-family: monospace;
+  letter-spacing: 0.05em;
+  color: var(--color-text, #fff);
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.kanoka-card__power {
+  font-size: 0.6rem;
+  color: var(--color-text-muted);
+  text-align: center;
+  line-height: 1.2;
+  min-height: 2.4em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kanoka-card__power--special {
+  font-size: 0.58rem;
+}
+
+.kanoka-card__level {
+  min-height: 1.2em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kanoka-card__level-num {
+  font-size: 0.62rem;
+  color: var(--color-text-muted);
+}
+
+.kanoka-card__great-badge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  background: rgba(196, 137, 60, 0.15);
+  border: 1px solid rgba(196, 137, 60, 0.4);
+  border-radius: 3px;
+  padding: 1px 4px;
+}
+
+/* Toggle button */
+.kanoka-toggle {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.3);
+  background: rgba(0,0,0,0.55);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.kanoka-toggle[hidden] { display: none; }
+
+.kanoka-toggle:hover {
+  background: rgba(0,0,0,0.8);
+  border-color: var(--color-accent);
+}
+
+.kanoka-toggle--owned {
+  background: rgba(196, 137, 60, 0.75);
+  border-color: var(--color-accent);
+}
+
+.kanoka-toggle--saving {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.kanoka-toggle__icon {
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+}
+</style>
+
+<script>
+  (function () {
+    if (typeof window === 'undefined') return;
+    if (window.location.hostname !== 'edit.bioniclecollective.com') return;
+
+    document.querySelectorAll<HTMLButtonElement>('.kanoka-toggle').forEach(btn => {
+      btn.hidden = false;
+      const card = btn.closest<HTMLElement>('.kanoka-card');
+      if (card?.dataset.owned === 'true') btn.classList.add('kanoka-toggle--owned');
+    });
+
+    function updateTally(card: HTMLElement) {
+      const section = card.closest<HTMLElement>('.kanoka-section');
+      if (!section) return;
+      const tally = section.querySelector<HTMLElement>('.kanoka-section__tally');
+      if (!tally) return;
+      const total = section.querySelectorAll('.kanoka-card[data-kanoka-id]').length;
+      const owned = section.querySelectorAll('.kanoka-card[data-owned="true"]').length;
+      tally.textContent = `${owned}/${total}`;
+    }
+
+    function updateGlobalCount() {
+      const countEl = document.querySelector<HTMLElement>('.kanoka-count');
+      if (!countEl) return;
+      const total = document.querySelectorAll('.kanoka-card[data-kanoka-id]').length;
+      const owned = document.querySelectorAll('.kanoka-card[data-owned="true"]').length;
+      countEl.textContent = `${owned} / ${total}`;
+    }
+
+    document.querySelectorAll<HTMLElement>('.kanoka-card[data-kanoka-id]').forEach(card => {
+      const btn = card.querySelector<HTMLButtonElement>('.kanoka-toggle');
+      if (!btn) return;
+
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const kanokaId = card.dataset.kanokaId;
+        if (!kanokaId) return;
+
+        const currentOwned = card.dataset.owned === 'true';
+        const newOwned = !currentOwned;
+
+        btn.classList.add('kanoka-toggle--saving');
+        card.dataset.owned = newOwned ? 'true' : 'false';
+        card.classList.toggle('kanoka-card--missing', !newOwned);
+        btn.classList.toggle('kanoka-toggle--owned', newOwned);
+        btn.querySelector('.kanoka-toggle__icon')!.textContent = newOwned ? '✓' : '+';
+        btn.setAttribute('aria-label', newOwned ? 'Mark as not owned' : 'Mark as owned');
+        updateTally(card);
+        updateGlobalCount();
+
+        try {
+          const res = await fetch('/api/kanoka/collection', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ kanokaId, owned: newOwned }),
+          });
+
+          if (res.status === 401) {
+            window.location.href = '/';
+            return;
+          }
+
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        } catch {
+          // Revert on error
+          card.dataset.owned = currentOwned ? 'true' : 'false';
+          card.classList.toggle('kanoka-card--missing', !currentOwned);
+          btn.classList.toggle('kanoka-toggle--owned', currentOwned);
+          btn.querySelector('.kanoka-toggle__icon')!.textContent = currentOwned ? '✓' : '+';
+          btn.setAttribute('aria-label', currentOwned ? 'Mark as not owned' : 'Mark as owned');
+          updateTally(card);
+          updateGlobalCount();
+        } finally {
+          btn.classList.remove('kanoka-toggle--saving');
+        }
+      });
+    });
+  })();
+</script>

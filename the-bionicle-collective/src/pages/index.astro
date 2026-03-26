@@ -8,6 +8,9 @@ import kanohiCollectionStatic from '../data/kanohi-collection.json';
 import { getKranaOwnedIds } from '../utils/kranaStoreR2';
 import kranaCollectionStatic from '../data/krana-collection.json';
 import { getKrana } from '../data/krana';
+import { getKanokaOwnedIds } from '../utils/kanokaStoreR2';
+import kanokaCollectionStatic from '../data/kanoka-collection.json';
+import { getKanoka } from '../data/kanoka';
 import { isAuthenticated } from '../utils/adminAuth';
 import { getUniqueItems } from '../utils/uniqueStoreR2';
 
@@ -47,6 +50,15 @@ try {
   ownedKranaCount = (kranaCollectionStatic as string[]).length;
 }
 const totalKranaCount = getKrana().length;
+
+let ownedKanokaCount: number;
+try {
+  const kanokaIds = bucket ? await getKanokaOwnedIds(bucket) : (kanokaCollectionStatic as string[]);
+  ownedKanokaCount = kanokaIds.length;
+} catch {
+  ownedKanokaCount = (kanokaCollectionStatic as string[]).length;
+}
+const totalKanokaCount = getKanoka().length;
 
 const totalSetCount = sets.length + uniqueItemCount;
 
@@ -99,6 +111,15 @@ const next = nextParam.startsWith('/') ? nextParam : '/collection/';
               <a href="/krana/" class="hero-stat hero-stat--link">
                 <span class="hero-stat__value">{ownedKranaCount}</span>
                 <span class="hero-stat__label">Krana</span>
+              </a>
+            </>
+          )}
+          {totalKanokaCount > 0 && (
+            <>
+              <div class="hero-stat__sep"></div>
+              <a href="/kanoka/" class="hero-stat hero-stat--link">
+                <span class="hero-stat__value">{ownedKanokaCount}</span>
+                <span class="hero-stat__label">Kanoka</span>
               </a>
             </>
           )}

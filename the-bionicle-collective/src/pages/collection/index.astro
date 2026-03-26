@@ -8,6 +8,9 @@ import { getMasksByYear, getKanohiYears, sortMasks } from '../../data/kanohi';
 import { getKrana, KRANA_VARIANTS, KRANA_TYPES } from '../../data/krana';
 import { getKranaOwnedIds } from '../../utils/kranaStoreR2';
 import kranaCollectionStatic from '../../data/krana-collection.json';
+import { getKanoka, METRU_LIST } from '../../data/kanoka';
+import { getKanokaOwnedIds } from '../../utils/kanokaStoreR2';
+import kanokaCollectionStatic from '../../data/kanoka-collection.json';
 import { MEDIA_CATEGORIES, mediaItems, getMediaCardName, getMediaCoverSrc, type MediaCategoryId } from '../../data/media';
 import { getMediaEraLabel, sortMediaByEra } from '../../data/mediaEras';
 import type { SetRecord } from '../../data/sets';
@@ -41,6 +44,15 @@ const allKrana = getKrana().map(k => ({ ...k, owned: kranaOwnedIdSet.has(k.id) }
 const kranaOwnedCount = allKrana.filter(k => k.owned).length;
 const hasKrana = allKrana.length > 0;
 
+let kanokaOwnedIdSet = new Set<string>();
+try {
+  const kanokaOwnedIds = bucket ? await getKanokaOwnedIds(bucket) : (kanokaCollectionStatic as string[]);
+  kanokaOwnedIdSet = new Set(kanokaOwnedIds);
+} catch { /* ignore */ }
+const allKanoka = getKanoka().map(k => ({ ...k, owned: kanokaOwnedIdSet.has(k.id) }));
+const kanokaOwnedCount = allKanoka.filter(k => k.owned).length;
+const hasKanoka = allKanoka.length > 0;
+
 const byGroup = new Map<string, SetRecord[]>();
 for (const g of YEAR_GROUPS) byGroup.set(g.id, []);
 for (const s of sets) {
@@ -61,7 +73,7 @@ const groupsWithData = VISIBLE_GROUPS.filter((g) => {
       sets.some((s) => {
         const theme = s.theme ?? '';
         return theme === 'Combiner Models' || theme === 'Alternate Models';
-      }) || hasKanohi || hasKrana || hasUniqueBuilds
+      }) || hasKanohi || hasKrana || hasKanoka || hasUniqueBuilds
     );
   if (g.id === 'media') return mediaItems.length > 0 || hasUniqueMedia;
   return (byGroup.get(g.id) ?? []).length > 0;
@@ -145,7 +157,7 @@ const defaultGroupId =
     const showUniqueBuilds = group.id === 'other' && hasUniqueBuilds;
     const showUniqueMedia = group.id === 'media' && hasUniqueMedia;
     const firstOtherTab =
-      group.id === 'other' ? (hasCombiner ? 'combiner' : hasAlternate ? 'alternate' : hasPromotional ? 'promotional' : hasKanohi ? 'kanohi' : hasKrana ? 'krana' : showUniqueBuilds ? 'unique' : '') : '';
+      group.id === 'other' ? (hasCombiner ? 'combiner' : hasAlternate ? 'alternate' : hasPromotional ? 'promotional' : hasKanohi ? 'kanohi' : hasKrana ? 'krana' : hasKanoka ? 'kanoka' : showUniqueBuilds ? 'unique' : '') : '';
 
     return (
       <section class="collection-section" id={group.id} data-group-id={group.id} data-active={group.id === defaultGroupId}>
@@ -222,6 +234,19 @@ const defaultGroupId =
                   data-group-id={group.id}
                 >
                   Krana
+                </button>
+              )}
+              {hasKanoka && (
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={firstOtherTab === 'kanoka'}
+                  aria-controls={`${group.id}-year-kanoka`}
+                  id={`${group.id}-tab-kanoka`}
+                  data-year="kanoka"
+                  data-group-id={group.id}
+                >
+                  Kanoka
                 </button>
               )}
               {showUniqueBuilds && (
@@ -446,6 +471,37 @@ const defaultGroupId =
                   <div class="krana-summary-total">
                     <span>{kranaOwnedCount} / {allKrana.length} Krana owned</span>
                     <a href="/krana/" class="krana-summary-link">View full Krana grid &rarr;</a>
+                  </div>
+                </div>
+              </div>
+            )}
+            {hasKanoka && (
+              <div
+                class="year-pane"
+                id={`${group.id}-year-kanoka`}
+                role="tabpanel"
+                aria-labelledby={`${group.id}-tab-kanoka`}
+                data-year="kanoka"
+                data-group-id={group.id}
+                data-active={firstOtherTab === 'kanoka'}
+              >
+                <div class="krana-summary-panel">
+                  {METRU_LIST.map(metru => {
+                    const metruDisks = allKanoka.filter(k => k.metru === metru.id);
+                    const metruOwned = metruDisks.filter(k => k.owned).length;
+                    return (
+                      <div class="krana-summary-row">
+                        <span class="krana-summary-label" style={`color: ${metru.color}`}>{metru.label}</span>
+                        <span class="krana-summary-tally">{metruOwned} / {metruDisks.length}</span>
+                        <div class="krana-summary-bar">
+                          <div class="krana-summary-bar__fill" style={`width: ${metruDisks.length > 0 ? Math.round((metruOwned / metruDisks.length) * 100) : 0}%; background: ${metru.color}`}></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div class="krana-summary-total">
+                    <span>{kanokaOwnedCount} / {allKanoka.length} Kanoka owned</span>
+                    <a href="/kanoka/" class="krana-summary-link">View full Kanoka grid &rarr;</a>
                   </div>
                 </div>
               </div>
