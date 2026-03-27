@@ -162,10 +162,12 @@ const next = nextParam.startsWith('/') ? nextParam : '/collection/';
         body: JSON.stringify({ username, password }),
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
+        redirect: 'manual',
       }).then((res) => {
         if (res.ok) {
-          window.location.href = next;
-          return;
+          return res.json().then((data) => {
+            window.location.href = data.next || next;
+          });
         }
         res.json()
           .then((data) => {

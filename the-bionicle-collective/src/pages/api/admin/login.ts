@@ -79,11 +79,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const url = new URL(request.url);
     const next = url.searchParams.get('next') || '/collection/';
-    const redirectUrl = next.startsWith('/') ? new URL(next, url.origin).toString() : `${url.origin}/collection/`;
-    return new Response(null, {
-      status: 302,
+    const redirectUrl = next.startsWith('/') ? next : '/collection/';
+    return new Response(JSON.stringify({ ok: true, next: redirectUrl }), {
+      status: 200,
       headers: {
-        Location: redirectUrl,
+        'Content-Type': 'application/json',
         'Set-Cookie': cookieHeader,
       },
     });
