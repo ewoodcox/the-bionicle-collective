@@ -208,8 +208,8 @@ function formatDate(d: string | undefined): string {
 
           if (photoStatus) { photoStatus.textContent = 'Uploaded!'; photoStatus.className = 'photo-upload-status'; }
           setTimeout(() => { if (photoStatus) photoStatus.textContent = ''; }, 2500);
-        } catch (err: any) {
-          if (photoStatus) { photoStatus.textContent = err.message; photoStatus.className = 'photo-upload-status photo-upload-status--error'; }
+        } catch (err) {
+          if (photoStatus) { photoStatus.textContent = err instanceof Error ? err.message : 'Upload failed'; photoStatus.className = 'photo-upload-status photo-upload-status--error'; }
         } finally {
           uploadBtn.disabled = false;
           fileInput.value = '';
